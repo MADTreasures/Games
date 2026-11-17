@@ -9,6 +9,7 @@
   const A = KF.Audio || { unlock() {}, play() {}, setMuted() {}, suspend() {}, resume() {} };
   const { COLS, ROWS, SPAWN_ROWS, Phase } = L;
 
+  const FIELD_ALPHA = 0.42;               // darkness of the glass behind the pieces; lower = more cave visible
   const ENTRY_ROWS = 2;                  // rows above the field where the incoming piece is already visible
   const STORE_KEY = 'kristallfall.v1';   // unchanged so existing records survive the rename
   const TITLE_LINES = ['CRYSTAL', 'DROP'];
@@ -181,11 +182,9 @@
     try { fn(cave); } catch (e) { cave = null; paintFallbackCave(); }
   }
 
-  function caveFocus(c) {
-    if (isTitle() || !c.setFocus) return;
-    const { cell, boardX, boardY, boardW, boardH } = view;
-    c.setFocus(boardX, boardY - ENTRY_ROWS * cell, boardW, boardH + ENTRY_ROWS * cell);
-  }
+  // The cave can darken itself behind the playfield (setFocus). Not used: the cave is meant to be seen
+  // through the field; the tinted glass of the field (FIELD_ALPHA) provides the contrast.
+  function caveFocus() {}
 
   function caveResize() {
     const r = view.caveRatio;
@@ -262,15 +261,15 @@
     g.fillRect(xl - o - 1, ey - 1, boardW + f * 2 + o * 2 + 2, boardY - ey + 1);
     g.globalCompositeOperation = 'source-over';
 
-    // entry shaft and field: dark glass, the cave stays faintly visible behind it
+    // entry shaft and field: tinted glass, the cave stays clearly visible behind it
     const shaft = g.createLinearGradient(0, ey, 0, boardY);
     shaft.addColorStop(0, 'rgba(4,9,24,0)');
-    shaft.addColorStop(1, 'rgba(4,9,24,0.66)');
+    shaft.addColorStop(1, 'rgba(4,9,24,' + (FIELD_ALPHA * 0.8).toFixed(3) + ')');
     g.fillStyle = shaft;
     g.fillRect(boardX, ey, boardW, ENTRY_ROWS * cell);
     const field = g.createLinearGradient(0, boardY, 0, yb);
-    field.addColorStop(0, 'rgba(6,13,32,0.78)');
-    field.addColorStop(1, 'rgba(4,9,24,0.86)');
+    field.addColorStop(0, 'rgba(6,13,32,' + FIELD_ALPHA.toFixed(3) + ')');
+    field.addColorStop(1, 'rgba(4,9,24,' + Math.min(1, FIELD_ALPHA + 0.08).toFixed(3) + ')');
     g.fillStyle = field;
     g.fillRect(boardX, boardY, boardW, boardH);
 
@@ -612,11 +611,13 @@
       const piece = game.currentPiece;
       if (piece && game.gameRunning) {
         const px = piece.x + vis.ox;
+        const pieceCells = shapeCells(piece, px, piece.y + vis.oy, boardX, boardY, cell, -ENTRY_ROWS - 1);
         if (settings.ghost && game.phase === Phase.FALLING) {
+          // landing preview: light refracted by the falling crystal (beams start at the piece)
           const gy = game.getGhostY();
-          if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true });
+          if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true, from: pieceCells });
         }
-        C.drawCells(g, shapeCells(piece, px, piece.y + vis.oy, boardX, boardY, cell, -ENTRY_ROWS - 1), { t, dpr });
+        C.drawCells(g, pieceCells, { t, dpr });
       }
     }
 
