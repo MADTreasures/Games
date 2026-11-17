@@ -17,7 +17,7 @@
   const TAU = Math.PI * 2;
   const FADE_MS = 1500;               // crossfade between two themes
   const MAX_BAKE_PIXELS = 6e6;        // huge canvases are baked at a reduced scale and stretched
-  const BAKE_STEPS_PER_UPDATE = 99;   // lower it to spread the bake of a new theme over several frames
+  const BAKE_STEPS_PER_UPDATE = 5;    // a theme bakes in 5 steps; 5 = all in one frame (~60 ms), 1 = spread over 5 frames
   const LIGHT_X = -0.64, LIGHT_Y = -0.77;   // unit vector pointing to the light (top-left)
   const WHITE = [255, 255, 255];
 
@@ -35,33 +35,34 @@
    *   crystals             1-3 quartz colours (the first one dominates)
    *   density, crystalSize how many clusters and how big (1 = normal)
    *   spikes, chunk, round stalactite frequency, roughness of the rock lips, roundness of the openings
+   *   walls, bend, rise    thickness of [side walls, ceiling, floor]; how far the tunnel bends sideways / up-down
    *   features             names from FEATURES; particles: kind from PARTICLE_KINDS, count, colour
    */
   const THEMES = [
     { key: 'ice', name: 'Bergkristall', seed: 11, rock: [207, 34, 33], deep: [222, 58, 8], light: [194, 85, 86],
       crystals: [[202, 62, 74], [188, 55, 84], [216, 64, 66]], density: 1, crystalSize: 1, spikes: 1.35, chunk: 1, round: 0.15,
-      features: ['icicles', 'drips'], particles: { kind: 'snow', count: 26, color: [198, 80, 92] } },
+      walls: [0.9, 1.1, 1], bend: 0.05, rise: -0.02, features: ['icicles', 'drips'], particles: { kind: 'snow', count: 26, color: [198, 80, 92] } },
     { key: 'amethyst', name: 'Amethyst', seed: 23, rock: [274, 30, 27], deep: [266, 55, 7], light: [286, 80, 82],
       crystals: [[272, 62, 64], [292, 55, 68], [256, 60, 70]], density: 1.25, crystalSize: 0.9, spikes: 0.45, chunk: 0.8, round: 0.3,
-      features: ['studs'], particles: { kind: 'dust', count: 22, color: [285, 80, 86] } },
+      walls: [1.15, 1, 1.1], bend: -0.02, rise: 0.03, features: ['studs'], particles: { kind: 'dust', count: 22, color: [285, 80, 86] } },
     { key: 'moss', name: 'Prasiolith', seed: 37, rock: [128, 20, 23], deep: [156, 48, 6], light: [100, 70, 76],
       crystals: [[142, 46, 60], [122, 42, 68], [160, 48, 56]], density: 0.9, crystalSize: 1, spikes: 0.9, chunk: 1.15, round: 0.2,
-      features: ['moss', 'drips'], particles: { kind: 'spore', count: 20, color: [88, 90, 74] } },
+      walls: [0.95, 1.3, 1], bend: -0.06, rise: 0.02, features: ['moss', 'drips'], particles: { kind: 'spore', count: 20, color: [88, 90, 74] } },
     { key: 'citrine', name: 'Citrin', seed: 41, rock: [26, 34, 27], deep: [18, 52, 7], light: [46, 95, 76],
       crystals: [[44, 86, 58], [36, 88, 62], [52, 82, 68]], density: 1, crystalSize: 1.05, spikes: 0.8, chunk: 1.25, round: 0.12,
-      features: ['veins'], particles: { kind: 'dust', count: 24, color: [46, 95, 78] } },
+      walls: [1.25, 1.15, 0.9], bend: 0.06, rise: 0.04, features: ['veins'], particles: { kind: 'dust', count: 24, color: [46, 95, 78] } },
     { key: 'rose', name: 'Rosenquarz', seed: 53, rock: [334, 24, 31], deep: [318, 42, 9], light: [342, 90, 88],
       crystals: [[340, 70, 76], [352, 66, 80], [324, 54, 74]], density: 0.8, crystalSize: 1.2, spikes: 0.6, chunk: 0.75, round: 0.26,
-      features: ['mist'], particles: { kind: 'dust', count: 18, color: [345, 90, 90] } },
+      walls: [1.1, 0.85, 1.05], bend: 0.03, rise: -0.04, features: ['mist'], particles: { kind: 'dust', count: 18, color: [345, 90, 90] } },
     { key: 'carnelian', name: 'Karneol', seed: 67, rock: [10, 30, 21], deep: [6, 62, 6], light: [26, 100, 62],
       crystals: [[18, 86, 56], [8, 80, 52], [30, 92, 60]], density: 0.9, crystalSize: 1, spikes: 1.2, chunk: 1.3, round: 0.1,
-      features: ['lava'], particles: { kind: 'ember', count: 28, color: [30, 100, 62] } },
+      walls: [1, 1.45, 0.85], bend: -0.05, rise: 0.05, features: ['lava'], particles: { kind: 'ember', count: 28, color: [30, 100, 62] } },
     { key: 'lake', name: 'Blauquarz', seed: 79, rock: [224, 34, 21], deep: [228, 62, 6], light: [182, 72, 72],
       crystals: [[218, 72, 60], [204, 78, 64], [234, 60, 68]], density: 1, crystalSize: 1, spikes: 1, chunk: 0.95, round: 0.22,
-      features: ['lake', 'drips'], particles: { kind: 'bubble', count: 16, color: [185, 70, 80] } },
+      walls: [0.85, 1, 1.2], bend: 0.04, rise: 0, features: ['lake', 'drips'], particles: { kind: 'bubble', count: 16, color: [185, 70, 80] } },
     { key: 'smoky', name: 'Rauchquarz', seed: 97, rock: [28, 9, 23], deep: [258, 14, 5], light: [40, 32, 82],
       crystals: [[32, 22, 66], [24, 16, 76], [42, 14, 54]], density: 0.7, crystalSize: 1.35, spikes: 0.75, chunk: 1.4, round: 0.16,
-      features: ['fog'], particles: { kind: 'dust', count: 16, color: [40, 30, 85] } },
+      walls: [1.4, 0.9, 1.1], bend: -0.04, rise: -0.03, features: ['fog'], particles: { kind: 'dust', count: 16, color: [40, 30, 85] } },
   ];
 
   // Particle behaviours. Speeds in screen units (1/100 of the short side) per second,
@@ -69,7 +70,7 @@
   const PARTICLE_KINDS = {
     dust: { vx: 0.45, vy: -0.25, wobble: 2.2, size: [0.3, 0.6], zone: [0, 1], pulse: 0.6 },
     snow: { vx: 0.25, vy: 2.1, wobble: 1.4, size: [0.25, 0.5], zone: [0, 1], pulse: 0.5 },
-    ember: { vx: 0.3, vy: -3.2, wobble: 1.8, size: [0.3, 0.6], zone: [0.3, 1], pulse: 0.35, fadeTop: true },
+    ember: { vx: 0.3, vy: -3.2, wobble: 1.8, size: [0.4, 0.85], zone: [0.25, 1], pulse: 0.35, fadeTop: true },
     spore: { vx: 0.5, vy: -0.6, wobble: 3.5, size: [0.4, 0.75], zone: [0.1, 0.95], pulse: 0.9 },
     bubble: { vx: 0, vy: -1.6, wobble: 0.8, size: [0.35, 0.7], zone: [0.62, 0.98], pulse: 0.2, fadeTop: true, ring: true },
   };
@@ -112,7 +113,7 @@
       rock(haze) {
         const f = (c, k) => css(mix(hsl(c), deep, haze * (k || 1)));
         return {
-          base: f(r), lit: f([r[0], r[1] * 0.95, r[2] + 8]), lit2: f([r[0] - 4, r[1] * 0.8, r[2] + 17]),
+          base: f(r), lit: f([r[0], r[1] * 0.95, r[2] + 10]), lit2: f([r[0] - 4, r[1] * 0.8, r[2] + 21]),
           shade: f([r[0] + 6, r[1] * 1.05, r[2] * 0.66]), ink: f([r[0] + 8, r[1] * 1.1, r[2] * 0.25], 0.7),
         };
       },
@@ -133,10 +134,16 @@
   // ------------------------------------------------------------------ sprites (baked once, reused every frame)
   function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
 
-  function makeGlowSprite(rgb) {
-    const c = makeCanvas(64, 64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  // Big translucent overlays (glows, light shafts, fog) are rendered at the resolution of the baked
+  // picture and blitted 1:1 on whole pixels with plain source-over: several times cheaper than
+  // filtered or additive blits. place() returns the pixel-snapped rect such a sprite is drawn at.
+  function place(img, x, y, scale) {
+    return { img, x: Math.round(x * scale) / scale, y: Math.round(y * scale) / scale, w: img.width / scale, h: img.height / scale };
+  }
+  function makeGlowSprite(rgb, r, scale) {
+    const n = Math.max(2, Math.round(r * 2 * scale)), h = n / 2, c = makeCanvas(n, n), g = c.getContext('2d'), gr = g.createRadialGradient(h, h, 0, h, h, h);
     gr.addColorStop(0, css(rgb, 0.85)); gr.addColorStop(0.35, css(rgb, 0.38)); gr.addColorStop(0.7, css(rgb, 0.1)); gr.addColorStop(1, css(rgb, 0));
-    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    g.fillStyle = gr; g.fillRect(0, 0, n, n);
     return c;
   }
   function makeDotSprite(rgb, ring) {
@@ -158,22 +165,32 @@
     g.closePath(); g.fill();
     return (starSprite = c);
   }
-  function makeShaftSprite(rgb) {       // slanted light beam: two hard-edged trapezoids fading downwards
-    const c = makeCanvas(64, 128), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 128);
+  // Slanted light beam: two hard-edged trapezoids fading downwards. lean = shift of the bottom end.
+  function makeShaftSprite(rgb, w, h, lean, scale) {
+    const pad = Math.abs(lean), c = makeCanvas(Math.ceil((w + pad) * scale), Math.ceil(h * scale)), g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, h), xt = (lean < 0 ? pad : 0) + w / 2, xb = xt + lean;
     gr.addColorStop(0, css(rgb, 0)); gr.addColorStop(0.1, css(rgb, 0.5)); gr.addColorStop(1, css(rgb, 0));
-    g.fillStyle = gr;
-    g.beginPath(); g.moveTo(22, 0); g.lineTo(42, 0); g.lineTo(64, 128); g.lineTo(0, 128); g.closePath(); g.fill();
-    g.beginPath(); g.moveTo(28, 0); g.lineTo(37, 0); g.lineTo(46, 128); g.lineTo(16, 128); g.closePath(); g.fill();
+    g.scale(scale, scale); g.fillStyle = gr;
+    [[0.16, 0.5], [0.07, 0.24]].forEach(q => {
+      g.beginPath(); g.moveTo(xt - w * q[0], 0); g.lineTo(xt + w * q[0], 0); g.lineTo(xb + w * q[1], h); g.lineTo(xb - w * q[1], h); g.closePath(); g.fill();
+    });
     return c;
   }
-  function makeFogSprite(rgb) {         // a bank of overlapping soft puffs
-    const c = makeCanvas(160, 64), g = c.getContext('2d'), R = makeRng(4711);
+  function makeFogSprite(rgb, w, h, scale) {   // a bank of overlapping soft puffs
+    const c = makeCanvas(Math.ceil(w * scale), Math.ceil(h * scale)), g = c.getContext('2d'), R = makeRng(4711);
+    g.scale(c.width / 160, c.height / 64);
     for (let i = 0; i < 10; i++) {
       const x = 26 + R() * 108, y = 24 + R() * 16, r = 14 + R() * 10, gr = g.createRadialGradient(x, y, 0, x, y, r);
       gr.addColorStop(0, css(rgb, 0.5)); gr.addColorStop(1, css(rgb, 0));
       g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2);
     }
     return c;
+  }
+  // Register a breathing glow of radius r around (x, y).
+  function addGlow(B, rgb, x, y, r, alpha) {
+    const o = place(makeGlowSprite(rgb, r, B.scale), x - r, y - r, B.scale);
+    o.a = alpha; o.speed = TAU / B.R.range(4, 7.5); o.phase = B.R() * TAU;
+    B.scene.glows.push(o);
   }
 
   // ------------------------------------------------------------------ drawing primitives (bake time only)
@@ -222,7 +239,7 @@
     const ax = Math.cos(ang), ay = Math.sin(ang);
     let px = -ay, py = ax;
     if (px * LIGHT_X + py * LIGHT_Y > 0) { px = -px; py = -py; }      // local -x is the lit side
-    const hw = w / 2, tl = Math.min(len * 0.45, w * 1.05), sh = len - tl, e = -w * 0.3;
+    const hw = w / 2, tl = Math.min(len * 0.42, w * 0.95), sh = len - tl, e = -w * 0.3;
     const x1 = -hw + w * 0.36, x2 = hw - w * 0.24, apex = w * 0.05;
     const s1 = sh + tl * 0.14, s2 = sh + tl * 0.08, s3 = sh - tl * 0.08;
     const face = (fill, q) => {
@@ -234,10 +251,11 @@
       g.closePath();
       if (fill) { g.fillStyle = fill; g.fill(); }
     };
-    const outline = [-hw, e, -hw, sh, apex, len, hw, s3, hw, e];
+    const tb = Math.min(sh * 0.35, w * 0.6), k = 0.5;                  // the root tapers, so a cluster also looks tidy on bare rock
+    const outline = [-hw * k, e, -hw, tb, -hw, sh, apex, len, hw, s3, hw, tb, hw * k, e];
     face(c.mid, outline);
-    face(c.pale, [-hw, e, x1, e, x1, s1, -hw, sh]);
-    face(c.dark, [x2, e, hw, e, hw, s3, x2, s2]);
+    face(c.pale, [-hw * k, e, x1 * k, e, x1, tb, x1, s1, -hw, sh, -hw, tb]);
+    face(c.dark, [x2 * k, e, hw * k, e, hw, tb, hw, s3, x2, s2, x2, tb]);
     face(c.tip, [-hw, sh, x1, s1, apex, len]);
     face(c.light, [x1, s1, x2, s2, apex, len]);
     face(c.darker, [x2, s2, hw, s3, apex, len]);
@@ -249,32 +267,30 @@
   // A cluster: a fan of 1-7 points around the direction c.ang, the longest near the middle.
   function drawCluster(B, c) {
     const g = B.g, R = B.R, haze = LAYERS[c.k].haze;
-    const n = c.count || (c.cls >= 3 ? 6 + R.int(2) : c.cls === 2 ? 5 : c.cls === 1 ? 4 : 3);
+    const n = c.count || Math.min(c.cls, 3) + 2 + R.int(2);
     const tx = -Math.sin(c.ang), ty = Math.cos(c.ang), peak = R.range(-0.25, 0.25), pts = [];
     for (let i = 0; i < n; i++) {
       const o = n === 1 ? 0 : (i / (n - 1)) * 2 - 1 + R.range(-0.1, 0.1);
       const len = c.size * Math.max(0.3, 1 - 0.62 * Math.pow(Math.abs(o - peak), 1.25)) * R.range(0.85, 1.05);
-      pts.push({ o, len, w: Math.max(len * R.range(0.2, 0.27), c.size * 0.11), ang: c.ang + o * 0.8 + R.range(-0.08, 0.08), col: R.chance(0.72) ? c.col : c.col + 1 });
+      pts.push({ o, len, w: Math.max(len * R.range(0.27, 0.34), c.size * 0.15), ang: c.ang + o * 0.75 + R.range(-0.08, 0.08), col: R.chance(0.72) ? c.col : c.col + 1 });
     }
     pts.sort((p, q) => q.len - p.len);                                  // longest first = at the back
-    const lw = clamp(c.size * 0.034, 1, 3);
-    for (const p of pts) drawPoint(g, c.x + tx * p.o * c.size * 0.2, c.y + ty * p.o * c.size * 0.2, p.ang, p.len, p.w, B.pal.crystal(p.col, haze), lw);
+    const lw = clamp(c.size * 0.04, 1.1, 3.2);
+    for (const p of pts) drawPoint(g, c.x + tx * p.o * c.size * 0.26, c.y + ty * p.o * c.size * 0.26, p.ang, p.len, p.w, B.pal.crystal(p.col, haze), lw);
     const m = pts[0];
-    c.tipX = c.x + tx * m.o * c.size * 0.2 + Math.cos(m.ang) * m.len * 0.86;
-    c.tipY = c.y + ty * m.o * c.size * 0.2 + Math.sin(m.ang) * m.len * 0.86;
-    if (c.face) {                                                       // rubble hiding the roots of clusters that sit on a rock face
-      const t = B.pal.rock(haze);
-      for (let i = -1; i <= 1; i++) {
-        const rad = c.size * R.range(0.13, 0.2), x = c.x + tx * i * c.size * 0.22, y = c.y + ty * i * c.size * 0.22;
-        const b = blob(R, x, y, rad, rad * 0.8, 7, 0.2);
-        g.beginPath(); poly(g, b); g.fillStyle = t.base; g.fill(); g.strokeStyle = t.ink; g.lineWidth = lw; g.stroke();
-        g.beginPath(); poly(g, b.map(p => [x - rad * 0.2 + (p[0] - x) * 0.55, y - rad * 0.22 + (p[1] - y) * 0.55])); g.fillStyle = t.lit; g.fill();
-      }
+    c.tipX = c.x + tx * m.o * c.size * 0.26 + Math.cos(m.ang) * m.len * 0.86;
+    c.tipY = c.y + ty * m.o * c.size * 0.26 + Math.sin(m.ang) * m.len * 0.86;
+    if (c.face) {                                                       // clusters on a rock face grow out of a little mound
+      const t = B.pal.rock(haze), rx = c.size * 0.44, ry = c.size * 0.24, x = c.x - Math.cos(c.ang) * ry * 0.5, y = c.y - Math.sin(c.ang) * ry * 0.5;
+      const b = blob(R, x, y, rx, ry, 8, 0.14);
+      g.beginPath(); poly(g, b); g.fillStyle = t.base; g.fill();
+      g.beginPath(); poly(g, b.map(p => [x - rx * 0.16 + (p[0] - x) * 0.66, y - ry * 0.3 + (p[1] - y) * 0.5])); g.fillStyle = t.lit; g.fill();
+      g.beginPath(); poly(g, b); g.strokeStyle = t.ink; g.lineWidth = lw; g.stroke();
     }
   }
   function clusterGlow(B, c, strength) {
-    const haze = LAYERS[c.k].haze, r = c.size * 1.2 + 3 * B.S;
-    softGlow(B.g, c.x + Math.cos(c.ang) * c.size * 0.4, c.y + Math.sin(c.ang) * c.size * 0.4, r, B.pal.glow(c.col), 0.32 * strength * (1 - haze * 0.7));
+    const haze = LAYERS[c.k].haze, r = c.size + 2 * B.S;
+    softGlow(B.g, c.x + Math.cos(c.ang) * c.size * 0.4, c.y + Math.sin(c.ang) * c.size * 0.4, r, B.pal.glow(c.col), 0.22 * strength * (1 - haze * 0.7));
   }
 
   // ------------------------------------------------------------------ scene generation
@@ -284,27 +300,37 @@
   function buildRing(B, k) {
     const R = B.R, W = B.W, H = B.H, T = B.T, L = LAYERS[k], u = B.S * L.scale;
     const chunk = T.chunk || 1, spikes = T.spikes === undefined ? 1 : T.spikes, dens = T.density || 1, csize = T.crystalSize || 1;
-    const l = W * L.side * R.range(0.85, 1.15), r = W - W * L.side * R.range(0.85, 1.15);
-    const t = H * L.top * R.range(0.9, 1.12), b = H - H * L.bottom * R.range(0.9, 1.12);
-    const cut = Math.min(r - l, b - t) * (T.round || 0.15), cx = (l + r) / 2, cy = (t + b) / 2;
+    // thickness of walls / ceiling / floor per theme (halved for the near ring, which must stay at the screen edge);
+    // deeper rings are shifted sideways and up or down so the tunnel bends instead of being concentric
+    const wl = T.walls || [1, 1, 1], th = i => 1 + (wl[i] - 1) * (k ? 1 : 0.5);
+    const bend = (T.bend || 0) * W * k / 2, rise = (T.rise || 0) * H * k / 2;
+    const l = W * L.side * th(0) * R.range(0.85, 1.15) + bend, r = W - W * L.side * th(0) * R.range(0.85, 1.15) + bend;
+    const t = H * L.top * th(1) * R.range(0.9, 1.12) + rise, b = H - H * L.bottom * th(2) * R.range(0.9, 1.12) + rise;
+    const cut = Math.min(r - l, b - t) * (T.round || 0.15), cutT = cut * 1.3, cutB = cut * 0.8, cx = (l + r) / 2, cy = (t + b) / 2;
     const ring = { k, unit: u, box: { l, r, t, b }, pts: [], clusters: [], tips: [], floorRange: [0, 0], ceilRange: [0, 0] };
     const sides = [
-      { a: [l + cut, t], b: [r - cut, t], kind: 'ceil' }, { a: [r, t + cut], b: [r, b - cut], kind: 'wall' },
-      { a: [r - cut, b], b: [l + cut, b], kind: 'floor' }, { a: [l, b - cut], b: [l, t + cut], kind: 'wall' },
+      { a: [l + cutT, t], b: [r - cutT, t], kind: 'ceil' }, { a: [r, t + cutT], b: [r, b - cutB], kind: 'wall' },
+      { a: [r - cutB, b], b: [l + cutB, b], kind: 'floor' }, { a: [l, b - cutB], b: [l, t + cutT], kind: 'wall' },
     ];
     const CFG = {   // step / amp / spike sizes in ring units; gap = distance between crystal sites
-      ceil: { step: 5.5, amp: 1.3, spike: 0.42 * spikes, len: [4, 15], width: 4.2, ledge: 0.15, arch: (b - t) * 0.03, gap: 17 },
-      floor: { step: 6, amp: 1.1, spike: 0.24 * spikes, len: [3, 9], width: 5, ledge: 0.2, arch: (b - t) * 0.012, gap: 17 },
-      wall: { step: 7, amp: 1.7, spike: 0.06, len: [2, 5], width: 4, ledge: 0.4, arch: (r - l) * 0.02, gap: 21 },
+      ceil: { step: 5.5, amp: 1.3, bulge: 2.4, spike: 0.5 * spikes, len: [6, 21], width: 5.5, ledge: 0.15, arch: (b - t) * 0.03, gap: 17 },
+      floor: { step: 6, amp: 1.1, bulge: 1.8, spike: 0.32 * spikes, len: [4, 11], width: 5.5, ledge: 0.2, arch: (b - t) * 0.012, gap: 17 },
+      wall: { step: 7, amp: 1.7, bulge: 3.4, spike: 0.06, len: [2, 5], width: 4, ledge: 0.4, arch: (r - l) * 0.02, gap: 21 },
     };
-    const SIZE = [[4.5, 7.5], [8.5, 12.5], [14, 18], [21, 27]];        // cluster size classes: small, medium, big, hero
+    const SIZE = [[5.5, 8.5], [9.5, 13.5], [14, 18], [21, 27]];        // cluster size classes: small, medium, big, hero
     sides.forEach((sd, si) => {
       const cfg = CFG[sd.kind], dx = sd.b[0] - sd.a[0], dy = sd.b[1] - sd.a[1], len = Math.hypot(dx, dy) || 1;
       const ux = dx / len, uy = dy / len, nx = -uy, ny = ux, amp = cfg.amp * u * chunk, step = cfg.step * u;
-      // point at distance s along the side, v units into the opening (the side itself is slightly arched)
-      const at = (s, v) => { const o = v - cfg.arch * Math.sin(Math.PI * clamp(s / len, 0, 1)); return [sd.a[0] + ux * s + nx * o, sd.a[1] + uy * s + ny * o]; };
+      // point at distance s along the side, v units into the opening (the side itself is slightly arched
+      // and bulges slowly in and out, so the rock frame never looks ruled)
+      const f1 = len / (55 * u) * TAU, f2 = len / (24 * u) * TAU, w1 = R() * TAU, w2 = R() * TAU, bulge = cfg.bulge * u * chunk;
+      const at = (s, v) => {
+        const f = clamp(s / len, 0, 1), e = Math.sin(Math.PI * f);
+        const o = v - cfg.arch * e + bulge * Math.sqrt(e) * (0.6 * Math.sin(f * f1 + w1) + 0.4 * Math.sin(f * f2 + w2));
+        return [sd.a[0] + ux * s + nx * o, sd.a[1] + uy * s + ny * o];
+      };
       // --- crystal sites are planned first so the profile can keep them free of stalactites
-      const n = Math.max(k === 2 ? 1 : 2, Math.round(len / (u * cfg.gap) * dens * (k === 2 ? 0.7 : 1)));
+      const n = Math.max(k === 2 ? 1 : 2, Math.round(len / (u * cfg.gap) * dens * [1, 0.8, 0.6][k]));
       const quiet = [], bigAt = sd.kind === 'wall' ? R.int(n) : -1;
       for (let j = 0; j < n; j++) {
         const s = len * (j + 0.5 + R.range(-0.28, 0.28)) / n;
@@ -318,18 +344,19 @@
         // growth direction: surface normal blended with the direction to the middle of the cave
         const ang = Math.atan2(ny * 0.8 + (cy - p[1]) / (b - t), nx * 0.8 + (cx - p[0]) / (r - l)) + R.range(-0.22, 0.22);
         ring.clusters.push({ x: p[0], y: p[1], ang, size, k, cls, col: R.chance(0.6) ? 0 : 1 + R.int(2) });
-        quiet.push([s - size * 0.2, s + size * 0.2]);
+        quiet.push([s - size * 0.14, s + size * 0.14]);
       }
       // --- jagged profile
       const start = ring.pts.length;
       const push = (s, v) => { const p = at(s, v); ring.pts.push([p[0], p[1], -nx, -ny]); return p; };
-      let s = step * R.range(0.4, 0.9), v = 0;
+      let s = step * R.range(0.4, 0.9), v = 0, heroAt = sd.kind === 'ceil' ? len * R.range(0.25, 0.75) : Infinity;
       push(0, 0);
       while (s < len - step * 0.6) {
-        const calm = quiet.some(q => s > q[0] && s < q[1]);
-        const sl = u * (cfg.len[0] + (cfg.len[1] - cfg.len[0]) * Math.pow(R(), 1.7));
+        const calm = quiet.some(q => s > q[0] && s < q[1]), hero = !calm && s >= heroAt;   // every ceiling gets one big stalactite
+        if (hero) heroAt = Infinity;
+        const sl = u * (hero ? cfg.len[1] * R.range(1, 1.3) : cfg.len[0] + (cfg.len[1] - cfg.len[0]) * Math.pow(R(), 1.35));
         const sw = Math.min(u * cfg.width * R.range(0.75, 1.25) * (0.55 + 0.45 * sl / (u * cfg.len[1])), len - step * 0.4 - s);
-        if (!calm && sw > u * 1.5 && R.chance(cfg.spike)) {             // stalactite / stalagmite with a slight belly
+        if (!calm && sw > u * 1.5 && (hero || R.chance(cfg.spike))) {   // stalactite / stalagmite with a slight belly
           push(s, v); push(s + sw * 0.16, v + sl * 0.5);
           const tip = push(s + sw * R.range(0.4, 0.6), v + sl);
           push(s + sw * 0.84, v + sl * 0.45);
@@ -348,15 +375,16 @@
       const ox = Math.sign(mx - cx) * 0.7, oy = Math.sign(my - cy) * 0.7;
       ring.pts.push([mx + ox * out, my + oy * out, ox, oy]);
     });
-    // --- small clusters sitting on the rock face of this ring's band (drawn over the rock)
+    // --- clusters sitting on the rock face of this ring's band (drawn over the rock; larger screens only)
     const bandX = W * (L.side - (k ? LAYERS[k - 1].side : 0)), bandY = H * (L.top - (k ? LAYERS[k - 1].top : 0));
-    const area = 2 * (b - t) * bandX + 2 * (r - l) * bandY, nFace = Math.min(12, Math.round(area / (u * u * 900) * dens));
+    const area = 2 * (b - t) * bandX + 2 * (r - l) * bandY, nFace = k === 2 ? 0 : Math.min(8, Math.round(area / (u * u * 1300) * dens));
     for (let j = 0; j < nFace; j++) {
       const onWall = R.chance((b - t) * bandX * 2 / area), far = R.range(0.25, 0.85), f = R.range(0.04, 0.96), flip = R.chance(0.5);
       const x = onWall ? (flip ? l - bandX * far : r + bandX * far) : l + (r - l) * f;
       const y = onWall ? t + (b - t) * f : (flip ? t - bandY * far : b + bandY * far);
       const ang = Math.atan2((cy - y) / (b - t) * 0.7 - 0.45, (cx - x) / (r - l) * 0.7) + R.range(-0.5, 0.5);
-      ring.clusters.push({ x, y, ang, size: u * csize * R.range(4, 8.5), k, cls: R.chance(0.3) ? 1 : 0, col: R.int(3), face: true });
+      const size = u * csize * R.range(5.5, 10);
+      if (size >= 32) ring.clusters.push({ x, y, ang, size, k, cls: R.chance(0.3) ? 1 : 0, col: R.int(3), face: true });   // too small to read otherwise
     }
     return ring;
   }
@@ -364,9 +392,9 @@
   // Cracks, raised plates and strata strokes on the rock (drawn while clipped to the ring).
   function rockDetails(B, ring, t) {
     const g = B.g, R = B.R, u = ring.unit, pts = ring.pts, n = pts.length;
-    for (let i = 0, m = Math.round(n / 3.5); i < m; i++) {              // raised stone plates
+    for (let i = 0, m = Math.round(n / 5); i < m; i++) {                // raised stone plates
       const p = pts[R.int(n)], d = u * R.range(5, 12), e = u * 0.45;
-      const b = blob(R, p[0] + p[2] * d, p[1] + p[3] * d, u * R.range(2.2, 4.8), u * R.range(1.6, 3.2), 6, 0.22);
+      const b = blob(R, p[0] + p[2] * d, p[1] + p[3] * d, u * R.range(3, 6), u * R.range(2, 3.8), 6, 0.22);
       g.fillStyle = t.lit; g.beginPath(); poly(g, b, -e * 0.8, -e); g.fill();
       g.fillStyle = t.shade; g.beginPath(); poly(g, b, e * 0.8, e); g.fill();
       g.fillStyle = t.base; g.beginPath(); poly(g, b); g.fill();
@@ -419,7 +447,7 @@
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
     const cx = W * R.range(0.44, 0.56), cy = H * R.range(0.36, 0.46), rx = W * (0.5 - far.side), ry = H * (1 - far.top - far.bottom) * 0.5;
     [[1, 0.07], [0.72, 0.13], [0.45, 0.2]].forEach(q => {
-      g.fillStyle = css(mix(pal.deep, pal.light, q[1])); g.beginPath(); poly(g, blob(R, cx, cy, rx * q[0], ry * q[0], 12, 0.14)); g.fill();
+      g.fillStyle = css(mix(pal.deep, pal.light, q[1])); g.beginPath(); poly(g, blob(R, cx, cy, rx * q[0], ry * q[0], 18, 0.07)); g.fill();
     });
   }
 
@@ -434,7 +462,7 @@
     for (const c of lip) drawCluster(B, c);
     B.hook('behind', ring);
     // the rock: cel-shaded frame, surface detail, glow of its crystals on the stone, ink outline
-    celShape(B, trace, 'evenodd', tones, u * 2.1);
+    celShape(B, trace, 'evenodd', tones, u * 2.6);
     g.save(); g.beginPath(); trace(0, 0); g.clip('evenodd');
     rockDetails(B, ring, tones);
     B.hook('inRock', ring);
@@ -455,7 +483,7 @@
       const p = pts[i0 + R.int(i1 - i0)], path = [];
       let x = p[0] + p[2] * u * 0.5, y = p[1] + p[3] * u * 0.5, a = Math.atan2(p[3], p[2]) + R.range(-0.5, 0.5);
       for (let s = 0, m = 4 + R.int(3); s < m; s++) { path.push([x, y]); a += R.range(-0.8, 0.8); const d = u * R.range(2.2, 4.5); x += Math.cos(a) * d; y += Math.sin(a) * d; }
-      [[cols.ink, 1.5, 0], [cols.mid, 0.8, 0], [cols.hi, 0.28, -0.14]].forEach(q => {
+      [[cols.ink, 1.3, 0], [cols.mid, 0.7, 0], [cols.hi, 0.25, -0.12]].forEach(q => {
         g.strokeStyle = q[0]; g.lineWidth = Math.max(0.8, u * q[1]); g.beginPath();
         path.forEach((v, i) => (i ? g.lineTo(v[0] + q[2] * u, v[1] + q[2] * u) : g.moveTo(v[0] + q[2] * u, v[1] + q[2] * u)));
         g.stroke();
@@ -477,15 +505,16 @@
     B.scene.shimmerColor = cols.hi;
     for (let i = 0; i < 7; i++) B.scene.shimmers.push({ x: W * R.range(0.2, 0.8), y: y0 + S * 1.2 + (H - y0) * 0.5 * Math.pow(R(), 1.4), w: S * R.range(4, 9), h: Math.max(1, S * 0.3), speed: R.range(0.5, 0.9), phase: R() * TAU });
   }
-  function poolLevel(B) { const bx = B.rings[2].box; return bx.b - (bx.b - bx.t) * 0.15; }
+  function poolLevel(B, f) { const bx = B.rings[2].box; return bx.b - (bx.b - bx.t) * f; }
   function addFog(B, rgb, alpha, y0, y1, n) {
     const g = B.g, R = B.R, W = B.W, H = B.H, S = B.S, gr = g.createLinearGradient(0, H * y0, 0, H * y1);
     gr.addColorStop(0, css(rgb, 0)); gr.addColorStop(0.55, css(rgb, alpha * 0.45)); gr.addColorStop(1, css(rgb, 0));
     g.fillStyle = gr; g.fillRect(0, H * y0, W, H * (y1 - y0));               // a resting veil, baked
-    B.scene.fogSprite = makeFogSprite(rgb);
+    const w = Math.min(W * 0.85, 90 * S), h = H * 0.17, img = makeFogSprite(rgb, w, h, B.scale);
     for (let i = 0; i < n; i++) {                                           // drifting banks, animated
-      const w = Math.max(W * 0.9, 70 * S) * R.range(0.8, 1.1), h = H * R.range(0.16, 0.22);
-      B.scene.fogs.push({ y: H * (y0 + (y1 - y0) * (i + 0.5) / n) - h / 2, w, h, speed: S * R.range(0.5, 1) * (i % 2 ? -1 : 1), a: alpha * R.range(0.8, 1.1), off: R(), phase: R() * TAU });
+      const o = place(img, 0, H * (y0 + (y1 - y0) * (i + 0.5) / n) - h / 2, B.scale);
+      o.speed = S * R.range(0.5, 1) * (i % 2 ? -1 : 1); o.a = alpha * R.range(0.8, 1.1); o.off = R(); o.phase = R() * TAU;
+      B.scene.fogs.push(o);
     }
   }
 
@@ -547,7 +576,7 @@
         for (let j = 0, n = Math.max(2, Math.round((i1 - i0) / 6)); j < n; j++) {             // mushroom groups
           const p = pts[i0 + 1 + R.int(Math.max(1, i1 - i0 - 2))];
           softGlow(g, p[0], p[1] - u * 2, u * 9, capRgb, 0.3);
-          if (ring.k === 0 && B.scene.glows.length < 3) B.scene.glows.push({ sprite: makeGlowSprite(capRgb), x: p[0], y: p[1] - u * 2, r: u * 9, a: 0.22, speed: TAU / R.range(4, 7), phase: R() * TAU });
+          if (ring.k === 0 && B.scene.glows.length < 3) addGlow(B, capRgb, p[0], p[1] - u * 2, u * 8, 0.22);
           for (let m = 0, mm = 2 + R.int(2); m < mm; m++) {
             const h = u * R.range(2, 4.4), cw = h * R.range(0.5, 0.7), x = p[0] + (m - 1) * u * R.range(1.8, 2.8), y = p[1] + u * 0.8;
             g.lineWidth = clamp(u * 0.35, 1, 2.2); g.strokeStyle = ink;
@@ -562,7 +591,7 @@
     veins: {
       inRock(B, ring) {
         const d = B.pal.deep, h = LAYERS[ring.k].haze, c = x => css(mix(hsl(x), d, h));
-        veins(B, ring, { ink: c([24, 60, 9]), mid: c([42, 92, 52]), hi: c([50, 100, 80]) }, false, 4.5);
+        veins(B, ring, { ink: c([24, 60, 9]), mid: c([42, 92, 52]), hi: c([50, 100, 80]) }, false, 6);
       },
     },
     // Rosenquarz: soft mist over the floor / Rauchquarz: fog banks drifting through the cave
@@ -575,22 +604,21 @@
       },
       onRing(B, ring) {
         if (ring.k !== 2) return;
-        const c = x => css(mix(hsl(x), B.pal.deep, 0.22));
-        pool(B, poolLevel(B), { base: c([18, 96, 46]), band: c([32, 100, 56]), hi: c([46, 100, 68]) });
+        const c = x => css(mix(hsl(x), B.pal.deep, 0.3));
+        pool(B, poolLevel(B, 0.1), { base: c([12, 92, 36]), band: c([24, 96, 46]), hi: c([40, 100, 60]) });
       },
       finish(B) {
-        const g = B.g, W = B.W, H = B.H, S = B.S, R = B.R, rgb = hsl([20, 100, 52]), gr = g.createLinearGradient(0, H, 0, H * 0.45);
-        gr.addColorStop(0, css(rgb, 0.34)); gr.addColorStop(0.5, css(rgb, 0.1)); gr.addColorStop(1, css(rgb, 0));
+        const g = B.g, W = B.W, H = B.H, S = B.S, rgb = hsl([20, 100, 52]), gr = g.createLinearGradient(0, H, 0, H * 0.45);
+        gr.addColorStop(0, css(rgb, 0.24)); gr.addColorStop(0.5, css(rgb, 0.07)); gr.addColorStop(1, css(rgb, 0));
         g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(0, H * 0.45, W, H * 0.55); g.globalCompositeOperation = 'source-over';
-        const sprite = makeGlowSprite(rgb);
-        for (let i = 0; i < 2; i++) B.scene.glows.push({ sprite, x: W * (0.25 + 0.5 * i), y: H + S * 4, r: Math.min(W * 0.45, S * 40), a: 0.2, speed: TAU / R.range(5, 8), phase: R() * TAU });
+        for (let i = 0; i < 2; i++) addGlow(B, rgb, W * (0.25 + 0.5 * i), H + S * 2, Math.min(W * 0.4, S * 34), 0.2);
       },
     },
     // Blauquarz: underground lake with ripples
     lake: {
       onRing(B, ring) {
         if (ring.k !== 2) return;
-        const R = B.R, S = B.S, y0 = poolLevel(B), c = x => css(mix(hsl(x), B.pal.deep, 0.25));
+        const R = B.R, S = B.S, y0 = poolLevel(B, 0.15), c = x => css(mix(hsl(x), B.pal.deep, 0.25));
         pool(B, y0, { base: c([212, 62, 26]), band: c([200, 62, 38]), hi: c([186, 70, 62]) });
         B.scene.rippleColor = c([186, 70, 70]);
         for (let i = 0; i < 3; i++) B.scene.ripples.push({ x: B.W * R.range(0.3, 0.7), y: y0 + S * R.range(3, 12), r: S * R.range(5, 9), period: R.range(4.5, 7.5), off: R() });
@@ -613,23 +641,24 @@
   function finishScene(B) {
     const g = B.g, R = B.R, W = B.W, H = B.H, S = B.S, T = B.T, pal = B.pal, scene = B.scene, wide = W > H;
     // breathing glows and twinkles for the most prominent clusters
-    const all = [], weight = c => c.size * (1 - LAYERS[c.k].haze * 0.8), sprites = {};
+    const all = [], weight = c => c.size * (1 - LAYERS[c.k].haze * 0.8);
     for (const ring of B.rings) for (const c of ring.clusters) all.push(c);
     all.sort((a, b) => weight(b) - weight(a));
     for (let i = 0, n = Math.min(all.length, wide ? 11 : 8); i < n; i++) {
-      const c = all[i], key = mod(c.col, T.crystals.length);
-      sprites[key] = sprites[key] || makeGlowSprite(pal.glow(c.col));
-      scene.glows.push({ sprite: sprites[key], x: c.x + Math.cos(c.ang) * c.size * 0.45, y: c.y + Math.sin(c.ang) * c.size * 0.45, r: c.size * 0.95 + 2 * S, a: 0.24 * (1 - LAYERS[c.k].haze * 0.6), speed: TAU / R.range(4, 7.5), phase: R() * TAU });
+      const c = all[i];
+      addGlow(B, pal.glow(c.col), c.x + Math.cos(c.ang) * c.size * 0.45, c.y + Math.sin(c.ang) * c.size * 0.45, Math.min(c.size * 0.8 + 2 * S, 20 * S), 0.26 * (1 - LAYERS[c.k].haze * 0.6));
     }
     for (let i = 0, n = Math.min(all.length, 16); i < n; i++) {
       const c = all[i];
       scene.glints.push({ x: c.tipX, y: c.tipY, r: clamp(c.size * 0.2, 5, 22), period: R.range(3.5, 7), off: R() });
     }
     // light shafts falling in from the ceiling
-    scene.shaftSprite = makeShaftSprite(pal.light);
     for (let i = 0, n = wide ? 4 : 2; i < n; i++) {
       const x = W * ((wide ? [0.14, 0.34, 0.66, 0.87][i] : [0.3, 0.7][i]) + R.range(-0.06, 0.06));
-      scene.shafts.push({ x, y: -2 * S, w: S * R.range(14, 22), h: H * R.range(0.55, 0.8), shear: R.range(-0.26, 0.26), a: R.range(0.1, 0.16), speed: R.range(0.25, 0.4), phase: R() * TAU });
+      const w = S * R.range(13, 19), h = H * R.range(0.5, 0.68), lean = h * R.range(-0.26, 0.26);
+      const o = place(makeShaftSprite(pal.light, w, h, lean, B.scale), x - w / 2 - (lean < 0 ? -lean : 0), -2 * S, B.scale);
+      o.a = R.range(0.1, 0.16); o.speed = R.range(0.25, 0.4); o.phase = R() * TAU; o.sway = S * 0.9;
+      scene.shafts.push(o);
     }
     // drifting particles
     const P = T.particles;
@@ -644,7 +673,7 @@
     // keep the middle (behind the playfield) calmer: a wide, soft veil in the deep colour
     if (B.focus) {
       const f = B.focus, ry = f.h * 0.62, gr = g.createRadialGradient(0, 0, 0, 0, 0, ry);
-      gr.addColorStop(0, css(pal.deep, 0.4)); gr.addColorStop(0.6, css(pal.deep, 0.28)); gr.addColorStop(1, css(pal.deep, 0));
+      gr.addColorStop(0, css(pal.deep, 0.28)); gr.addColorStop(0.6, css(pal.deep, 0.2)); gr.addColorStop(1, css(pal.deep, 0));
       g.save(); g.translate(f.x + f.w / 2, f.y + f.h / 2); g.scale(clamp(f.w / f.h, 0.2, 5), 1);
       g.fillStyle = gr; g.fillRect(-ry, -ry, ry * 2, ry * 2); g.restore();
     }
@@ -655,9 +684,9 @@
     const pw = Math.max(1, Math.ceil(W * scale - 1e-4)), ph = Math.max(1, Math.ceil(H * scale - 1e-4));
     const canvas = makeCanvas(pw, ph), g = canvas.getContext('2d', { alpha: false });
     g.setTransform(scale, 0, 0, scale, 0, 0); g.lineJoin = 'round'; g.lineCap = 'round';
-    const scene = { theme: T, canvas, w: pw / scale, h: ph / scale, glows: [], glints: [], shafts: [], dots: [], fogs: [], drips: [], ripples: [], shimmers: [] };
+    const scene = { theme: T, canvas, scale, w: pw / scale, h: ph / scale, glows: [], glints: [], shafts: [], dots: [], fogs: [], drips: [], ripples: [], shimmers: [] };
     const feats = (T.features || []).map(n => FEATURES[n]).filter(Boolean);
-    const B = { g, R: makeRng(T.seed * 7919 + 17), W, H, S: Math.min(W, H) / 100, T, pal: makePalette(T), scene, rings: [], focus };
+    const B = { g, scale, R: makeRng(T.seed * 7919 + 17), W, H, S: Math.min(W, H) / 100, T, pal: makePalette(T), scene, rings: [], focus };
     B.hook = (name, ring) => { for (const f of feats) if (f[name]) f[name](B, ring); };
     B.heroDiag = B.R.int(2);
     const steps = [
@@ -672,17 +701,23 @@
   // ------------------------------------------------------------------ per-frame overlays (cheap sprite blits only)
   function drawOverlays(ctx, sc, t, wgt, W, H) {
     let i, o, a, p, q, x, y;
-    ctx.globalCompositeOperation = 'lighter';
-    for (i = 0; i < sc.shafts.length; i++) {            // swaying light shafts
-      o = sc.shafts[i]; q = o.shear + Math.sin(t * o.speed + o.phase) * 0.035;
+    const px = sc.scale;
+    for (i = 0; i < sc.shafts.length; i++) {            // light shafts: slow sway (in whole pixels) and breathing
+      o = sc.shafts[i];
       ctx.globalAlpha = wgt * o.a * (0.72 + 0.28 * Math.sin(t * o.speed * 1.7 + o.phase * 2));
-      ctx.transform(1, 0, q, 1, 0, 0); ctx.drawImage(sc.shaftSprite, o.x - o.w / 2 - q * o.y, o.y, o.w, o.h); ctx.transform(1, 0, -q, 1, 0, 0);
+      ctx.drawImage(o.img, o.x + Math.round(Math.sin(t * o.speed + o.phase) * o.sway * px) / px, o.y, o.w, o.h);
     }
     for (i = 0; i < sc.glows.length; i++) {             // cluster glows breathing out of phase
       o = sc.glows[i];
       ctx.globalAlpha = wgt * o.a * (0.55 + 0.45 * Math.sin(t * o.speed + o.phase));
-      ctx.drawImage(o.sprite, o.x - o.r, o.y - o.r, o.r * 2, o.r * 2);
+      ctx.drawImage(o.img, o.x, o.y, o.w, o.h);
     }
+    for (i = 0; i < sc.fogs.length; i++) {              // fog banks drifting sideways
+      o = sc.fogs[i];
+      ctx.globalAlpha = wgt * o.a * (0.75 + 0.25 * Math.sin(t * 0.21 + o.phase));
+      ctx.drawImage(o.img, Math.round((mod(o.off * (W + o.w) + o.speed * t, W + o.w) - o.w) * px) / px, o.y, o.w, o.h);
+    }
+    ctx.globalCompositeOperation = 'lighter';
     if (sc.dots.length) {                               // dust, snow, embers, spores, bubbles
       const K = sc.dotKind, m = 12, sw = W + 2 * m, z0 = K.zone[0] * H - m, sh = (K.zone[1] - K.zone[0]) * H + 2 * m;
       for (i = 0; i < sc.dots.length; i++) {
@@ -702,11 +737,6 @@
       ctx.globalAlpha = wgt * a * 0.9; ctx.drawImage(starImg, o.x - q, o.y - q, q * 2, q * 2);
     }
     ctx.globalCompositeOperation = 'source-over';
-    for (i = 0; i < sc.fogs.length; i++) {              // fog banks drifting sideways
-      o = sc.fogs[i];
-      ctx.globalAlpha = wgt * o.a * (0.75 + 0.25 * Math.sin(t * 0.21 + o.phase));
-      ctx.drawImage(sc.fogSprite, mod(o.off * (W + o.w) + o.speed * t, W + o.w) - o.w, o.y, o.w, o.h);
-    }
     if (sc.shimmers.length) {                           // highlights gliding over lava / water
       ctx.fillStyle = sc.shimmerColor;
       for (i = 0; i < sc.shimmers.length; i++) {

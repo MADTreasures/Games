@@ -537,7 +537,8 @@
 
   function onLevelUp(p) {
     toast('LEVEL ' + p.level);
-    setCaveLevel(p.level, false);
+    // The new cave is baked in one frame: do that after the burst of the clear, not during it.
+    window.setTimeout(() => { if (game.gameRunning && game.level === p.level) setCaveLevel(p.level, false); }, 650);
     window.setTimeout(() => play('levelUp'), 380);
   }
 
