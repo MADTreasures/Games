@@ -613,9 +613,9 @@
         const px = piece.x + vis.ox;
         const pieceCells = shapeCells(piece, px, piece.y + vis.oy, boardX, boardY, cell, -ENTRY_ROWS - 1);
         if (settings.ghost && game.phase === Phase.FALLING) {
-          // landing preview: light refracted by the falling crystal (beams start at the piece)
+          // landing preview: the crystal's shape as shimmering rainbow light
           const gy = game.getGhostY();
-          if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true, from: pieceCells });
+          if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true });
         }
         C.drawCells(g, pieceCells, { t, dpr });
       }

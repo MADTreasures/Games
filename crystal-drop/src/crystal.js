@@ -338,10 +338,10 @@
     }
   }
 
-  // Landing preview sprite: a white LIGHT MAP of the crystal (lit facets pass more light) inside a solid
-  // contour. drawPrism() tints these maps with a spectrum, so the preview reads as refracted light.
+  // Landing preview sprite: a white LIGHT MAP of the crystal (a soft body, slightly brighter on the lit
+  // facets) inside a bright contour. drawShimmer() colours and animates these maps as shimmering light.
   function bakeGhost(g, geo, pal) {
-    const S = geo.S, side = S + PAD * 2, wg = Math.max(1, Math.round(S * 0.06));
+    const S = geo.S, side = S + PAD * 2, wg = Math.max(1, Math.round(S * 0.05));
     bakeBody(g, geo, pal);
     const img = g.getImageData(0, 0, side, side), d = img.data;
     let lo = 1, hi = 0;
@@ -356,11 +356,11 @@
       const l = ((d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11) / 255 - lo) / span;
       const k = l < 0.35 ? 0 : (l - 0.35) / 0.65;
       d[i] = d[i + 1] = d[i + 2] = 255;
-      d[i + 3] = Math.round(d[i + 3] * (0.09 + 0.46 * k * k));
+      d[i + 3] = Math.round(d[i + 3] * (0.2 + 0.2 * k * k));
     }
     g.putImageData(img, 0, 0);
     g.globalCompositeOperation = 'source-over';
-    g.globalAlpha = 1;
+    g.globalAlpha = 0.9;
     g.fillStyle = '#ffffff';
     g.beginPath();
     [ring(geo, 0), ring(geo, wg)].forEach(function (pts) {
@@ -369,6 +369,7 @@
       g.closePath();
     });
     g.fill('evenodd');
+    g.globalAlpha = 1;
   }
 
   /* ------------------------------------------------------------------------------------------------ *
@@ -526,11 +527,11 @@
   }
 
   /* ------------------------------------------------------------------------------------------------ *
-   * Landing preview as a prism of light: white light leaves the falling crystal as faint beams, fans
-   * out into the spectrum and paints the landing spot. Everything is additive, nothing looks solid.
+   * Landing preview as shimmering light: the crystal's shape glows in drifting rainbow colours, bright
+   * reflections sweep across it, the rim has a soft halo and small sparkles flicker inside. Everything is
+   * additive light - it never looks like a solid block.
    * ------------------------------------------------------------------------------------------------ */
-  const SPECTRUM = [[255, 77, 109], [255, 159, 67], [255, 230, 109], [92, 255, 157], [77, 216, 255], [91, 124, 255], [199, 125, 255]];
-  const SPECTRUM_CSS = SPECTRUM.map(function (c) { return 'rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')'; });
+  const SPECTRUM_CSS = ['rgb(255,77,109)', 'rgb(255,159,67)', 'rgb(255,230,109)', 'rgb(92,255,157)', 'rgb(77,216,255)', 'rgb(91,124,255)', 'rgb(199,125,255)'];
   let prismMask = null, prismTint = null;
 
   function growCanvas(cv, w, h) {
@@ -540,32 +541,20 @@
     return cv;
   }
 
-  // Fill the mask (white, alpha = light) with one colour or gradient and return the tinted canvas.
-  function tintMask(w, h, fill) {
-    const g = prismTint.getContext('2d');
-    g.globalCompositeOperation = 'source-over';
-    g.clearRect(0, 0, w, h);
-    g.drawImage(prismMask, 0, 0, w, h, 0, 0, w, h);
-    g.globalCompositeOperation = 'source-in';
-    g.fillStyle = fill;
-    g.fillRect(0, 0, w, h);
-    g.globalCompositeOperation = 'source-over';
-    return prismTint;
-  }
-
-  function drawPrism(ctx, cells, size, px, dpr, alpha, t, from) {
+  function drawShimmer(ctx, cells, size, px, dpr, alpha, t) {
     const inv = 1 / dpr;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     for (let i = 0; i < cells.length; i++) {
       const X = Math.round(cells[i].x * dpr), Y = Math.round(cells[i].y * dpr);
       if (X < x0) x0 = X; if (X > x1) x1 = X; if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
     }
-    const m = Math.ceil(px * 0.14) + PAD;                       // room for the colour fringes
+    const m = Math.ceil(px * 0.14) + PAD;                       // room for the halo
     const w = x1 - x0 + px + m * 2, h = y1 - y0 + px + m * 2;
     if (!(w > 0 && h > 0) || w * h > 4e6) return;
     prismMask = growCanvas(prismMask, w, h);
     prismTint = growCanvas(prismTint, w, h);
 
+    // 1) white light map of the whole (fused) shape
     const mg = prismMask.getContext('2d');
     mg.clearRect(0, 0, w, h);
     for (let i = 0; i < cells.length; i++) {
@@ -574,60 +563,65 @@
       mg.drawImage(sp, Math.round(c.x * dpr) - x0 + m - PAD, Math.round(c.y * dpr) - y0 + m - PAD);
     }
 
-    const period = Math.max(w, px * 3.2);                       // device px per spectrum cycle
-    const phase = (t / 5200) % 1;                               // the colours drift slowly
-    const breathe = 0.84 + 0.16 * Math.sin(t / 430);
-    const dx = (x0 - m) * inv, dy = (y0 - m) * inv, dw = w * inv, dh = h * inv;
-
-    ctx.globalCompositeOperation = 'lighter';
-
-    // 1) beams from the falling crystal down to the landing spot: the spectrum runs across the piece,
-    //    the light is strongest right under the crystal and thins out on the way down
-    if (from && from.length) {
-      const cols = new Map();
-      for (let i = 0; i < cells.length; i++) {
-        const key = Math.round(cells[i].x * dpr), e = cols.get(key);
-        if (!e) cols.set(key, { x: cells[i].x, top: cells[i].y, src: -Infinity });
-        else if (cells[i].y < e.top) e.top = cells[i].y;
-      }
-      for (let i = 0; i < from.length; i++) {
-        const e = cols.get(Math.round(from[i].x * dpr));
-        if (e) e.src = Math.max(e.src, from[i].y + from[i].size);
-      }
-      const ux0 = (x0 - m) * inv, sxu = ux0 - phase * period * inv;
-      const beam = ctx.createLinearGradient(sxu, 0, sxu + period * 2 * inv, 0);
-      for (let i = 0; i <= SPECTRUM_CSS.length * 2; i++) beam.addColorStop(i / (SPECTRUM_CSS.length * 2), SPECTRUM_CSS[i % SPECTRUM_CSS.length]);
-      ctx.fillStyle = beam;
-      const SLICES = 12;
-      cols.forEach(function (e) {
-        const len = e.top - e.src;
-        if (!(len > size * 0.2)) return;
-        for (let k = 0; k < SLICES; k++) {
-          const f = (k + 0.5) / SLICES;
-          const a = (f < 0.1 ? f / 0.1 : 1) * (0.2 - 0.14 * f) * breathe;        // fade in under the piece, thin out below
-          ctx.globalAlpha = alpha * a;
-          ctx.fillRect(e.x, e.src + len * k / SLICES, size, len / SLICES + 0.5);
-        }
-      });
-    }
-
-    // 2) the landing spot: warm and cool fringes either side (dispersion), the spectrum itself, a white core
-    const off = size * 0.075;
-    ctx.globalAlpha = alpha * 0.5;
-    ctx.drawImage(tintMask(w, h, 'rgb(255,70,110)'), 0, 0, w, h, dx - off, dy, dw, dh);
-    ctx.drawImage(tintMask(w, h, 'rgb(70,120,255)'), 0, 0, w, h, dx + off, dy, dw, dh);
+    // 2) colour it with a rainbow that drifts across the shape
     const tg = prismTint.getContext('2d');
-    const sx = -phase * period;
+    tg.globalCompositeOperation = 'source-over';
+    tg.clearRect(0, 0, w, h);
+    tg.drawImage(prismMask, 0, 0, w, h, 0, 0, w, h);
+    tg.globalCompositeOperation = 'source-in';
+    const period = Math.max(w, px * 3.2), phase = (t / 2800) % 1, sx = -phase * period;
     const grd = tg.createLinearGradient(sx, 0, sx + period * 2, period * 0.6);
     const n = SPECTRUM_CSS.length;
     for (let i = 0; i <= n * 2; i++) grd.addColorStop(i / (n * 2), SPECTRUM_CSS[i % n]);
+    tg.fillStyle = grd;
+    tg.fillRect(0, 0, w, h);
+
+    // 3) shimmer: soft bright reflections sweeping diagonally through the light (only where there is light)
+    tg.globalCompositeOperation = 'source-atop';
+    const bw = px * 0.5, travel = w + h + bw * 4;
+    const band = function (pos, width, a) {                     // the strip pos <= x + y <= pos + width
+      tg.fillStyle = 'rgba(255,255,255,' + a + ')';
+      tg.beginPath();
+      tg.moveTo(pos, 0); tg.lineTo(pos + width, 0); tg.lineTo(pos + width - h, h); tg.lineTo(pos - h, h);
+      tg.closePath();
+      tg.fill();
+    };
+    for (let k = 0; k < 2; k++) {
+      const pos = (((t / (1700 + k * 900)) + k * 0.47) % 1) * travel - bw * 2;
+      band(pos - bw * 0.6, bw * 0.6, 0.18);
+      band(pos, bw, 0.5);
+      band(pos + bw, bw * 0.6, 0.18);
+    }
+    tg.globalCompositeOperation = 'source-over';
+
+    // 4) put the light on the board: soft halo first, then the body, gently pulsing
+    const dx = (x0 - m) * inv, dy = (y0 - m) * inv, dw = w * inv, dh = h * inv;
+    const pulse = 0.8 + 0.2 * Math.sin(t / 300);
+    ctx.globalCompositeOperation = 'lighter';
+    const r = size * 0.075;
+    ctx.globalAlpha = alpha * 0.1 * pulse;
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4;
+      ctx.drawImage(prismTint, 0, 0, w, h, dx + Math.cos(a) * r, dy + Math.sin(a) * r, dw, dh);
+    }
     ctx.globalAlpha = alpha;
-    const spec = tintMask(w, h, grd);
-    ctx.drawImage(spec, 0, 0, w, h, dx, dy, dw, dh);
-    ctx.globalAlpha = alpha * 0.6;                               // second pass: saturated colours, not just tinted white
-    ctx.drawImage(spec, 0, 0, w, h, dx, dy, dw, dh);
-    ctx.globalAlpha = alpha * 0.28 * breathe;
-    ctx.drawImage(prismMask, 0, 0, w, h, dx, dy, dw, dh);
+    ctx.drawImage(prismTint, 0, 0, w, h, dx, dy, dw, dh);
+    ctx.globalAlpha = alpha * 0.55 * pulse;
+    ctx.drawImage(prismTint, 0, 0, w, h, dx, dy, dw, dh);
+
+    // 5) sparkles flickering at changing spots inside the shape
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i], seed = c.seed >>> 0;
+      const per = 620 + seed % 560, tt = t + seed % per;
+      const f = (tt % per) / per, spot = hash32(seed, Math.floor(tt / per));
+      const R = size * (0.11 + ((spot >>> 16) & 7) * 0.012) * Math.sin(f * Math.PI);
+      if (R < 0.5) continue;
+      starPath(ctx, c.x + size * (0.18 + (spot & 255) / 255 * 0.64), c.y + size * (0.18 + ((spot >>> 8) & 255) / 255 * 0.64), R);
+    }
+    ctx.fill();
     ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
@@ -644,10 +638,10 @@
     const pad = PAD * inv, dw = (px + PAD * 2) * inv;
     let cracked = null, twinkles = null;
 
-    if (ghost) {                                   // landing preview: refracted light, see drawPrism
+    if (ghost) {                                   // landing preview: shimmering light, see drawShimmer
       const ga = alpha * ctx.globalAlpha;
       ctx.save();
-      drawPrism(ctx, cells, size, px, dpr, ga, t, opts.from);
+      drawShimmer(ctx, cells, size, px, dpr, ga, t);
       ctx.restore();
       return;
     }
