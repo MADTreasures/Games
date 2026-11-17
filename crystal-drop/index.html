@@ -1,0 +1,3257 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1628">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Crystal Drop</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2032%2032'%3E%3Crect%20width%3D'32'%20height%3D'32'%20rx%3D'7'%20fill%3D'%230a1628'%2F%3E%3Cpath%20d%3D'M16%203l8%207v12l-8%207-8-7V10z'%20fill%3D'%23bfe8ff'%20stroke%3D'%2306101f'%20stroke-width%3D'2'%20stroke-linejoin%3D'round'%2F%3E%3Cpath%20d%3D'M16%203l8%207-8%204-8-4z'%20fill%3D'%23ffffff'%2F%3E%3Cpath%20d%3D'M16%2014v15l8-7V10z'%20fill%3D'%237fc0f0'%2F%3E%3C%2Fsvg%3E">
+<style>
+:root { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+@font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 600; font-display: swap; src: url(data:font/woff2;base64,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) format('woff2'); }
+/* Crystal Drop – layout: animated cave behind everything; one narrow portrait column on top of it
+   (HUD bar · playfield with a 2-row entry shaft · control bar). Controls are chunky 3D cartoon buttons. */
+:root {
+  color-scheme: dark;
+  --ground: #050a18;      /* behind the cave canvas while it boots */
+  --ink: #06102a;         /* cartoon outline */
+  --ice: #eef8ff;         /* primary text */
+  --ice-dim: #a9cdf5;     /* secondary text */
+  --gold: #ffd23e;        /* accent numbers */
+  --rose: #ff8fb0;
+  --font: 'Fredoka', ui-rounded, 'Arial Rounded MT Bold', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --u: 4px;               /* 1% of the column width, set from JS */
+  --board-w: 280px;       /* playfield width, set from JS */
+  --card-y: 45%;          /* where cards sit inside .kf-mid, set from JS */
+  --toast-y: 25%;         /* where level-up banners sit inside .kf-mid, set from JS */
+  /* text outline built from shadows (works in every WebView) */
+  --outline: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink), 2.2px 2.2px 0 var(--ink), -2.2px 2.2px 0 var(--ink), 2.2px -2.2px 0 var(--ink), -2.2px -2.2px 0 var(--ink), 0 6px 0 var(--ink), 2.2px 5px 0 var(--ink), -2.2px 5px 0 var(--ink);
+  --outline-s: 1.6px 0 0 var(--ink), -1.6px 0 0 var(--ink), 0 1.6px 0 var(--ink), 0 -1.6px 0 var(--ink), 1.2px 1.2px 0 var(--ink), -1.2px 1.2px 0 var(--ink), 1.2px -1.2px 0 var(--ink), -1.2px -1.2px 0 var(--ink), 0 3px 0 var(--ink);
+}
+
+html { box-sizing: border-box; height: 100%; background: var(--ground); }
+*, *::before, *::after { box-sizing: inherit; }
+[hidden] { display: none !important; }
+body {
+  height: 100%; margin: 0; overflow: hidden;
+  display: flex; justify-content: center;
+  background: var(--ground); color: var(--ice);
+  font-family: var(--font); font-weight: 600;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* full-window layers: cave (animated) · playfield frame (static) · pieces and effects */
+.kf-layer { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+#kf-cave { z-index: 0; pointer-events: auto; }
+#kf-bg { z-index: 1; }
+#kf-fg { z-index: 2; }
+
+.kf-app {
+  position: relative; z-index: 3; height: 100%; width: 100%; max-width: 100%;   /* width is set from JS: full width on phones, a narrow column on wide windows */
+  display: flex; flex-direction: column;
+  touch-action: none;
+}
+
+/* ------------------------------------------------------------------ 3D cartoon surfaces
+   Structure: ::after is the slab underneath (the visible side), ::before is the glossy face on top.
+   --d is the height of the side; pressing moves the face down onto the slab. */
+.kf-btn, .kf-panel {
+  --d: 6px; --r: 14px; --b: 3px; --press: 0px;
+  --hi: #86d6ff; --mid: #2f93ec; --lo: #1c6fd4; --side: #134a9e;
+  position: relative; isolation: isolate;
+  border-radius: var(--r);
+}
+.kf-btn::before, .kf-panel::before,
+.kf-btn::after, .kf-panel::after { content: ''; position: absolute; left: 0; right: 0; border: var(--b) solid var(--ink); }
+.kf-btn::after, .kf-panel::after {                 /* slab */
+  z-index: -2; top: 40%; bottom: calc(-1 * var(--d) + var(--press));
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--side);
+  box-shadow: 0 5px 7px rgba(0, 0, 0, 0.5);
+}
+.kf-btn::before, .kf-panel::before {               /* face */
+  z-index: -1; top: 0; bottom: 0;
+  border-radius: var(--r);
+  background:
+    radial-gradient(8px 4.5px at 14% 26%, rgba(255, 255, 255, 0.98) 0 60%, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(4px 3px at calc(14% + 13px) 22%, rgba(255, 255, 255, 0.9) 0 60%, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(120% 96% at 50% -46%, rgba(255, 255, 255, 0.62) 0 60%, rgba(255, 255, 255, 0) 61%),
+    linear-gradient(180deg, var(--hi) 0%, var(--mid) 50%, var(--lo) 100%);
+  box-shadow: inset 0 2.5px 0 rgba(255, 255, 255, 0.9), inset 0 -5px 0 rgba(0, 0, 0, 0.24), inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.kf-btn {
+  border: 0; margin: 0 0 var(--d); padding: 0 calc(var(--u) * 3.2);
+  min-height: clamp(26px, calc(var(--u) * 10), 46px);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: none;
+  font: 600 calc(var(--u) * 3.7)/1 var(--font); letter-spacing: 0.05em;
+  color: #ffffff; text-shadow: var(--outline-s);
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transform: translateY(var(--press));
+}
+.kf-btn:active, .kf-btn.is-down { --press: calc(var(--d) - 1px); }
+.kf-btn:active::before, .kf-btn.is-down::before { filter: brightness(1.08); }
+.kf-btn:focus-visible { outline: none; }
+.kf-btn:focus-visible::before { border-color: #ffffff; }
+.kf-btn svg { width: 1.4em; height: 1.4em; display: block; overflow: visible; }
+.kf-btn svg .o { fill: none; stroke: var(--ink); stroke-width: 6.4; stroke-linecap: round; stroke-linejoin: round; }
+.kf-btn svg .i { fill: none; stroke: #ffffff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+.kf-btn--gold { --hi: #fff6ae; --mid: #ffcc2e; --lo: #ff9d12; --side: #b65f00; }
+.kf-btn--rose { --hi: #ffc6d8; --mid: #ff6f9e; --lo: #e9447b; --side: #9a1d4d; }
+.kf-btn--ghost { --hi: #6c8fd6; --mid: #3b5ba6; --lo: #2a468a; --side: #162a5c; }
+.kf-btn--icon { padding: 0; width: clamp(28px, calc(var(--u) * 11), 48px); flex: none; }
+.kf-btn--wide { width: 100%; min-height: clamp(30px, calc(var(--u) * 12), 54px); }
+.kf-btn--big { --d: 10px; --r: 20px; min-height: clamp(40px, calc(var(--u) * 17), 76px); font-size: calc(var(--u) * 6.2); text-shadow: var(--outline); }
+
+/* ------------------------------------------------------------------ top bar */
+.kf-top {
+  position: relative; flex: none;
+  display: flex; align-items: stretch; gap: calc(var(--u) * 1.6);
+  padding-block: calc(var(--u) * 2) calc(var(--u) * 1);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity 260ms ease;
+}
+#kf-btn-main { min-width: calc(var(--u) * 22); font-size: calc(var(--u) * 3.5); padding-inline: calc(var(--u) * 2); }
+.kf-stats { margin-left: auto; display: flex; gap: calc(var(--u) * 1.4); min-width: 0; margin-bottom: 6px; }
+.kf-stat {                                          /* recessed display */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: calc(var(--u) * 0.8) calc(var(--u) * 2); min-width: calc(var(--u) * 11.5);
+  border: 3px solid var(--ink); border-radius: 12px;
+  background: linear-gradient(180deg, #081431 0%, #12295a 100%);
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.55), inset 0 -2px 0 rgba(130, 190, 255, 0.3), inset 0 0 0 1.5px rgba(130, 190, 255, 0.14), 0 0 0 2px rgba(120, 175, 255, 0.35), 0 4px 5px rgba(0, 0, 0, 0.45);
+}
+.kf-stat__label { font-size: calc(var(--u) * 2.3); letter-spacing: 0.1em; color: var(--ice-dim); line-height: 1; }
+.kf-stat__value { font-size: calc(var(--u) * 4.2); line-height: 1; color: var(--ice); font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.kf-stat--score { min-width: calc(var(--u) * 19); }
+.kf-stat--score .kf-stat__value { color: var(--gold); }
+.kf-stat--next { padding: 2px calc(var(--u) * 1.2); gap: 1px; }
+.kf-stat--next canvas { display: block; }
+
+/* ------------------------------------------------------------------ playfield area */
+.kf-mid { position: relative; flex: 1 1 auto; min-height: 0; }
+
+.kf-panel {
+  --d: 9px; --r: 22px;
+  --hi: #3f6fd0; --mid: #23449a; --lo: #1a3580; --side: #0d1d52;
+  margin-bottom: var(--d);
+  width: min(100%, 340px);
+  padding: calc(var(--u) * 5) calc(var(--u) * 5);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 3.4);
+}
+.kf-panel::before {
+  background:
+    radial-gradient(140% 70% at 50% -30%, rgba(255, 255, 255, 0.16) 0 60%, rgba(255, 255, 255, 0) 61%),
+    linear-gradient(180deg, var(--hi) 0%, var(--mid) 46%, var(--lo) 100%);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+.kf-panel::after { box-shadow: 0 10px 18px rgba(0, 0, 0, 0.55); }
+.kf-panel h2 { margin: 0 0 2px; text-align: center; font-size: calc(var(--u) * 7); line-height: 1; letter-spacing: 0.05em; color: #ffffff; text-shadow: var(--outline); }
+.kf-panel h3 { margin: 6px 0 0; font-size: calc(var(--u) * 3.8); letter-spacing: 0.06em; color: var(--ice); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.kf-panel p, .kf-panel li { margin: 0; font-size: calc(var(--u) * 3.5); line-height: 1.4; color: var(--ice-dim); font-weight: 600; }
+.kf-panel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.kf-panel li { display: grid; grid-template-columns: calc(var(--u) * 26) 1fr; gap: 8px; align-items: baseline; }
+.kf-panel li b { color: var(--ice); font-weight: 600; }
+
+.kf-panel.kf-card {
+  position: absolute; left: 50%; top: var(--card-y); transform: translate(-50%, -50%);
+  width: min(calc(var(--board-w) - 18px), 320px);
+  align-items: center; text-align: center;
+}
+.kf-card p { text-wrap: balance; }
+.kf-card .kf-big { font-size: calc(var(--u) * 10); color: var(--gold); text-shadow: var(--outline); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kf-card .kf-over { color: var(--rose); }
+
+.kf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: calc(var(--u) * 3.9); color: var(--ice); min-height: 40px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.kf-best { text-align: center; color: var(--ice-dim); font-size: calc(var(--u) * 3.8); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+.kf-best b { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.kf-toast {
+  position: absolute; left: 50%; top: var(--toast-y); transform: translate(-50%, -50%);
+  pointer-events: none; white-space: nowrap; opacity: 0;
+  font-size: calc(var(--u) * 9); color: var(--gold); text-shadow: var(--outline); letter-spacing: 0.03em;
+}
+.kf-toast.is-on { animation: kf-pop 1300ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes kf-pop {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5) rotate(-4deg); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(2deg); }
+  24% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  78% { opacity: 1; transform: translate(-50%, -58%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -90%) scale(0.96); }
+}
+
+/* ------------------------------------------------------------------ bottom controls */
+.kf-bottom {
+  position: relative; flex: none;
+  display: grid; grid-template-columns: 1fr 2.4fr 1fr; gap: calc(var(--u) * 2.4);
+  padding-block: calc(var(--u) * 1) calc(var(--u) * 1.6);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity 260ms ease;
+}
+.kf-bottom .kf-btn { --d: 9px; --r: 18px; min-height: clamp(34px, calc(var(--u) * 13), 72px); font-size: calc(var(--u) * 5.8); padding-inline: 0; text-shadow: var(--outline); }
+.kf-bottom .kf-btn svg { width: 1.45em; height: 1.45em; }
+
+/* ------------------------------------------------------------------ title screen */
+.kf-title {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 6);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--u) * 8);
+}
+.kf-title__logo { display: block; max-width: 100%; margin-bottom: calc(var(--u) * 4); animation: kf-float 3800ms ease-in-out infinite; }
+.kf-title .kf-btn--big { width: min(78%, 300px); animation: kf-breathe 1900ms ease-in-out infinite; }
+.kf-title .kf-btn--ghost { min-width: 46%; }
+.kf-title .kf-best { font-size: calc(var(--u) * 4.4); text-shadow: var(--outline-s); color: var(--ice); }
+@keyframes kf-float { 0%, 100% { transform: translateY(-1.2%); } 50% { transform: translateY(1.2%); } }
+@keyframes kf-breathe { 0%, 100% { scale: 1; } 50% { scale: 1.045; } }
+.kf-app.is-title .kf-top, .kf-app.is-title .kf-bottom { opacity: 0; visibility: hidden; }
+
+/* ------------------------------------------------------------------ menu / help */
+.kf-modal {
+  position: absolute; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  background: rgba(2, 5, 14, 0.72);
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-y: auto; touch-action: pan-y;
+}
+
+.kf-switch {                                         /* 3D toggle */
+  flex: none; position: relative; width: 62px; height: 34px; border: 3px solid var(--ink); padding: 0; cursor: pointer;
+  border-radius: 17px; background: linear-gradient(180deg, #0a1736, #17306a);
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(130, 190, 255, 0.25);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background 140ms;
+}
+.kf-switch::after {
+  content: ''; position: absolute; top: 1px; left: 1px; width: 24px; height: 22px; border-radius: 12px;
+  border: 2.5px solid var(--ink);
+  background: radial-gradient(60% 45% at 40% 22%, rgba(255, 255, 255, 0.95) 0 60%, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #e8f1ff, #9fb6dc);
+  box-shadow: 0 3px 0 #5a6f97, 0 3px 0 2.5px var(--ink);
+  transition: transform 140ms;
+}
+.kf-switch[aria-checked="true"] { background: linear-gradient(180deg, #0f7a4f, #25c483); }
+.kf-switch[aria-checked="true"]::after { transform: translateX(28px); background: radial-gradient(60% 45% at 40% 22%, rgba(255, 255, 255, 0.95) 0 60%, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #fffbe0, #ffd23e); box-shadow: 0 3px 0 #b67a00, 0 3px 0 2.5px var(--ink); }
+.kf-switch:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kf-toast.is-on { animation-duration: 1ms; opacity: 0; }
+  .kf-title__logo, .kf-title .kf-btn--big { animation: none; }
+  .kf-switch, .kf-switch::after, .kf-top, .kf-bottom { transition: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="kf-cave" class="kf-layer" aria-hidden="true"></canvas>
+<canvas id="kf-bg" class="kf-layer" aria-hidden="true"></canvas>
+<canvas id="kf-fg" class="kf-layer" aria-hidden="true"></canvas>
+
+<div id="kf-app" class="kf-app is-title">
+  <header id="kf-top" class="kf-top">
+    <button id="kf-btn-menu" class="kf-btn kf-btn--icon kf-btn--ghost" type="button" aria-label="Menü">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M5 7h14M5 12h14M5 17h14"/><path class="i" d="M5 7h14M5 12h14M5 17h14"/></svg>
+    </button>
+    <button id="kf-btn-main" class="kf-btn kf-btn--gold" type="button">PAUSE</button>
+    <div class="kf-stats">
+      <div class="kf-stat"><span class="kf-stat__label">LEVEL</span><span id="kf-level" class="kf-stat__value">1</span></div>
+      <div class="kf-stat kf-stat--score"><span class="kf-stat__label">PUNKTE</span><span id="kf-score" class="kf-stat__value">0</span></div>
+      <div class="kf-stat kf-stat--next"><span class="kf-stat__label">NEXT</span><canvas id="kf-next" width="1" height="1" aria-label="Nächster Stein"></canvas></div>
+    </div>
+  </header>
+
+  <main id="kf-mid" class="kf-mid">
+    <div id="kf-toast" class="kf-toast" aria-live="polite"></div>
+
+    <section id="kf-card-pause" class="kf-panel kf-card" hidden>
+      <h2>PAUSE</h2>
+      <button id="kf-resume" class="kf-btn kf-btn--gold kf-btn--wide" type="button">WEITER</button>
+    </section>
+
+    <section id="kf-card-over" class="kf-panel kf-card" hidden>
+      <h2 class="kf-over">GAME OVER</h2>
+      <div class="kf-big" id="kf-final-score">0</div>
+      <p class="kf-best" id="kf-best-over">Rekord: <b>0</b></p>
+      <button id="kf-again" class="kf-btn kf-btn--gold kf-btn--wide" type="button">NOCHMAL</button>
+    </section>
+  </main>
+
+  <footer id="kf-bottom" class="kf-bottom">
+    <button id="kf-btn-soft" class="kf-btn" type="button" aria-label="Langsam fallen lassen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M12 4v14M5.5 11.5 12 18l6.5-6.5"/><path class="i" d="M12 4v14M5.5 11.5 12 18l6.5-6.5"/></svg>
+    </button>
+    <button id="kf-btn-drop" class="kf-btn kf-btn--gold" type="button" aria-label="Sofort fallen lassen">DROP</button>
+    <button id="kf-btn-rot" class="kf-btn" type="button" aria-label="Drehen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M19 12a7 7 0 1 1-2.4-5.3M19 4.5v4.4h-4.4"/><path class="i" d="M19 12a7 7 0 1 1-2.4-5.3M19 4.5v4.4h-4.4"/></svg>
+    </button>
+  </footer>
+
+  <section id="kf-title" class="kf-title">
+    <canvas id="kf-logo" class="kf-title__logo" width="1" height="1" role="img" aria-label="Crystal Drop"></canvas>
+    <button id="kf-start" class="kf-btn kf-btn--gold kf-btn--big" type="button">SPIELEN</button>
+    <p class="kf-best" id="kf-best-start" hidden>Rekord: <b>0</b></p>
+    <button id="kf-title-menu" class="kf-btn kf-btn--ghost" type="button">OPTIONEN</button>
+  </section>
+
+  <div id="kf-menu" class="kf-modal" hidden>
+    <div class="kf-panel" role="dialog" aria-modal="true" aria-labelledby="kf-menu-title">
+      <h2 id="kf-menu-title">MENÜ</h2>
+      <button id="kf-menu-resume" class="kf-btn kf-btn--gold kf-btn--wide" type="button">WEITER</button>
+      <button id="kf-menu-new" class="kf-btn kf-btn--wide" type="button">NEUES SPIEL</button>
+      <button id="kf-menu-help" class="kf-btn kf-btn--wide" type="button">STEUERUNG</button>
+      <div class="kf-row"><span id="kf-lbl-sound">Ton</span><button id="kf-opt-sound" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-sound"></button></div>
+      <div class="kf-row"><span id="kf-lbl-ghost">Landehilfe</span><button id="kf-opt-ghost" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-ghost"></button></div>
+      <div class="kf-row" id="kf-row-vibrate"><span id="kf-lbl-vibrate">Vibration</span><button id="kf-opt-vibrate" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-vibrate"></button></div>
+      <p class="kf-best" id="kf-best-menu">Rekord: <b>0</b></p>
+      <button id="kf-menu-close" class="kf-btn kf-btn--rose kf-btn--wide" type="button">SCHLIESSEN</button>
+    </div>
+  </div>
+
+  <div id="kf-help" class="kf-modal" hidden>
+    <div class="kf-panel" role="dialog" aria-modal="true" aria-labelledby="kf-help-title">
+      <h2 id="kf-help-title">STEUERUNG</h2>
+      <h3>Touch</h3>
+      <ul>
+        <li><b>Neben dem Feld</b><span>tippen = bewegen, halten = weiterlaufen</span></li>
+        <li><b>Auf den Stein</b><span>tippen = drehen</span></li>
+        <li><b>Pfeil unten</b><span>langsam fallen (halten)</span></li>
+        <li><b>DROP</b><span>sofort fallen</span></li>
+        <li><b>Drehpfeil</b><span>drehen</span></li>
+      </ul>
+      <h3>Tastatur</h3>
+      <ul>
+        <li><b>← →</b><span>bewegen</span></li>
+        <li><b>↑ oder X</b><span>drehen</span></li>
+        <li><b>↓</b><span>langsam fallen</span></li>
+        <li><b>Leertaste</b><span>sofort fallen / Start</span></li>
+        <li><b>P</b><span>Pause</span></li>
+      </ul>
+      <button id="kf-help-back" class="kf-btn kf-btn--rose kf-btn--wide" type="button">ZURÜCK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- src/logic.js
+// Kristallfall – game rules (no DOM, no clocks, no rendering).
+// Ported 1:1 from the Kotlin sources (Board.kt, Tetromino.kt, Randomizer.kt, GameState.kt).
+// Every method that depends on time takes `now` (ms on the caller's game clock).
+(function (KF) {
+  'use strict';
+
+  const COLS = 10;
+  const ROWS = 20;        // visible rows
+  const SPAWN_ROWS = 4;   // hidden rows above the visible field
+  const TYPES = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'];
+
+  const SHAPES = {
+    I: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]],
+    O: [[1, 1], [1, 1]],
+    T: [[0, 1, 0], [1, 1, 1], [0, 0, 0]],
+    S: [[0, 1, 1], [1, 1, 0], [0, 0, 0]],
+    Z: [[1, 1, 0], [0, 1, 1], [0, 0, 0]],
+    J: [[1, 0, 0], [1, 1, 1], [0, 0, 0]],
+    L: [[0, 0, 1], [1, 1, 1], [0, 0, 0]],
+  };
+
+  const POINTS = { 1: 100, 2: 300, 3: 500, 4: 800 };
+  const SPEEDS = [800, 720, 630, 550, 470, 380, 300, 220, 130, 100, 80, 80, 80, 70, 70, 70, 50, 50, 50, 30];
+  const HARD_DROP_DEBOUNCE_MS = 50;
+  const LOCK_DELAY_MS = 500;
+  const DAS_DELAY_MS = 170;
+  const ARR_DELAY_MS = 50;
+  const MAX_LOCK_RESETS = 15;
+  // Time between "row is complete" and "row is removed": the crystals crack during this window, then burst.
+  const CLEAR_DELAY_MS = 240;
+
+  // Kick table of the original (tried in order after a clockwise rotation).
+  const SIMPLE_KICKS = [[0, 0], [-1, 0], [1, 0], [0, -1], [-1, -1], [1, -1], [0, -2]];
+
+  const Phase = Object.freeze({
+    IDLE: 'IDLE', SPAWNING: 'SPAWNING', FALLING: 'FALLING', LOCKING: 'LOCKING', CLEARING: 'CLEARING', GAME_OVER: 'GAME_OVER',
+  });
+
+  function rotateCW(shape) {
+    const n = shape.length;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(new Array(n));
+      for (let j = 0; j < n; j++) out[i][j] = shape[n - 1 - j][i];
+    }
+    return out;
+  }
+
+  function rotateCCW(shape) {
+    const n = shape.length;
+    const out = [];
+    for (let i = 0; i < n; i++) {
+      out.push(new Array(n));
+      for (let j = 0; j < n; j++) out[i][j] = shape[j][n - 1 - i];
+    }
+    return out;
+  }
+
+  // Stable 32-bit hash; gives every block of every piece its own look (facet variation) for its whole life.
+  function cellSeed(pid, blockId) {
+    let h = (Math.imul(pid | 0, 0x9E3779B1) ^ Math.imul((blockId | 0) + 0x7F4A7C15, 0x85EBCA6B)) >>> 0;
+    h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D) >>> 0;
+    h ^= h >>> 12; h = Math.imul(h, 0x297A2D39) >>> 0;
+    h ^= h >>> 15;
+    return h >>> 0;
+  }
+
+  // ---------------------------------------------------------------- Board
+
+  class Board {
+    constructor(cols = COLS, visibleRows = ROWS, spawnRows = SPAWN_ROWS) {
+      this.cols = cols;
+      this.visibleRows = visibleRows;
+      this.spawnRows = spawnRows;
+      this.totalRows = visibleRows + spawnRows;
+      this.grid = [];
+      this.reset();
+    }
+
+    _emptyRow() { return new Array(this.cols).fill(null); }
+
+    reset() {
+      this.grid = [];
+      for (let r = 0; r < this.totalRows; r++) this.grid.push(this._emptyRow());
+    }
+
+    // pieceY is in visible coordinates (0 = first visible row, negative = hidden spawn rows).
+    isValid(shape, pieceX, pieceY, offsetX = 0, offsetY = 0) {
+      for (let r = 0; r < shape.length; r++) {
+        for (let c = 0; c < shape[r].length; c++) {
+          if (shape[r][c] === 0) continue;
+          const nx = pieceX + c + offsetX;
+          const ny = pieceY + r + offsetY;
+          if (nx < 0 || nx >= this.cols) return false;
+          if (ny >= this.visibleRows) return false;
+          const boardY = ny + this.spawnRows;
+          if (boardY >= 0 && boardY < this.totalRows && this.grid[boardY][nx] !== null) return false;
+        }
+      }
+      return true;
+    }
+
+    lockPiece(piece) {
+      const cells = [];
+      for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+          const k = piece.shape[r][c];
+          if (k === 0) continue;
+          const by = piece.y + r + this.spawnRows;
+          const bx = piece.x + c;
+          if (by >= 0 && by < this.totalRows && bx >= 0 && bx < this.cols) {
+            const cell = { type: piece.type, pid: piece.pid, seed: cellSeed(piece.pid, k) };
+            this.grid[by][bx] = cell;
+            cells.push({ col: bx, row: by - this.spawnRows, type: cell.type, pid: cell.pid, seed: cell.seed });
+          }
+        }
+      }
+      return cells;
+    }
+
+    findCompleteRows() {
+      const complete = [];
+      for (let r = this.spawnRows; r < this.totalRows; r++) {
+        if (this.grid[r].every((cell) => cell !== null)) complete.push(r);
+      }
+      return complete;
+    }
+
+    removeRows(rows) {
+      const rowSet = new Set(rows);
+      const next = [];
+      for (let i = 0; i < rows.length; i++) next.push(this._emptyRow());
+      for (let r = 0; r < this.totalRows; r++) {
+        if (!rowSet.has(r)) next.push(this.grid[r]);
+      }
+      this.grid = next;
+    }
+
+    getCell(boardRow, col) {
+      if (boardRow < 0 || boardRow >= this.totalRows || col < 0 || col >= this.cols) return null;
+      return this.grid[boardRow][col];
+    }
+
+    getGhostY(piece) {
+      let ghostY = piece.y;
+      while (this.isValid(piece.shape, piece.x, ghostY + 1)) ghostY++;
+      return ghostY;
+    }
+  }
+
+  // ---------------------------------------------------------------- Randomizer (7-bag)
+
+  class Randomizer {
+    constructor(rng) {
+      this.rng = typeof rng === 'function' ? rng : Math.random;
+      this.bag = [];
+    }
+
+    reset() { this.bag = []; }
+
+    next() {
+      if (this.bag.length === 0) this._fillBag();
+      return this.bag.pop();
+    }
+
+    _fillBag() {
+      const bag = TYPES.slice();
+      for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(this.rng() * (i + 1));
+        const tmp = bag[i]; bag[i] = bag[j]; bag[j] = tmp;
+      }
+      this.bag = bag;
+    }
+  }
+
+  // ---------------------------------------------------------------- GameState
+
+  class GameState {
+    // opts: { rng: () => [0,1), clearDelayMs: number }
+    constructor(opts = {}) {
+      this.board = new Board(COLS, ROWS, SPAWN_ROWS);
+      this.randomizer = new Randomizer(opts.rng);
+      this.clearDelayMs = typeof opts.clearDelayMs === 'number' ? opts.clearDelayMs : CLEAR_DELAY_MS;
+
+      // Single hook for sound and effects: onEvent(name, payload).
+      // Names: start, spawn, move, rotate, softDrop, hardDrop, lock, clearStart, clearEnd, levelUp, gameOver, pause.
+      this.onEvent = null;
+
+      this.currentPiece = null;
+      this.nextPiece = null;
+      this.score = 0;
+      this.level = 1;
+      this.lines = 0;
+      this.phase = Phase.IDLE;
+      this.gameRunning = false;
+      this.paused = false;
+
+      this.dropInterval = SPEEDS[0];
+      this.lastDropTime = 0;
+      this.lastHardDropTime = -Infinity;
+
+      this.lockDelayStartTime = 0;
+      this.lockDelayActive = false;
+      this.lockDelayMoveResets = 0;
+
+      this.dasDirection = 0;
+      this.dasStartTime = 0;
+      this.dasActive = false;
+      this.lastArrTime = 0;
+
+      // While rows are cracking: { rows: [boardRow…], displayRows: [row…], startTime, cells: [{col,row,type,pid,seed}] }
+      this.clearing = null;
+      this._pid = 0;
+    }
+
+    _emit(name, payload) {
+      if (typeof this.onEvent === 'function') this.onEvent(name, payload);
+    }
+
+    startGame(now) {
+      this.board.reset();
+      this.randomizer.reset();
+      this.clearing = null;
+      this.currentPiece = null;
+      this.nextPiece = null;
+      this.score = 0;
+      this.level = 1;
+      this.lines = 0;
+      this.dropInterval = SPEEDS[0];
+      this.paused = false;
+      this.gameRunning = true;
+      this.lockDelayActive = false;
+      this.lockDelayMoveResets = 0;
+      this.lastHardDropTime = -Infinity;
+      this.stopDAS();
+      this._pid = 0;
+      this.phase = Phase.SPAWNING;
+      this._emit('start');
+      this.spawn();
+      this.lastDropTime = now;
+    }
+
+    togglePause(now) {
+      if (!this.gameRunning) return;
+      this.paused = !this.paused;
+      if (!this.paused) this.lastDropTime = now;
+      this._emit('pause', { paused: this.paused });
+    }
+
+    update(now) {
+      if (!this.gameRunning || this.paused) return;
+
+      // Auto-shift while a direction is held (DAS, then ARR).
+      if (this.dasActive && this.dasDirection !== 0 && this.phase === Phase.FALLING && this.currentPiece) {
+        if (now - this.dasStartTime >= DAS_DELAY_MS && now - this.lastArrTime >= ARR_DELAY_MS) {
+          const p = this.currentPiece;
+          if (this.board.isValid(p.shape, p.x, p.y, this.dasDirection, 0)) {
+            p.x += this.dasDirection;
+            this._resetLockDelay(now);
+            this._emit('move', { dx: this.dasDirection, auto: true });
+          }
+          this.lastArrTime = now;
+        }
+      }
+
+      if (this.phase === Phase.FALLING) {
+        const piece = this.currentPiece;
+        if (!piece) return;
+        if (!this.board.isValid(piece.shape, piece.x, piece.y, 0, 1)) {
+          // Resting on something: lock after the delay.
+          if (!this.lockDelayActive) {
+            this.lockDelayActive = true;
+            this.lockDelayStartTime = now;
+          }
+          if (now - this.lockDelayStartTime >= LOCK_DELAY_MS) this._performLock(now);
+        } else {
+          this.lockDelayActive = false;
+          if (now - this.lastDropTime >= this.dropInterval) {
+            piece.y += 1;
+            this.lastDropTime = now;
+          }
+        }
+      } else if (this.phase === Phase.CLEARING) {
+        if (this.clearing && now - this.clearing.startTime >= this.clearDelayMs) this._finishClear(now);
+      }
+    }
+
+    _performLock(now) {
+      const piece = this.currentPiece;
+      if (!piece) return;
+      this.phase = Phase.LOCKING;
+      const cells = this.board.lockPiece(piece);
+      this.currentPiece = null;
+      this.lockDelayActive = false;
+      this.lockDelayMoveResets = 0;
+      this._emit('lock', { type: piece.type, cells });
+
+      const complete = this.board.findCompleteRows();
+      if (complete.length > 0) {
+        this._startClear(complete, now);
+      } else {
+        this.phase = Phase.SPAWNING;
+        this.spawn();
+        this.lastDropTime = now;
+      }
+    }
+
+    _startClear(rows, now) {
+      const cells = [];
+      for (const r of rows) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = this.board.getCell(r, c);
+          if (cell) cells.push({ col: c, row: r - SPAWN_ROWS, type: cell.type, pid: cell.pid, seed: cell.seed });
+        }
+      }
+      this.clearing = { rows: rows.slice(), displayRows: rows.map((r) => r - SPAWN_ROWS), startTime: now, cells };
+      this.phase = Phase.CLEARING;
+      this._emit('clearStart', { rows: this.clearing.displayRows, cells, count: rows.length });
+      if (this.clearDelayMs <= 0) this._finishClear(now);
+    }
+
+    _finishClear(now) {
+      const clearing = this.clearing;
+      if (!clearing) return;
+      this.clearing = null;
+
+      this.board.removeRows(clearing.rows);
+
+      const count = clearing.rows.length;
+      const gained = (POINTS[count] || 0) * this.level;
+      this.lines += count;
+      this.score += gained;
+      const newLevel = Math.floor(this.lines / 10) + 1;
+      let leveledUp = false;
+      if (newLevel !== this.level) {
+        this.level = newLevel;
+        this.dropInterval = SPEEDS[Math.min(this.level - 1, SPEEDS.length - 1)];
+        leveledUp = true;
+      }
+      this._emit('clearEnd', { rows: clearing.displayRows, cells: clearing.cells, count, gained });
+      if (leveledUp) this._emit('levelUp', { level: this.level });
+
+      this.phase = Phase.SPAWNING;
+      this.spawn();
+      this.lastDropTime = now;
+    }
+
+    spawn() {
+      this.currentPiece = this.nextPiece || this.createPiece(this.randomizer.next());
+      this.nextPiece = this.createPiece(this.randomizer.next());
+
+      const piece = this.currentPiece;
+      if (!this.board.isValid(piece.shape, piece.x, piece.y)) {
+        this.gameRunning = false;
+        this.phase = Phase.GAME_OVER;
+        this._emit('gameOver', { score: this.score, level: this.level, lines: this.lines });
+        return;
+      }
+      this.phase = Phase.FALLING;
+      this._emit('spawn', { type: piece.type });
+    }
+
+    createPiece(type) {
+      // Non-zero entries become block ids 1..4 so each block keeps its identity (and look) through rotations.
+      let k = 0;
+      const shape = SHAPES[type].map((row) => row.map((v) => (v ? ++k : 0)));
+      const x = Math.floor((COLS - shape[0].length) / 2);
+      return { type, shape, x, y: -2, rotation: 0, pid: ++this._pid };
+    }
+
+    // ---- input actions
+
+    moveLeft(now) { return this._move(-1, now); }
+    moveRight(now) { return this._move(1, now); }
+
+    _move(dx, now) {
+      if (this.phase !== Phase.FALLING) return false;
+      const piece = this.currentPiece;
+      if (!piece) return false;
+      if (!this.board.isValid(piece.shape, piece.x, piece.y, dx, 0)) return false;
+      piece.x += dx;
+      this._resetLockDelay(now);
+      this._emit('move', { dx, auto: false });
+      return true;
+    }
+
+    startDAS(direction, now) {
+      this.dasDirection = direction;
+      this.dasStartTime = now;
+      this.dasActive = true;
+      this.lastArrTime = now + DAS_DELAY_MS;
+    }
+
+    stopDAS() {
+      this.dasActive = false;
+      this.dasDirection = 0;
+    }
+
+    tryRotate(now) {
+      if (this.phase !== Phase.FALLING) return false;
+      const piece = this.currentPiece;
+      if (!piece) return false;
+      const rotated = rotateCW(piece.shape);
+      for (const kick of SIMPLE_KICKS) {
+        if (this.board.isValid(rotated, piece.x, piece.y, kick[0], kick[1])) {
+          piece.shape = rotated;
+          piece.x += kick[0];
+          piece.y += kick[1];
+          piece.rotation = (piece.rotation + 1) % 4;
+          this._resetLockDelay(now);
+          this._emit('rotate', { type: piece.type });
+          return true;
+        }
+      }
+      return false;
+    }
+
+    softDrop(now) {
+      if (this.phase !== Phase.FALLING) return false;
+      const piece = this.currentPiece;
+      if (!piece) return false;
+      if (!this.board.isValid(piece.shape, piece.x, piece.y, 0, 1)) return false;
+      piece.y += 1;
+      this.score += 1;
+      this.lastDropTime = now;
+      this._emit('softDrop');
+      return true;
+    }
+
+    hardDrop(now) {
+      if (this.phase !== Phase.FALLING) return false;
+      const piece = this.currentPiece;
+      if (!piece) return false;
+      if (now - this.lastHardDropTime < HARD_DROP_DEBOUNCE_MS) return false;
+      this.lastHardDropTime = now;
+
+      const fromY = piece.y;
+      let dropCount = 0;
+      while (this.board.isValid(piece.shape, piece.x, piece.y, 0, 1)) {
+        piece.y += 1;
+        dropCount++;
+      }
+      this.score += dropCount * 2;
+      this._emit('hardDrop', { type: piece.type, x: piece.x, fromY, toY: piece.y, shape: piece.shape, distance: dropCount });
+      this._performLock(now);
+      return true;
+    }
+
+    _resetLockDelay(now) {
+      if (this.lockDelayActive && this.lockDelayMoveResets < MAX_LOCK_RESETS) {
+        this.lockDelayStartTime = now;
+        this.lockDelayMoveResets++;
+      }
+    }
+
+    canAcceptInput() {
+      return this.currentPiece !== null && this.gameRunning && !this.paused && this.phase === Phase.FALLING;
+    }
+
+    getGhostY() {
+      const piece = this.currentPiece;
+      if (!piece) return 0;
+      return this.board.getGhostY(piece);
+    }
+  }
+
+  KF.Logic = {
+    COLS, ROWS, SPAWN_ROWS, TYPES, SHAPES, POINTS, SPEEDS, SIMPLE_KICKS,
+    HARD_DROP_DEBOUNCE_MS, LOCK_DELAY_MS, DAS_DELAY_MS, ARR_DELAY_MS, MAX_LOCK_RESETS, CLEAR_DELAY_MS,
+    Phase, rotateCW, rotateCCW, cellSeed, Board, Randomizer, GameState,
+  };
+})(globalThis.KF = globalThis.KF || {});
+
+// ---- src/crystal.js
+// Kristallfall - crystal renderer ("fused" look) and shatter effect.
+//
+// Every tetromino reads as ONE chunk of cartoon rock crystal. Cells of the same piece are fused: no inner
+// outlines, a bold tinted outline around the silhouette, chipped corners, and a ridged-prism facet model
+// whose ridges, hips and valleys run straight through the joints. Cleared rows crack along seeded shard
+// polygons and then shatter into exactly those shards.
+//
+// Classic script, Canvas 2D only, no assets, no clocks, no Math.random.
+// Public API: KF.Crystal = { id, palette, drawCells, createFx, invalidate }.
+(function (KF) {
+  'use strict';
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Palette - seven quartz varieties. Tones run from specular to outline; all types share the same
+   * value structure so they read as one mineral family.
+   * ------------------------------------------------------------------------------------------------ */
+  const palette = {
+    I: { name: 'Bergkristall', hi: '#ffffff', pale: '#f3faff', light: '#dcedfb', mid: '#bcd6ee', deep: '#93b5d9', shade: '#7094c2', line: '#3a5687' },
+    O: { name: 'Rosenquarz',   hi: '#fff5f9', pale: '#ffe1ec', light: '#ffc2d8', mid: '#ff9bbf', deep: '#ec6c9d', shade: '#d04f87', line: '#8a2a5c' },
+    T: { name: 'Citrin',       hi: '#fffbe6', pale: '#fff3ba', light: '#ffe57c', mid: '#ffcf3e', deep: '#f0a41c', shade: '#d6860f', line: '#87540a' },
+    S: { name: 'Blauquarz',    hi: '#eef7ff', pale: '#c6e3ff', light: '#8fc5ff', mid: '#4f9cf5', deep: '#2e72dc', shade: '#2259bf', line: '#16347e' },
+    Z: { name: 'Amethyst',     hi: '#f8f0ff', pale: '#ead8ff', light: '#d1abff', mid: '#b07af2', deep: '#894fdc', shade: '#6f3ec1', line: '#42207d' },
+    J: { name: 'Prasiolith',   hi: '#f1fff8', pale: '#d2fbe7', light: '#9ff0cc', mid: '#60dba9', deep: '#2eb487', shade: '#1e9872', line: '#0e5d4a' },
+    L: { name: 'Karneol',      hi: '#fff1e5', pale: '#ffd9bf', light: '#ffb180', mid: '#ff8746', deep: '#e45e23', shade: '#c64917', line: '#822b0d' },
+  };
+  const TYPE_INDEX = { I: 0, O: 1, T: 2, S: 3, Z: 4, J: 5, L: 6 };
+  const PALS = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'].map(function (k) {
+    const p = palette[k];
+    p.glow = mix(p.mid, p.light, 0.5);   // lit side facets, inner bounce light
+    p.core = mix(p.mid, p.deep, 0.45);   // facets facing away from the light
+    return p;
+  });
+  const O_INDEX = 1;
+
+  function mix(a, b, t) {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = function (sh) { return Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t); };
+    return '#' + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1);
+  }
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Deterministic randomness
+   * ------------------------------------------------------------------------------------------------ */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  function hash32(a, b) {
+    let h = (Math.imul(a | 0, 0x9E3779B1) ^ Math.imul((b | 0) + 0x7F4A7C15, 0x85EBCA6B)) >>> 0;
+    h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D) >>> 0; h ^= h >>> 13;
+    return h >>> 0;
+  }
+  const TAU = Math.PI * 2;
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Cell geometry. Edges and corners are indexed clockwise: edges N=0 E=1 S=2 W=3 (bit 1<<k of conn),
+   * corner k is the start of edge k (NW=0 NE=1 SE=2 SW=3). All shapes are described in the frame of a
+   * corner: a = distance along edge k, d = depth into the cell; mapPt rotates that into cell space.
+   * ------------------------------------------------------------------------------------------------ */
+  const VARIANTS = 4;        // facet variations per type/conn, picked by cell seed
+  const PAD = 2;             // transparent border around a sprite (device px): 1 px joint overlap + AA
+  const SPRITE_BUDGET = 6e6; // sprite cache cap in pixels (~24 MB); the cache is dropped when it is exceeded
+  const K = {                // fractions of the cell edge
+    margin: 0.02,            // gap between silhouette and cell boundary on outer edges
+    line: 0.07,              // outline width
+    // Sawtooth nick the outline dips into at every joint (keeps the cells of a fused chunk countable):
+    // depth, and the length of its slope at the start / end of an edge (clockwise).
+    pinch: 0.045, pinchStart: 0.13, pinchEnd: 0.04,
+    rim: 0.06,               // shade rim on bottom / right outer edges
+    ridgeX: 0.40, ridgeY: 0.38,   // ridge position inside an arm (off-centre: lit facets are narrower)
+    stripA: 0.30, stripB: 0.50,   // reflection streak crossing every joint (x + y between A and B) ...
+    glintA: 0.56, glintB: 0.62,   // ... and its thinner companion
+  };
+  // Everything that touches an open edge (joint) must look identical in every sprite, whatever its
+  // variant: outline inset, rim widths, ridge position and the reflection streaks are therefore constants;
+  // seeded variation is confined to the inside of a cell and to its outer edges.
+
+  const STAR = { x: 0.27, y: 0.25 };          // star sparkle position on a chunk's top-left corner cell
+  function starRadius(variant) { return 0.15 + variant * 0.013; }
+  function starPath(ctx, x, y, R) {            // four-pointed star, appended to the current path
+    const r = R * 0.2;
+    ctx.moveTo(x, y - R); ctx.lineTo(x + r, y - r); ctx.lineTo(x + R, y); ctx.lineTo(x + r, y + r);
+    ctx.lineTo(x, y + R); ctx.lineTo(x - r, y + r); ctx.lineTo(x - R, y); ctx.lineTo(x - r, y - r);
+    ctx.closePath();
+  }
+
+  function mapPt(S, k, a, d) {
+    switch (k) {
+      case 0: return [a, d];
+      case 1: return [S - d, a];
+      case 2: return [S - a, S - d];
+      default: return [d, S - a];
+    }
+  }
+
+  function makeGeo(ti, conn, variant, S, ghost) {
+    const rnd = mulberry32(hash32(ti * 64 + conn * 4 + variant, 0x51ED));
+    const closed = [!(conn & 1), !(conn & 2), !(conn & 4), !(conn & 8)];
+    const nOpen = (conn & 1) + (conn >> 1 & 1) + (conn >> 2 & 1) + (conn >> 3 & 1);
+    const ch = [];
+    for (let k = 0; k < 4; k++) {            // chipped outer corners, bigger on crystal tips and nuggets
+      const base = (nOpen === 1 ? 0.25 : nOpen === 0 ? 0.2 : 0.17) + rnd() * 0.08;
+      const skew = 0.64 + rnd() * 0.8;
+      ch.push([S * Math.min(0.4, base * skew), S * Math.min(0.4, base / skew)]);
+    }
+    return {
+      S: S, closed: closed, ch: ch, rnd: rnd, variant: variant,
+      // Ridge junction C (unit coords). Arms of the other pieces are one cell wide and share one ridge
+      // position. The 2x2 block of the O piece is a stubby prism with a slim flat ridge facet along its
+      // horizontal middle, so C sits near the block centre: its offset depends on the cell's quadrant.
+      center: ti !== O_INDEX ? [K.ridgeX, K.ridgeY] : [
+        !closed[1] ? 0.56 : !closed[3] ? 0.44 : K.ridgeX,
+        !closed[2] ? 0.9 : !closed[0] ? 0.1 : K.ridgeY,
+      ],
+      m: Math.round(S * K.margin), w: Math.max(1, Math.round(S * K.line)),
+      pinch: S * K.pinch, pinchStart: S * K.pinchStart, pinchEnd: S * K.pinchEnd,
+      // Two open edges meeting at a corner leave a concave notch - except in the O piece, the only
+      // tetromino that contains a filled 2x2 (conn carries no diagonal information).
+      concave: ti !== O_INDEX,
+      ext: ghost ? 0 : 1,                    // overlap across joints so fused cells never show a seam
+    };
+  }
+
+  // Chamfer legs after offsetting the silhouette inwards by `ins` (keeps the outline width constant).
+  function chamfer(c, ins) {
+    if (!ins) return c;
+    const L = Math.hypot(c[0], c[1]);
+    return [Math.max(0, c[0] + ins * (L - c[0]) / c[1] - ins), Math.max(0, c[1] + ins * (L - c[1]) / c[0] - ins)];
+  }
+
+  // Closed polygon of the cell silhouette, inset by `ins` on outer edges (0 = silhouette, w = body).
+  function ring(geo, ins) {
+    const S = geo.S, pts = [], i = geo.m + ins, e = -geo.ext;
+    const j = i + geo.pinch;                         // inset is `j` wherever the outline crosses a joint
+    for (let k = 0; k < 4; k++) {
+      const A = geo.closed[(k + 3) & 3], B = geo.closed[k];
+      if (A && B) {
+        const c = chamfer(geo.ch[k], ins);
+        pts.push(mapPt(S, k, i, i + c[1]), mapPt(S, k, i + c[0], i));
+      } else if (A) pts.push(mapPt(S, k, i, geo.pinchEnd), mapPt(S, k, j, 0), mapPt(S, k, j, e));
+      else if (B) pts.push(mapPt(S, k, e, j), mapPt(S, k, 0, j), mapPt(S, k, geo.pinchStart, i));
+      else if (geo.concave) pts.push(mapPt(S, k, e, j), mapPt(S, k, j, j), mapPt(S, k, j, e));
+      else pts.push(mapPt(S, k, e, e));
+    }
+    return pts;
+  }
+
+  function tracePoly(g, pts) {
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.closePath();
+  }
+  function fillPoly(g, pts, color) { tracePoly(g, pts); g.fillStyle = color; g.fill(); }
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Sprite baking
+   * ------------------------------------------------------------------------------------------------ */
+  const sprites = new Map();
+  let spritePixels = 0;
+
+  // Cell sprite for type index / conn mask / facet variant, baked at px device pixels (plus PAD).
+  function getSprite(ti, conn, variant, px, ghost) {
+    const key = ((((px * 2 + (ghost ? 1 : 0)) * 7 + ti) * 16 + conn) * VARIANTS) + variant;
+    let cv = sprites.get(key);
+    if (!cv) {
+      const side = px + PAD * 2;
+      if (spritePixels + side * side > SPRITE_BUDGET && sprites.size > 64) { sprites.clear(); spritePixels = 0; }
+      spritePixels += side * side;
+      cv = document.createElement('canvas');
+      cv.width = cv.height = side;
+      const g = cv.getContext('2d');
+      g.translate(PAD, PAD);
+      const geo = makeGeo(ti, conn, variant, px, ghost);
+      if (ghost) bakeGhost(g, geo, PALS[ti]); else bakeBody(g, geo, PALS[ti]);
+      sprites.set(key, cv);
+    }
+    return cv;
+  }
+
+  function bakeBody(g, geo, pal) {
+    const S = geo.S, cl = geo.closed, rnd = geo.rnd;
+    const I = geo.m + geo.w;                       // depth where the body starts on an outer edge
+    const J = I + geo.pinch;                       // ... and where it starts at a joint
+    const X = geo.ext + 1;                         // generous overdraw; the clip trims it
+    const hl = Math.max(1, Math.round(S * 0.035)); // crisp highlight line on lit edges
+    const rimW = Math.max(1, S * K.rim);           // shade rim on bottom / right edges
+    const cu = geo.center, C = [cu[0] * S, cu[1] * S];
+    const depth = [C[1], S - C[0], S - C[1], C[0]];             // edge -> ridge distance per side
+    // Tones per facet orientation (N, E, S, W); light comes from the top-left.
+    const planeTone = [pal.light, pal.core, pal.mid, pal.glow];
+    const stepTone = [pal.pale, pal.deep, pal.glow, pal.light];  // seeded secondary facets
+    const rimTone = [pal.hi, pal.shade, pal.deep, pal.hi];
+    const kiteTone = [pal.hi, pal.light, pal.shade, pal.deep];   // chipped corners NW, NE, SE, SW
+    const poly = function (k, pts, color) {
+      fillPoly(g, pts.map(function (p) { return mapPt(S, k, p[0], p[1]); }), color);
+    };
+    // Region u1 <= (x + y) / S <= u2: a plane running bottom-left to top-right.
+    const strip = function (u1, u2, color) {
+      const c1 = u1 * S, c2 = u2 * S, B = S * 2;
+      fillPoly(g, [[c1 + B, -B], [c2 + B, -B], [-B, c2 + B], [-B, c1 + B]], color);
+    };
+    // 1) silhouette in the outline colour, then everything else clipped to the body
+    fillPoly(g, ring(geo, 0), pal.line);
+    g.save();
+    tracePoly(g, ring(geo, geo.w));
+    g.clip();
+
+    // 2) Roof facets. The chunk is modelled as a ridged prism (the straight skeleton of the piece):
+    //    every point belongs to the outer edge of the piece that reaches it first. Inside one cell all
+    //    facet borders lie on a fan of eight triangles around the ridge junction C, so it is enough to
+    //    classify those octants. An open edge contributes no plane of its own; at a concave corner the
+    //    outer edges of the two neighbouring arms reach into the cell instead (the larger of the two
+    //    distances wins there). That makes ridges, hips and valleys continue seamlessly across joints.
+    const B = [[0, 0], [cu[0], 0], [1, 0], [1, cu[1]], [1, 1], [cu[0], 1], [0, 1], [0, cu[1]]];
+    const plane = [];
+    for (let i = 0; i < 8; i++) {
+      const q = B[i], r = B[(i + 1) & 7];
+      const x = (cu[0] + q[0] + r[0]) / 3, y = (cu[1] + q[1] + r[1]) / 3;
+      const h = [y / cu[1], (1 - x) / (1 - cu[0]), (1 - y) / (1 - cu[1]), x / cu[0]];
+      let best = 2, bh = Infinity;
+      for (let k = 0; k < 4; k++) {
+        const kp = (k + 3) & 3;
+        let s = -1;
+        if (cl[k]) s = k;
+        else if (!cl[kp] && geo.concave) s = h[k] > h[kp] ? k : kp;   // reflex corner between kp and k
+        if (s >= 0 && h[s] < bh) { bh = h[s]; best = s; }
+      }
+      plane.push(best);
+    }
+    const Bp = B.map(function (p) { return [C[0] + (p[0] * S - C[0]) * 1.2, C[1] + (p[1] * S - C[1]) * 1.2]; });
+    // polygon of the run of equal-plane octants that contains octant `i`
+    const runPoly = function (i) {
+      let a = i, b = i, n = 1;
+      while (n < 8 && plane[(a + 7) & 7] === plane[i]) { a = (a + 7) & 7; n++; }
+      while (n < 8 && plane[(b + 1) & 7] === plane[i]) { b = (b + 1) & 7; n++; }
+      if (n === 8) return [[-S, -S], [2 * S, -S], [2 * S, 2 * S], [-S, 2 * S]];
+      const pts = [C];
+      for (let j = 0; j <= n; j++) pts.push(Bp[(a + j) & 7]);
+      return pts;
+    };
+    for (let i = 0; i < 8; i++) {
+      if (plane[(i + 7) & 7] !== plane[i] || (i === 0 && plane.every(function (p) { return p === plane[0]; }))) {
+        fillPoly(g, runPoly(i), planeTone[plane[i]]);
+      }
+    }
+
+    // 3) outer edges: one seeded secondary facet per edge (wedge or slanted growth step) and the rim
+    const edgeFacets = function (k) {
+      const D = depth[k];
+      g.save();
+      tracePoly(g, runPoly(k * 2));
+      g.clip();
+      const p1 = S * (0.2 + rnd() * 0.2), p2 = S * (0.56 + rnd() * 0.24);
+      if (rnd() < 0.5) {
+        const q = p1 + (p2 - p1) * (0.25 + rnd() * 0.5);
+        poly(k, [[p1, 0], [q, I + (D - I) * (0.5 + rnd() * 0.4)], [p2, 0]], stepTone[k]);
+      } else {
+        const s1 = S * (rnd() - 0.5) * 0.3, s2 = S * (rnd() - 0.5) * 0.3;
+        poly(k, [[p1 + s1, 0], [p2 + s2, 0], [p2, D + 2], [p1, D + 2]], stepTone[k]);
+      }
+      // rim: stroke the body boundary of this edge; the outer half of the stroke falls outside the clip
+      const kn = (k + 1) & 3, line = [];
+      if (cl[(k + 3) & 3]) line.push([I + chamfer(geo.ch[k], geo.w)[0], I]);
+      else line.push([-X, J], [0, J], [geo.pinchStart, I]);
+      if (cl[kn]) line.push([S - I - chamfer(geo.ch[kn], geo.w)[1], I]);
+      else line.push([S - geo.pinchEnd, I], [S, J], [S + X, J]);
+      g.beginPath();
+      line.forEach(function (p, n) { const q = mapPt(S, k, p[0], p[1]); if (n) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
+      g.strokeStyle = rimTone[k];
+      g.lineWidth = 2 * (k === 1 || k === 2 ? rimW : hl);
+      g.stroke();
+      g.restore();
+    };
+    [2, 1, 3, 0].forEach(function (k) { if (cl[k]) edgeFacets(k); });
+
+    // 3b) Corner with two joints but no notch = the middle of a 2x2 block: the rectangle between C and
+    //     that corner is this cell's quarter of the block's flat ridge facet.
+    const tables = [null, null, null, null];
+    for (let k = 0; k < 4; k++) {
+      if (cl[k] || cl[(k + 3) & 3] || geo.concave) continue;
+      const tx = k === 0 || k === 3 ? C[0] : S - C[0], ty = k < 2 ? C[1] : S - C[1];   // extent towards C
+      const a = k & 1 ? ty : tx, d = k & 1 ? tx : ty;
+      poly(k, [[-X, -X], [a, -X], [a, d], [-X, d]], pal.pale);
+      tables[k] = [mapPt(S, k, a, -X), mapPt(S, k, a, d), mapPt(S, k, -X, d)];
+    }
+
+    // 4) reflection planes that bridge joints: they cross every open edge at the same height
+    const upperLeft = !cl[3] || !cl[0], lowerRight = !cl[1] || !cl[2];
+    g.globalAlpha = 0.33;
+    if (upperLeft) { strip(K.stripA, K.stripB, '#ffffff'); strip(K.glintA, K.glintB, '#ffffff'); }
+    if (lowerRight) { strip(1 + K.stripA, 1 + K.stripB, '#ffffff'); strip(1 + K.glintA, 1 + K.glintB, '#ffffff'); }
+    g.globalAlpha = 1;
+
+    // 5) ridge lines along facet borders
+    g.strokeStyle = pal.pale;
+    g.lineWidth = Math.max(1, S * 0.028);
+    g.beginPath();
+    for (let i = 0; i < 8; i++) {
+      if (!(i & 1) && tables[i >> 1]) continue;                  // no hip line across a table
+      if (plane[(i + 7) & 7] !== plane[i]) { g.moveTo(C[0], C[1]); g.lineTo(Bp[i][0], Bp[i][1]); }
+    }
+    tables.forEach(function (t) {
+      if (t) { g.moveTo(t[0][0], t[0][1]); g.lineTo(t[1][0], t[1][1]); g.lineTo(t[2][0], t[2][1]); }
+    });
+    g.stroke();
+
+    // 6) corners: chipped termination facet on convex corners, rim turning the corner on concave ones
+    for (let k = 0; k < 4; k++) {
+      const kp = (k + 3) & 3;
+      if (cl[kp] && cl[k]) {
+        const c = chamfer(geo.ch[k], geo.w), corner = mapPt(S, k, 0, 0);
+        const f1 = S * (0.04 + rnd() * 0.08), f2 = S * (0.04 + rnd() * 0.08);
+        const lam = 0.1 + (geo.ch[k][0] + geo.ch[k][1]) / S * (0.9 + rnd() * 0.5);
+        const Q = [corner[0] + (C[0] - corner[0]) * lam, corner[1] + (C[1] - corner[1]) * lam];
+        const pA = mapPt(S, k, I, I + c[1] + f2), pB = mapPt(S, k, I + c[0] + f1, I);
+        fillPoly(g, [pA, mapPt(S, k, -X, I + c[1] + f2), mapPt(S, k, -X, -X), mapPt(S, k, I + c[0] + f1, -X), pB, Q], kiteTone[k]);
+        g.beginPath(); g.moveTo(pA[0], pA[1]); g.lineTo(Q[0], Q[1]); g.lineTo(pB[0], pB[1]); g.stroke();
+      } else if (!cl[kp] && !cl[k] && geo.concave) {
+        const wk = k === 1 || k === 2 ? rimW : hl, wp = kp === 1 || kp === 2 ? rimW : hl;
+        poly(k, [[-X, J], [J, J], [J + wk, J + wk], [-X, J + wk]], rimTone[k]);
+        poly(k, [[J, -X], [J, J], [J + wp, J + wp], [J + wp, -X]], rimTone[kp]);
+      }
+    }
+
+    g.restore();
+
+    // 7) one star sparkle per chunk, on its lit top-left corner (drawCells animates a twinkle on top)
+    if (cl[3] && cl[0]) {
+      g.fillStyle = '#ffffff';
+      g.beginPath();
+      starPath(g, S * STAR.x, S * STAR.y, S * starRadius(geo.variant));
+      g.fill();
+    }
+  }
+
+  // Landing preview: a faint phantom of the crystal inside a thin bright contour - never a solid block.
+  function bakeGhost(g, geo, pal) {
+    const S = geo.S, wg = Math.max(1, Math.round(S * 0.05));
+    bakeBody(g, geo, pal);
+    g.globalCompositeOperation = 'destination-in';
+    g.fillStyle = 'rgba(0,0,0,0.24)';
+    g.fillRect(-PAD, -PAD, S + PAD * 2, S + PAD * 2);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 0.8;
+    g.fillStyle = pal.light;
+    g.beginPath();
+    [ring(geo, 0), ring(geo, wg)].forEach(function (pts) {
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.closePath();
+    });
+    g.fill('evenodd');
+  }
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Fracture patterns. A cell breaks along one of a small set of patterns (picked by its seed): cracks
+   * radiate from an impact point, kink once and reach the cell border; a few wedges get a concentric
+   * split. The very same polygons are drawn as crack lines by drawCells and released as shards by
+   * fx.shatter, so crack -> burst is continuous. A fixed set keeps the crack overlays bakeable.
+   * ------------------------------------------------------------------------------------------------ */
+  const FRACTURE_PATTERNS = 20, CRACK_LEVELS = 7;
+  const fractures = [];
+  const UNIT_CORNERS = [[0, 0], [1, 0], [1, 1], [0, 1]];
+
+  function fracture(seed) {
+    const id = (seed >>> 0) % FRACTURE_PATTERNS;
+    return fractures[id] || (fractures[id] = makeFracture(id));
+  }
+
+  function makeFracture(id) {
+    const rnd = mulberry32(hash32(id, 0x2F6E2B1));
+    const px = 0.3 + rnd() * 0.4, py = 0.3 + rnd() * 0.4;        // impact point (unit square)
+    const n = 4 + (rnd() * 2 | 0);
+    const base = rnd() * TAU, rays = [];
+    for (let i = 0; i < n; i++) {
+      const ang = base + (i + (rnd() - 0.5) * 0.55) * TAU / n;
+      const dx = Math.cos(ang), dy = Math.sin(ang);
+      const tx = dx > 1e-9 ? (1 - px) / dx : dx < -1e-9 ? -px / dx : 1e9;
+      const ty = dy > 1e-9 ? (1 - py) / dy : dy < -1e-9 ? -py / dy : 1e9;
+      const t = Math.min(tx, ty);
+      const bx = Math.min(1, Math.max(0, px + dx * t)), by = Math.min(1, Math.max(0, py + dy * t));
+      // position on the perimeter, clockwise from the top-left corner (0..4)
+      const s = tx < ty ? (dx > 0 ? 1 + by : 3 + (1 - by)) : (dy > 0 ? 2 + (1 - bx) : bx);
+      const kt = t * (0.36 + rnd() * 0.28), kn = t * (rnd() - 0.5) * 0.34;   // kink makes the crack jagged
+      // `at`: when this crack starts to grow (0..1 of the build-up) - staggered, so a half-cracked
+      // block shows a few long fractures instead of a little asterisk
+      rays.push({ kx: px + dx * kt - dy * kn, ky: py + dy * kt + dx * kn, bx: bx, by: by, s: s, at: i ? rnd() * 0.5 : 0 });
+    }
+    const polys = [], wedges = [], chords = [];
+    for (let i = 0; i < n; i++) {
+      const r = rays[i], q = rays[(i + 1) % n];
+      const outer = [r.kx, r.ky, r.bx, r.by];
+      const end = q.s > r.s ? q.s : q.s + 4;
+      for (let c = Math.floor(r.s) + 1; c < end; c++) outer.push(UNIT_CORNERS[c & 3][0], UNIT_CORNERS[c & 3][1]);
+      outer.push(q.bx, q.by, q.kx, q.ky);
+      const wedge = outer.concat(px, py);
+      wedges.push(wedge);
+      if (rnd() < 0.22) {                                         // concentric crack splits the wedge
+        polys.push([px, py, r.kx, r.ky, q.kx, q.ky], outer);
+        chords.push([r.kx, r.ky, q.kx, q.ky]);
+      } else polys.push(wedge);
+    }
+    // polys: all shards (flat x,y lists); wedges: the same tiling without the concentric splits
+    return { px: px, py: py, rays: rays, chords: chords, polys: polys, wedges: wedges };
+  }
+
+  // Crack overlay of one pattern at growth step `level` (1..CRACK_LEVELS): white jagged lines with a
+  // dark casing (so they also read on the pale crystals) and a small white impact chip.
+  const crackSprites = new Map();
+
+  function crackSprite(seed, level, px) {
+    const id = (seed >>> 0) % FRACTURE_PATTERNS, key = (px * FRACTURE_PATTERNS + id) * 8 + level;
+    let cv = crackSprites.get(key);
+    if (cv) return cv;
+    if (crackSprites.size >= 320) crackSprites.clear();
+    cv = document.createElement('canvas');
+    cv.width = cv.height = px + PAD * 2;
+    const g = cv.getContext('2d'), f = fracture(id), grow = level / CRACK_LEVELS, S = px;
+    g.translate(PAD, PAD);
+    g.lineCap = g.lineJoin = 'round';
+    const trace = function () {
+      g.beginPath();
+      for (let i = 0; i < f.rays.length; i++) {
+        const r = f.rays[i], u = (grow - r.at) / 0.5;             // 0..1 along this crack
+        if (u <= 0) continue;
+        const u1 = Math.min(1, u / 0.45), u2 = Math.min(1, (u - 0.45) / 0.55);
+        g.moveTo(f.px * S, f.py * S);
+        g.lineTo((f.px + (r.kx - f.px) * u1) * S, (f.py + (r.ky - f.py) * u1) * S);
+        if (u2 > 0) g.lineTo((r.kx + (r.bx - r.kx) * u2) * S, (r.ky + (r.by - r.ky) * u2) * S);
+      }
+      const uc = Math.min(1, (grow - 0.7) / 0.3);                 // concentric cracks close the pattern last
+      for (let i = 0; uc > 0 && i < f.chords.length; i++) {
+        const c = f.chords[i];
+        g.moveTo(c[0] * S, c[1] * S);
+        g.lineTo((c[0] + (c[2] - c[0]) * uc) * S, (c[1] + (c[3] - c[1]) * uc) * S);
+      }
+    };
+    trace(); g.strokeStyle = 'rgba(16,30,72,0.62)'; g.lineWidth = Math.max(2, S * 0.115); g.stroke();
+    trace(); g.strokeStyle = '#ffffff'; g.lineWidth = Math.max(1, S * 0.046); g.stroke();
+    g.fillStyle = '#ffffff';                                      // impact chip between the crack roots
+    g.beginPath();
+    const chip = 0.12 + 0.2 * Math.min(1, grow * 1.5);
+    for (let i = 0; i < f.rays.length; i++) {
+      const r = f.rays[i], k = grow > r.at ? chip : chip * 0.35;
+      g.lineTo((f.px + (r.kx - f.px) * k) * S, (f.py + (r.ky - f.py) * k) * S);
+    }
+    g.fill();
+    crackSprites.set(key, cv);
+    return cv;
+  }
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * drawCells
+   * ------------------------------------------------------------------------------------------------ */
+  // Big groups that hold still (the settled board) are flattened into one layer canvas, so a static
+  // board costs a single blit per frame instead of one per cell. Cracks and twinkles stay per frame.
+  // Translucent groups are flattened too (into a scratch layer), because fused sprites overlap by a
+  // pixel at the joints and would otherwise show seams when blended individually.
+  const LAYER_MIN_CELLS = 24, MAX_LAYERS = 2, MAX_LAYER_PIXELS = 6e6;
+  const layers = [], seenSigs = [0, 0, 0, 0];
+  let seenAt = 0, layerClock = 0, scratch = null;
+
+  // Returns { cv, x, y, w, h } (device px) holding the whole group, or null if it should be drawn directly.
+  function groupLayer(cells, px, dpr, cacheable, mustFlatten) {
+    let h = px | 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let i = 0; i < cells.length; i++) {           // signature of everything that affects the pixels
+      const c = cells[i], X = Math.round(c.x * dpr), Y = Math.round(c.y * dpr);
+      h = Math.imul(h ^ X, 0x9E3779B1); h = Math.imul(h ^ Y, 0x85EBCA6B);
+      h = Math.imul(h ^ (c.seed >>> 0) ^ ((c.conn & 15) << 4) ^ (TYPE_INDEX[c.type] | 0), 0xC2B2AE35);
+      h ^= h >>> 15;
+      if (X < x0) x0 = X; if (X > x1) x1 = X; if (Y < y0) y0 = Y; if (Y > y1) y1 = Y;
+    }
+    h = ((h ^ cells.length) >>> 0) || 1;
+    const w = x1 - x0 + px + PAD * 2, hh = y1 - y0 + px + PAD * 2;
+    if (!(w > 0 && hh > 0) || w > 4096 || hh > 4096 || w * hh > MAX_LAYER_PIXELS) return null;
+    let L = null;
+    if (cacheable) {
+      layerClock++;
+      for (let i = 0; i < layers.length; i++) {
+        if (layers[i].sig === h && layers[i].px === px) { layers[i].used = layerClock; return layers[i]; }
+      }
+      // First sighting: only cache once the group shows up unchanged again.
+      if (seenSigs.indexOf(h) < 0) seenSigs[seenAt++ & 3] = h;
+      else if (layers.length < MAX_LAYERS) { L = { cv: document.createElement('canvas'), used: 0 }; layers.push(L); }
+      else {
+        L = layers[0];
+        for (let i = 1; i < layers.length; i++) if (layers[i].used < L.used) L = layers[i];
+        if (layerClock - L.used <= MAX_LAYERS * 2) L = null;     // every slot is in active use: do not thrash
+      }
+    }
+    if (L) { L.sig = h; L.px = px; L.used = layerClock; }
+    else if (mustFlatten) L = scratch || (scratch = { cv: document.createElement('canvas') });
+    else return null;
+    if (L === scratch) {                                         // scratch only ever grows
+      if (L.cv.width < w) L.cv.width = w;
+      if (L.cv.height < hh) L.cv.height = hh;
+    } else if (L.cv.width !== w || L.cv.height !== hh) { L.cv.width = w; L.cv.height = hh; }
+    const g = L.cv.getContext('2d');
+    g.clearRect(0, 0, w, hh);
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i];
+      const sp = getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, ((c.seed >>> 0) >>> 7) % VARIANTS, px, false);
+      g.drawImage(sp, Math.round(c.x * dpr) - x0, Math.round(c.y * dpr) - y0);
+    }
+    L.x = x0 - PAD; L.y = y0 - PAD; L.w = w; L.h = hh;
+    return L;
+  }
+
+  function drawCells(ctx, cells, opts) {
+    if (!ctx || !cells || !cells.length) return;
+    opts = opts || {};
+    const size = +cells[0].size;
+    if (!(size > 0)) return;
+    const dpr = opts.dpr > 0 ? opts.dpr : 1, inv = 1 / dpr;
+    const ghost = !!opts.ghost, t = +opts.t || 0;
+    const alpha = opts.alpha == null ? 1 : Math.max(0, Math.min(1, +opts.alpha));
+    const px = Math.max(4, Math.min(512, Math.round(size * dpr)));
+    const pad = PAD * inv, dw = (px + PAD * 2) * inv;
+    let cracked = null, twinkles = null;
+
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    const big = cells.length >= LAYER_MIN_CELLS, sheer = alpha < 1 && cells.length > 1;
+    const layer = !ghost && (big || sheer) ? groupLayer(cells, px, dpr, big, sheer) : null;
+    if (layer) ctx.drawImage(layer.cv, 0, 0, layer.w, layer.h, layer.x * inv, layer.y * inv, layer.w * inv, layer.h * inv);
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i], conn = c.conn & 15, seed = c.seed >>> 0;
+      if (!layer) {
+        const sp = getSprite(TYPE_INDEX[c.type] | 0, conn, (seed >>> 7) % VARIANTS, px, ghost);
+        // snap to device pixels: crisp blit and gap-free joints
+        ctx.drawImage(sp, Math.round(c.x * dpr) * inv - pad, Math.round(c.y * dpr) * inv - pad, dw, dw);
+      }
+      if (ghost) continue;
+      if (c.crack > 0) (cracked || (cracked = [])).push(c);
+      if (!(conn & 9)) {
+        // the baked star of this chunk twinkles now and then, out of phase with the others (seed)
+        const period = 2600 + seed % 1900, ph = ((t + (seed >>> 3) % period) % period) / 520;
+        if (ph < 1) (twinkles || (twinkles = [])).push(c.x, c.y, starRadius((seed >>> 7) % VARIANTS) * (1 + 0.6 * Math.sin(ph * Math.PI)));
+      }
+    }
+    if (cracked) drawCracks(ctx, cracked, size, px, dpr, alpha);
+    if (twinkles) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      for (let i = 0; i < twinkles.length; i += 3) starPath(ctx, twinkles[i] + size * STAR.x, twinkles[i + 1] + size * STAR.y, twinkles[i + 2] * size);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Fracture overlay for cells with crack > 0: the blocks brighten and baked crack patterns grow step
+  // by step; the fracture sweeps outwards from the middle of the cracking group.
+  function drawCracks(ctx, list, size, px, dpr, alpha) {
+    const inv = 1 / dpr, pad = PAD * inv, dw = (px + PAD * 2) * inv, n = list.length;
+    let minX = Infinity, maxX = -Infinity;
+    for (let i = 0; i < n; i++) { minX = Math.min(minX, list[i].x); maxX = Math.max(maxX, list[i].x); }
+    const midX = (minX + maxX) / 2, half = Math.max(size, (maxX - minX) / 2);
+    for (let pass = 0; pass < 2; pass++) {             // 0: additive brighten, 1: crack lines
+      ctx.globalCompositeOperation = pass ? 'source-over' : 'lighter';
+      if (pass) ctx.globalAlpha = alpha;
+      for (let i = 0; i < n; i++) {
+        const c = list[i], seed = c.seed >>> 0;
+        // per-cell progress 0..1; cells further from the middle lag behind
+        const k = Math.max(0.04, Math.min(1, Math.min(1, c.crack) * 1.6 - 0.6 * Math.abs(c.x - midX) / half));
+        const dx = Math.round(c.x * dpr) * inv - pad, dy = Math.round(c.y * dpr) * inv - pad;
+        if (pass) ctx.drawImage(crackSprite(seed, Math.max(1, Math.ceil(k * CRACK_LEVELS)), px), dx, dy, dw, dw);
+        else {
+          ctx.globalAlpha = alpha * 0.26 * k;
+          ctx.drawImage(getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, (seed >>> 7) % VARIANTS, px, false), dx, dy, dw, dw);
+        }
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------------ *
+   * Effects: shatter (shards, glitter dust, star glints, row flash) and lock sparkle
+   * ------------------------------------------------------------------------------------------------ */
+  const GRAVITY = 0.000037;      // cell sizes per ms^2
+
+  function createFx() {
+    const shards = [[], [], [], [], [], [], []];   // grouped by crystal type (palette lookup per group)
+    let dust = [], stars = [], flashes = [];
+
+    function addStar(x, y, R, life, delay) { stars.push({ x: x, y: y, R: R, life: life, max: life, delay: delay }); }
+
+    function shatter(cells, o) {
+      if (!cells || !cells.length) return;
+      const rows = Math.max(1, Math.min(4, (o && o.rows) | 0 || 1));
+      const power = 0.78 + 0.27 * rows;                           // more rows: faster, higher, longer
+      // The polygon budget per burst is roughly constant: one row breaks into fine, outlined shards;
+      // two rows keep the outline; three and four rows trade it for sheer numbers (four rows also
+      // leave the small concentric splinters fused to their wedge).
+      const fine = rows === 1, rich = rows <= 2;
+      let minX = Infinity, maxX = -Infinity;
+      const rowY = new Map();
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i];
+        if (!(c.size > 0)) continue;
+        minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x + c.size);
+        const key = Math.round(c.y), r = rowY.get(key);
+        if (r) { r.x0 = Math.min(r.x0, c.x); r.x1 = Math.max(r.x1, c.x + c.size); }
+        else rowY.set(key, { x0: c.x, x1: c.x + c.size, y: c.y, h: c.size });
+      }
+      const midX = (minX + maxX) / 2, half = Math.max(1, (maxX - minX) / 2);
+      rowY.forEach(function (r) {
+        const life = 85 + 14 * rows;
+        flashes.push({ x: r.x0, y: r.y, w: r.x1 - r.x0, h: r.h, life: life, max: life });
+      });
+
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i], s = c.size;
+        if (!(s > 0)) continue;
+        const seed = c.seed >>> 0, f = fracture(seed), rnd = mulberry32(seed ^ 0x51F15E), ti = TYPE_INDEX[c.type] | 0;
+        const side = (c.x + s / 2 - midX) / half;                 // -1..1 across the cleared rows
+        // A single row can afford finer debris: every shard with 4+ corners breaks once more, along
+        // its shortest diagonal so the halves stay chunky.
+        let polys = rows === 4 ? f.wedges : f.polys;
+        if (fine) {
+          polys = [];
+          for (let j = 0; j < f.polys.length; j++) {
+            const q = f.polys[j], n = q.length >> 1, m = n >> 1;
+            if (n < 4) { polys.push(q); continue; }
+            let best = 0, bd = Infinity;
+            for (let v = 0; v < n; v++) {
+              const u = (v + m) % n, d = Math.hypot(q[v * 2] - q[u * 2], q[v * 2 + 1] - q[u * 2 + 1]);
+              if (d < bd) { bd = d; best = v; }
+            }
+            const r = q.slice(best * 2).concat(q.slice(0, best * 2));      // rotate so the cut starts at 0
+            polys.push(r.slice(0, m * 2 + 2), r.slice(m * 2).concat(r[0], r[1]));
+          }
+        }
+        for (let j = 0; j < polys.length; j++) {
+          const poly = polys[j], n = poly.length >> 1;
+          let cx = 0, cy = 0;
+          for (let v = 0; v < n; v++) { cx += poly[v * 2]; cy += poly[v * 2 + 1]; }
+          cx /= n; cy /= n;
+          // local vertices, stored in a frame rotated by -axis so the tumble (flip) axis differs per shard
+          const axis = rnd() * TAU, ca = Math.cos(axis), sa = Math.sin(axis);
+          const loc = new Float32Array(n * 2);
+          let rad = 0;
+          for (let v = 0; v < n; v++) {
+            const lx = (poly[v * 2] - cx) * s, ly = (poly[v * 2 + 1] - cy) * s;
+            loc[v * 2] = lx * ca + ly * sa; loc[v * 2 + 1] = -lx * sa + ly * ca;
+            rad = Math.max(rad, Math.hypot(lx, ly));
+          }
+          let dx = cx - f.px, dy = cy - f.py;                     // fly away from the impact point
+          const dl = Math.hypot(dx, dy) || 1;
+          dx /= dl; dy /= dl;
+          const sp = s * (0.0028 + rnd() * 0.0062) * power;
+          // big bursts carry many more shards, so each one clears the playfield a little sooner
+          const life = (290 + rnd() * 330 + rad / s * 240) * (rich ? 1 : 0.86);
+          shards[ti].push({
+            n: n, loc: loc, w: new Float32Array(n * 2), s: s, tone: 0, k: 1, rim: rich,
+            x: c.x + cx * s, y: c.y + cy * s,
+            vx: dx * sp + side * s * 0.0035 * power * rnd(),
+            vy: dy * sp - s * (0.004 + rnd() * 0.009) * (1.15 + 0.07 * rows),  // fountain upwards
+            a: axis, va: (rnd() - 0.5) * 0.016,
+            ph: rnd() * Math.PI, vph: 0.004 + rnd() * 0.009,
+            life: life, max: life,
+          });
+        }
+        const nd = (fine ? 8 : rich ? 6 : 4) + (rnd() < 0.5 ? 1 : 0);   // glitter dust
+        for (let j = 0; j < nd; j++) {
+          const ang = rnd() * TAU, sp = s * (0.002 + rnd() * 0.011) * power, life = 340 + rnd() * 640;
+          dust.push({
+            x: c.x + rnd() * s, y: c.y + rnd() * s, s: s,
+            vx: Math.cos(ang) * sp + side * s * 0.003, vy: Math.sin(ang) * sp - s * 0.004 * power,
+            r: s * (0.05 + rnd() * 0.075), ph: rnd() * TAU, life: life, max: life,
+          });
+        }
+        if (rnd() < 0.12 + 0.02 * rows) {                         // a few star glints popping along the rows
+          addStar(c.x + rnd() * s, c.y + rnd() * s, s * (0.26 + rnd() * 0.2 + 0.04 * rows), 220 + rnd() * 160, rnd() * 110);
+        }
+      }
+    }
+
+    // Subtle twinkle when a piece locks: a star on each chunk's lit corner plus a few rising motes.
+    function sparkle(cells) {
+      if (!cells || !cells.length) return;
+      for (let i = 0; i < cells.length; i++) {
+        const c = cells[i], s = c.size;
+        if (!(s > 0)) continue;
+        const rnd = mulberry32((c.seed >>> 0) ^ 0x7A11CE);
+        if (!(c.conn & 9)) addStar(c.x + s * STAR.x, c.y + s * STAR.y, s * 0.38, 320, 0);
+        if (!(c.conn & 1)) {
+          const life = 240 + rnd() * 220;
+          dust.push({
+            x: c.x + rnd() * s, y: c.y + s * 0.08, s: s, vx: (rnd() - 0.5) * s * 0.003, vy: -s * (0.002 + rnd() * 0.003),
+            r: s * (0.05 + rnd() * 0.04), ph: rnd() * TAU, life: life, max: life,
+          });
+        }
+      }
+    }
+
+    function age(list, dt) {                                      // advance lifetimes, drop the dead
+      let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        if (p.delay > 0) { p.delay -= dt; list[n++] = p; continue; }
+        p.life -= dt;
+        if (p.life > 0) list[n++] = p;
+      }
+      list.length = n;
+    }
+
+    function update(dt) {
+      dt = +dt;
+      if (!(dt > 0)) return;
+      const drag = Math.exp(-dt * 0.0021), dustDrag = Math.exp(-dt * 0.0042);
+      for (let ti = 0; ti < 7; ti++) {
+        const list = shards[ti];
+        if (!list.length) continue;
+        for (let i = 0; i < list.length; i++) {
+          const p = list[i];
+          p.vx *= drag; p.vy = p.vy * drag + GRAVITY * p.s * dt;
+          p.x += p.vx * dt; p.y += p.vy * dt; p.a += p.va * dt; p.ph += p.vph * dt;
+        }
+        age(list, dt);
+      }
+      for (let i = 0; i < dust.length; i++) {
+        const p = dust[i];
+        p.vx *= dustDrag; p.vy = p.vy * dustDrag + GRAVITY * 0.45 * p.s * dt;
+        p.x += p.vx * dt; p.y += p.vy * dt; p.ph += dt * 0.021;
+      }
+      age(dust, dt); age(stars, dt); age(flashes, dt);
+    }
+
+    // Fill one shard, scaled by q around its centre and nudged by `off` towards bottom-right (so the
+    // bright edge left around the body is widest on the lit side).
+    function fillShard(ctx, p, q, off) {
+      const w = p.w, n = p.n, x = p.x + off, y = p.y + off;
+      ctx.beginPath();
+      ctx.moveTo(x + w[0] * q, y + w[1] * q);
+      for (let v = 1; v < n; v++) ctx.lineTo(x + w[v * 2] * q, y + w[v * 2 + 1] * q);
+      ctx.fill();
+    }
+
+    function draw(ctx /* , opts */) {
+      if (!ctx || !(flashes.length || count() > 0)) return;
+      ctx.save();
+      // short white flash along the cleared rows, collapsing to a streak on the row centre line
+      ctx.fillStyle = '#ffffff';
+      for (let i = 0; i < flashes.length; i++) {
+        const fl = flashes[i], f = fl.life / fl.max, h = fl.h * f * f;
+        ctx.globalAlpha = 0.94;
+        ctx.fillRect(fl.x, fl.y + (fl.h - h) / 2, fl.w, h);
+      }
+      ctx.globalAlpha = 1;
+
+      // shards: tumbling polygons; the tone follows which way the facet currently faces
+      for (let ti = 0; ti < 7; ti++) {
+        const list = shards[ti];
+        if (!list.length) continue;
+        const pal = PALS[ti];
+        for (let i = 0; i < list.length; i++) {
+          const p = list[i], f = p.life / p.max;
+          const flip = Math.cos(p.ph);
+          const k = f > 0.4 ? 1 : Math.pow(f / 0.4, 0.75);        // shrink away at the end of life
+          const fx = (flip < 0 ? -1 : 1) * Math.max(0.34, Math.abs(flip)) * k;
+          const ca = Math.cos(p.a), sa = Math.sin(p.a), loc = p.loc, w = p.w;
+          for (let v = 0; v < p.n; v++) {
+            const lx = loc[v * 2] * fx, ly = loc[v * 2 + 1] * k;
+            w[v * 2] = lx * ca - ly * sa; w[v * 2 + 1] = lx * sa + ly * ca;
+          }
+          p.k = k;
+          // 0 = glint (white-hot right after the impact, then twice per turn), 1 = lit face, 2 = back face
+          const g = (p.ph + 2.6) % Math.PI;
+          p.tone = p.max - p.life < 20 || g < 0.4 ? 0 : flip > 0 ? 1 : 2;
+        }
+        const off = list[0].s * 0.028, body = [pal.pale, pal.mid, pal.deep];
+        for (let i = 0; i < list.length; i++) {
+          const p = list[i];
+          let q = 1;
+          if (p.rim) { ctx.fillStyle = pal.line; fillShard(ctx, p, 1.06, 0); q = 0.86; }   // cartoon outline
+          if (p.tone === 0) { ctx.fillStyle = '#ffffff'; fillShard(ctx, p, q, 0); continue; }
+          ctx.fillStyle = pal.pale; fillShard(ctx, p, q, 0);                            // bright edge
+          if (p.k > 0.72) { ctx.fillStyle = body[p.tone]; fillShard(ctx, p, q * 0.68, off * p.k); }  // skip once it is a speck
+        }
+      }
+
+      // glitter dust (twinkling diamonds, cheap rects) and star glints
+      ctx.fillStyle = '#ffffff';
+      ctx.save();
+      ctx.rotate(Math.PI / 4);                                    // squares drawn in a 45 degree frame = diamonds
+      for (let i = 0; i < dust.length; i++) {
+        const p = dust[i], r = p.r * 0.62 * Math.min(1, p.life / p.max * 1.6) * (0.55 + 0.45 * Math.sin(p.ph));
+        if (r > 0.15) ctx.fillRect((p.x + p.y) * Math.SQRT1_2 - r, (p.y - p.x) * Math.SQRT1_2 - r, r * 2, r * 2);
+      }
+      ctx.restore();
+      ctx.beginPath();
+      for (let i = 0; i < stars.length; i++) {
+        const p = stars[i];
+        if (!(p.delay > 0)) starPath(ctx, p.x, p.y, p.R * Math.pow(Math.sin(Math.PI * p.life / p.max), 0.6));
+      }
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function count() {
+      let n = dust.length + stars.length;
+      for (let ti = 0; ti < 7; ti++) n += shards[ti].length;
+      return n;
+    }
+
+    return {
+      shatter: shatter, sparkle: sparkle, update: update, draw: draw,
+      get active() { return count() + flashes.length > 0; },
+      get count() { return count(); },
+      reset: function () { for (let ti = 0; ti < 7; ti++) shards[ti].length = 0; dust = []; stars = []; flashes = []; },
+    };
+  }
+
+  KF.Crystal = {
+    id: 'fused',
+    palette: palette,
+    drawCells: drawCells,
+    createFx: createFx,
+    // Drop every cached canvas (call on resize / DPR change).
+    invalidate: function () {
+      sprites.clear(); spritePixels = 0; crackSprites.clear();
+      layers.length = 0; seenSigs.fill(0); scratch = null;
+    },
+  };
+})(globalThis.KF = globalThis.KF || {});
+
+// ---- src/audio.js
+/*
+ * Kristallfall - audio module (KF.Audio)
+ *
+ * Every sound is synthesised with the Web Audio API; there are no audio assets.
+ * A sound is a plain function (ctx, dest, t, opts, rnd) that schedules a small
+ * node graph at context time `t`. The live path (AudioContext, Math.random) and
+ * the test path (OfflineAudioContext, seeded PRNG) run exactly the same code.
+ *
+ * Signal flow:  sound nodes -> per-sound gain -> master gain -> limiter -> destination
+ *
+ * Usage:  KF.Audio.unlock()                      inside every pointer / key handler (cheap)
+ *         KF.Audio.play('shatter', { rows: 3 })  anywhere; never throws, may silently do nothing
+ */
+(function (KF) {
+  'use strict';
+
+  var root = globalThis;
+  var AC = root.AudioContext || root.webkitAudioContext || null;
+  var OAC = root.OfflineAudioContext || root.webkitOfflineAudioContext || null;
+
+  var MIN_ATTACK = 0.002;   // s  - no envelope rises faster than this (click-free)
+  var LOOKAHEAD = 0.005;    // s  - live sounds are scheduled this far ahead
+  var WARMUP = 0.03;        // s  - a new context's limiter fades in; nothing is scheduled before this
+  var SOFT_VOICES = 8;      // more sounding voices than this: minor sounds are dropped
+  var MAX_VOICES = 14;      // hard cap for everything
+  var RESUME_GRACE = 250;   // ms - a sound waiting for ctx.resume() is dropped after this
+  var OFFLINE_MAX = 2.5;    // s  - upper bound of an offline render (trimmed afterwards)
+
+  var ctx = null;           // live AudioContext, created inside unlock()
+  var master = null;        // live master gain
+  var unlocked = false;
+  var hidden = false;       // page hidden: suspend() was called
+  var muted = false;
+  var volume = 1;
+  var voices = [];          // end times (context clock) of the voices still sounding
+  var lastPlayed = {};      // name -> ms timestamp, for rate limiting
+  var tally = null;         // { end, last } of the sound currently being built
+
+  // ---------------------------------------------------------------- utilities
+
+  function noop() {}
+  function nowMs() { return root.performance && root.performance.now ? root.performance.now() : Date.now(); }
+  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+  function rowsOf(opts) { return clamp(Math.round((opts && +opts.rows) || 1), 1, 4); }
+  function between(rnd, lo, hi) { return lo + rnd() * (hi - lo); }
+  function vary(rnd, amount) { return 1 + (rnd() * 2 - 1) * amount; }   // 1 +- amount
+
+  /** Seeded PRNG (mulberry32), returns floats in [0, 1). */
+  function prng(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ---------------------------------------------- shared buffers (per context)
+
+  // Pre-rendered "glass ping" recipes. One buffer source per ping makes the shard
+  // rain of a shatter very cheap. Each recipe covers one frequency band and is
+  // re-pitched by at most +-33 %, so its baked-in 3 ms attack never drops below 2 ms.
+  // parts: [frequency ratio, amplitude, decay factor]
+  var SHARD_RECIPES = [
+    { f: 2400, t60: 0.190, parts: [[1, 0.7, 1]] },                                    // 1.8 - 3.2 kHz
+    { f: 2400, t60: 0.120, parts: [[1, 0.6, 1], [3, 0.07, 0.8], [2.756, 0.3, 0.5]] }, // triangle-ish + bar partial
+    { f: 4200, t60: 0.130, parts: [[1, 1.0, 1]] },                                    // 3.2 - 5.6 kHz
+    { f: 4200, t60: 0.085, parts: [[1, 0.8, 1], [1.83, 0.3, 0.6]] },
+    { f: 7000, t60: 0.080, parts: [[1, 0.9, 1]] },                                    // 5.6 - 9 kHz
+    { f: 7000, t60: 0.052, parts: [[1, 0.75, 1], [1.47, 0.28, 0.7]] }
+  ];
+
+  function makeNoise(c) {
+    var n = Math.floor(c.sampleRate), buf = c.createBuffer(1, n, c.sampleRate);
+    var data = buf.getChannelData(0), r = prng(0x4b46);
+    for (var i = 0; i < n; i++) data[i] = r() * 2 - 1;
+    return buf;
+  }
+
+  function makeShard(c, recipe) {
+    var sr = c.sampleRate, attack = 0.003, fade = 0.002;
+    var n = Math.ceil((attack + recipe.t60) * sr), buf = c.createBuffer(1, n, sr), data = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) {
+      var t = i / sr, v = 0;
+      for (var p = 0; p < recipe.parts.length; p++) {
+        var part = recipe.parts[p];   // exp(-6.91) = -60 dB after t60
+        v += part[1] * Math.sin(2 * Math.PI * recipe.f * part[0] * t) * Math.exp(-6.91 * t / (recipe.t60 * part[2]));
+      }
+      data[i] = v * Math.min(1, t / attack) * Math.min(1, (n - 1 - i) / (fade * sr));
+    }
+    return { f: recipe.f, buffer: buf };
+  }
+
+  /** Noise + shard buffers, created once per context and then reused. */
+  function buffers(c) {
+    if (!c._kfBuffers) {
+      c._kfBuffers = { noise: makeNoise(c), shards: SHARD_RECIPES.map(function (r) { return makeShard(c, r); }) };
+    }
+    return c._kfBuffers;
+  }
+
+  // ------------------------------------------------------ synthesis primitives
+
+  /** Starts a source, stops it after its tail and remembers the one that ends last. */
+  function run(src, t, stopAt, offset) {
+    if (offset == null) src.start(t); else src.start(t, offset);
+    src.stop(stopAt);
+    if (tally && stopAt > tally.end) { tally.end = stopAt; tally.last = src; }
+  }
+
+  /** Click-free percussive envelope: linear attack, exponential decay to -60 dB, 3 ms fade to zero. */
+  function env(param, t, peak, attack, decay) {
+    attack = Math.max(attack, MIN_ATTACK);
+    param.setValueAtTime(0, t);
+    param.linearRampToValueAtTime(peak, t + attack);
+    param.exponentialRampToValueAtTime(peak * 0.001, t + attack + decay);
+    param.linearRampToValueAtTime(0, t + attack + decay + 0.003);
+    return t + attack + decay + 0.003;
+  }
+
+  /** One oscillator partial with envelope; optionally glides from f0 to f1 within `glide` s. 2 nodes. */
+  function tone(c, dest, t, type, f0, peak, attack, decay, f1, glide) {
+    var osc = c.createOscillator(), g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, t);
+    if (f1) osc.frequency.exponentialRampToValueAtTime(f1, t + (glide || decay));
+    var end = env(g.gain, t, peak, attack, decay);
+    osc.connect(g);
+    g.connect(dest);
+    run(osc, t, end + 0.005);
+  }
+
+  /** Filtered noise burst with envelope; the filter optionally sweeps from f0 to f1. 3 nodes. */
+  function burst(c, dest, t, rnd, type, f0, q, peak, attack, decay, f1) {
+    var src = c.createBufferSource(), flt = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = buffers(c).noise;
+    src.loop = true;
+    flt.type = type;
+    flt.Q.value = q;
+    flt.frequency.setValueAtTime(f0, t);
+    if (f1) flt.frequency.exponentialRampToValueAtTime(f1, t + attack + decay);
+    var end = env(g.gain, t, peak, attack, decay);
+    src.connect(flt);
+    flt.connect(g);
+    g.connect(dest);
+    run(src, t, end + 0.005, rnd() * 0.9);
+  }
+
+  /** One pre-rendered glass ping at `freq` (1.8 - 9 kHz). 1 node; the level is set by `dest`. */
+  function shard(c, dest, t, freq, rnd) {
+    var bank = buffers(c).shards;
+    var item = bank[(freq < 3200 ? 0 : freq < 5600 ? 2 : 4) + (rnd() < 0.5 ? 0 : 1)];
+    var src = c.createBufferSource(), rate = freq / item.f;
+    src.buffer = item.buffer;
+    src.playbackRate.value = rate;
+    src.connect(dest);
+    run(src, t, t + item.buffer.duration / rate + 0.005);
+  }
+
+  /** Glockenspiel-like note: fundamental plus the faster-fading inharmonic partials of a free bar. */
+  function bell(c, dest, t, f, peak, decay, bend) {
+    tone(c, dest, t, 'sine', f, peak, 0.003, decay, bend ? f * bend : 0);
+    tone(c, dest, t, 'sine', f * 2.756, peak * 0.3, MIN_ATTACK, decay * 0.45);
+    if (f * 5.404 < 12000) tone(c, dest, t, 'sine', f * 5.404, peak * 0.12, MIN_ATTACK, decay * 0.2);
+  }
+
+  // -------------------------------------------------------------------- sounds
+
+  function sndMove(c, dest, t, opts, rnd) {            // tiny soft glassy tick
+    var f = 2450 * vary(rnd, 0.05);
+    tone(c, dest, t, 'sine', f, 0.11, MIN_ATTACK, 0.024);
+    tone(c, dest, t, 'sine', f * 1.71, 0.035, MIN_ATTACK, 0.014);
+  }
+
+  function sndRotate(c, dest, t, opts, rnd) {          // bright 'tink' with an upward pitch flick
+    var f = 1800 * vary(rnd, 0.04);
+    tone(c, dest, t, 'sine', f, 0.2, MIN_ATTACK, 0.075, f * 1.32, 0.04);
+    tone(c, dest, t, 'sine', f * 2.7, 0.06, MIN_ATTACK, 0.04, f * 3.4, 0.03);
+  }
+
+  function sndSoftDrop(c, dest, t, opts, rnd) {        // very quiet low tick
+    var f = 430 * vary(rnd, 0.05);
+    tone(c, dest, t, 'triangle', f, 0.1, 0.003, 0.028, f * 0.75, 0.03);
+  }
+
+  function sndHardDrop(c, dest, t, opts, rnd) {        // whoosh -> thud + clink
+    var hit = t + 0.055, f = 2050 * vary(rnd, 0.06);
+    burst(c, dest, t, rnd, 'bandpass', 5200, 1.3, 0.45, 0.045, 0.02, 520);   // swelling, falling whoosh
+    tone(c, dest, hit, 'sine', 210, 0.6, 0.003, 0.19, 50, 0.08);             // solid thud
+    burst(c, dest, hit, rnd, 'lowpass', 900, 0.7, 0.35, MIN_ATTACK, 0.055);  // impact body
+    tone(c, dest, hit, 'sine', f, 0.22, MIN_ATTACK, 0.12);                   // crystalline clink
+    tone(c, dest, hit, 'sine', f * 1.66, 0.15, MIN_ATTACK, 0.09);
+    tone(c, dest, hit, 'sine', f * 2.62, 0.09, MIN_ATTACK, 0.055);
+  }
+
+  function sndLock(c, dest, t, opts, rnd) {            // two quartz pieces touching
+    var f = 1480 * vary(rnd, 0.06);
+    burst(c, dest, t, rnd, 'highpass', 3800, 0.7, 0.07, MIN_ATTACK, 0.009);  // contact tick
+    tone(c, dest, t, 'sine', f, 0.2, MIN_ATTACK, 0.135);
+    tone(c, dest, t + between(rnd, 0, 0.004), 'sine', f * 1.59 * vary(rnd, 0.02), 0.14, MIN_ATTACK, 0.1);
+    tone(c, dest, t, 'sine', f * 2.25, 0.085, MIN_ATTACK, 0.065);
+  }
+
+  /** Dry fracturing: 4-10 irregular clicks that get denser and louder over ~150 ms. 5 nodes. */
+  function sndCrack(c, dest, t, opts, rnd) {
+    var rows = rowsOf(opts), n = 2 + 2 * rows, span = 0.15, at = [], i;
+    var src = c.createBufferSource(), body = c.createBiquadFilter(), air = c.createBiquadFilter();
+    var airGain = c.createGain(), gate = c.createGain();
+    src.buffer = buffers(c).noise;
+    src.loop = true;
+    body.type = 'bandpass';
+    body.Q.value = 2.2;
+    air.type = 'highpass';
+    air.frequency.value = 6000;
+    airGain.gain.value = 0.16;
+    src.connect(body); body.connect(gate);
+    src.connect(air); air.connect(airGain); airGain.connect(gate);
+    gate.connect(dest);
+    gate.gain.setValueAtTime(0, t);
+    // onsets: the spacing shrinks towards the end, i.e. the density rises
+    for (i = 0; i < n; i++) at.push(span * Math.pow(i / (n - 1), 0.6) + (i ? between(rnd, -0.0015, 0.0015) : 0));
+    for (i = 0; i < n; i++) {
+      var a = t + at[i], gap = i < n - 1 ? at[i + 1] - at[i] : 0.03;
+      var decay = Math.min(between(rnd, 0.005, 0.012), gap - MIN_ATTACK - 0.002);  // done before the next click
+      var peak = (0.7 + 0.075 * rows) * (0.4 + 0.6 * i / (n - 1)) * between(rnd, 0.7, 1);
+      body.frequency.setValueAtTime(between(rnd, 1300, 4200), a);   // gate is closed here: no zipper noise
+      gate.gain.setValueAtTime(0, a);
+      gate.gain.linearRampToValueAtTime(peak, a + MIN_ATTACK);
+      gate.gain.exponentialRampToValueAtTime(peak * 0.01, a + MIN_ATTACK + decay);
+      gate.gain.linearRampToValueAtTime(0, a + MIN_ATTACK + decay + 0.001);
+    }
+    run(src, t, t + at[n - 1] + 0.04, rnd() * 0.9);
+  }
+
+  var SHIMMER = [2349, 2637, 3136, 3520, 4186, 4699, 5274, 6272];   // D7 .. G8, major pentatonic
+
+  /** Hero sound: bright snap, band-passed crash and a rain of shard pings. At most ~39 nodes. */
+  function sndShatter(c, dest, t, opts, rnd) {
+    var rows = rowsOf(opts), k = (rows - 1) / 3;          // intensity 0..1
+    var count = [9, 12, 15, 16][rows - 1];                // random shard pings
+    var spread = 0.3 + 0.2 * k;                           // s - window the shards rain down in
+    var level = 0.5 + 0.35 * k, pans = [-0.6, 0, 0.6], bus = [], i;
+
+    // impact: very short bright snap plus the crash body (about 3 - 10 kHz, settling slightly)
+    burst(c, dest, t, rnd, 'highpass', 6500, 0.7, 0.4 * level, MIN_ATTACK, 0.022);
+    burst(c, dest, t, rnd, 'bandpass', 6200 * vary(rnd, 0.08), 1, 0.75 * level, 0.003, 0.2 + 0.1 * k, 4600);
+
+    // shard bus: left / centre / right groups that fade over time, so later pings are quieter
+    for (i = 0; i < 3; i++) {
+      var g = c.createGain(), lvl = level * between(rnd, 0.36, 0.46);
+      g.gain.setValueAtTime(lvl, t);
+      g.gain.exponentialRampToValueAtTime(lvl * 0.22, t + spread + 0.1);
+      if (pans[i] && c.createStereoPanner) {
+        var pan = c.createStereoPanner();
+        pan.pan.value = pans[i];
+        g.connect(pan);
+        pan.connect(dest);
+      } else {
+        g.connect(dest);
+      }
+      bus.push(g);
+    }
+    for (i = 0; i < count; i++) {
+      var delay = i < 2 ? 0 : spread * Math.pow(rnd(), 1.6);   // two on the impact, the rest thinning out
+      shard(c, bus[i % 3], t + delay, 1800 * Math.pow(5, Math.pow(rnd(), 0.75)), rnd);   // 1.8 - 9 kHz, leaning high
+    }
+
+    if (rows === 4) {   // jackpot: sub thump and a short rising shimmer of pings
+      tone(c, dest, t, 'triangle', 150, 0.34, 0.008, 0.17, 50, 0.12);
+      var sh = c.createGain();
+      sh.gain.value = 0.2;
+      sh.connect(dest);
+      for (i = 0; i < SHIMMER.length; i++) {
+        shard(c, sh, t + 0.07 + i * 0.03 + between(rnd, 0, 0.006), SHIMMER[i] * vary(rnd, 0.004), rnd);
+      }
+    }
+  }
+
+  var ARPEGGIO = [1046.5, 1318.5, 1568, 1760, 2093];   // C6 E6 G6 A6 C7
+  function sndLevelUp(c, dest, t, opts, rnd) {         // crystal glockenspiel run, ~600 ms
+    for (var i = 0; i < ARPEGGIO.length; i++) {
+      var top = i === ARPEGGIO.length - 1;
+      bell(c, dest, t + i * 0.085 + between(rnd, 0, 0.004), ARPEGGIO[i] * vary(rnd, 0.002), top ? 0.26 : 0.2, top ? 0.3 : 0.2);
+    }
+  }
+
+  var LAMENT = [1318.5, 1046.5, 880, 698.5, 587.3];    // E6 C6 A5 F5 D5
+  function sndGameOver(c, dest, t, opts, rnd) {        // sagging glass tones, then a soft thump, ~1.2 s
+    for (var i = 0; i < LAMENT.length; i++) {
+      bell(c, dest, t + i * 0.165 + between(rnd, 0, 0.006), LAMENT[i] * vary(rnd, 0.002), 0.22, 0.34, 0.97);
+    }
+    tone(c, dest, t + 0.86, 'triangle', 140, 0.5, 0.012, 0.32, 52, 0.2);
+  }
+
+  function sndStart(c, dest, t, opts, rnd) {           // bright two-note chime (G6 -> C7)
+    var tune = vary(rnd, 0.003);
+    bell(c, dest, t, 1568 * tune, 0.22, 0.2);
+    bell(c, dest, t + 0.095, 2093 * tune, 0.26, 0.28);
+  }
+
+  function blips(c, dest, t, rnd, f1, f2) {
+    var tune = vary(rnd, 0.01);
+    tone(c, dest, t, 'triangle', f1 * tune, 0.2, 0.003, 0.07);
+    tone(c, dest, t + 0.08, 'triangle', f2 * tune, 0.2, 0.003, 0.09);
+  }
+  function sndPause(c, dest, t, opts, rnd) { blips(c, dest, t, rnd, 1318.5, 987.8); }    // E6 -> B5
+  function sndResume(c, dest, t, opts, rnd) { blips(c, dest, t, rnd, 987.8, 1318.5); }   // B5 -> E6
+
+  function sndUiTap(c, dest, t, opts, rnd) {           // neutral soft tick
+    var f = 1000 * vary(rnd, 0.02);
+    tone(c, dest, t, 'sine', f, 0.13, MIN_ATTACK, 0.035);
+    tone(c, dest, t, 'sine', f * 2, 0.03, MIN_ATTACK, 0.018);
+  }
+
+  // make: synth function, gain: per-sound level, gap: minimum ms between two plays,
+  // vip: still played when the soft voice limit is reached
+  var SOUNDS = {
+    move:     { make: sndMove,     gain: 0.6,  gap: 25 },
+    rotate:   { make: sndRotate,   gain: 0.55, gap: 25 },
+    softDrop: { make: sndSoftDrop, gain: 0.6,  gap: 25 },
+    hardDrop: { make: sndHardDrop, gain: 0.6,  vip: true },
+    lock:     { make: sndLock,     gain: 0.42, gap: 20 },
+    crack:    { make: sndCrack,    gain: 1,    vip: true },
+    shatter:  { make: sndShatter,  gain: 1,    vip: true },
+    levelUp:  { make: sndLevelUp,  gain: 0.5,  vip: true },
+    gameOver: { make: sndGameOver, gain: 0.65, vip: true },
+    start:    { make: sndStart,    gain: 0.5,  vip: true },
+    pause:    { make: sndPause,    gain: 0.85 },
+    resume:   { make: sndResume,   gain: 0.85 },
+    uiTap:    { make: sndUiTap,    gain: 0.85, gap: 25 }
+  };
+  var NAMES = Object.keys(SOUNDS);
+
+  function known(name) { return Object.prototype.hasOwnProperty.call(SOUNDS, name); }
+
+  // -------------------------------------------------------------------- engine
+
+  /** master gain -> compressor used as limiter -> destination. Returns the master gain. */
+  function makeMaster(c, gainValue) {
+    var gain = c.createGain(), tail = gain;
+    gain.gain.value = gainValue;
+    if (c.createDynamicsCompressor) {
+      var limiter = c.createDynamicsCompressor();
+      limiter.threshold.value = -10;
+      limiter.knee.value = 6;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.002;
+      limiter.release.value = 0.12;
+      // Chromium adds about +4.4 dB of make-up gain with these settings; the per-sound levels allow for it.
+      // A fresh limiter fades in over one release time; make that 1 ms until WARMUP has passed.
+      limiter.release.setValueAtTime(0.001, 0);
+      limiter.release.setValueAtTime(0.12, WARMUP);
+      gain.connect(limiter);
+      tail = limiter;
+    }
+    tail.connect(c.destination);
+    return gain;
+  }
+
+  /** Builds one sound behind its own gain node; returns the context time at which it has ended. */
+  function build(c, masterNode, name, t, opts, rnd) {
+    var def = SOUNDS[name], out = c.createGain(), mine = { end: t, last: null };
+    out.gain.value = def.gain;
+    out.connect(masterNode);
+    tally = mine;
+    try { def.make(c, out, t, opts || {}, rnd); } finally { tally = null; }
+    // free the whole voice as soon as its longest-running source has stopped
+    if (mine.last) mine.last.onended = function () { try { out.disconnect(); } catch (e) { /* already gone */ } };
+    return mine.end;
+  }
+
+  function masterLevel() { return muted ? 0 : volume * volume; }   // quadratic taper feels linear to the ear
+
+  function applyLevel() {
+    if (!ctx || !master) return;
+    try { master.gain.setTargetAtTime(masterLevel(), ctx.currentTime, 0.015); } catch (e) { master.gain.value = masterLevel(); }
+  }
+
+  /** Asks a suspended / interrupted context to run again; returns the promise if there is one. */
+  function wake() {
+    if (!ctx || ctx.state === 'running' || !ctx.resume) return null;
+    var p = ctx.resume();
+    if (p && p.catch) p.catch(noop);
+    return p;
+  }
+
+  function fire(name, opts) {
+    var def = SOUNDS[name], stamp = nowMs(), t = ctx.currentTime;
+    if (def.gap && stamp - lastPlayed[name] < def.gap) return;
+    voices = voices.filter(function (end) { return end > t; });
+    if (voices.length >= (def.vip ? MAX_VOICES : SOFT_VOICES)) return;
+    lastPlayed[name] = stamp;
+    voices.push(build(ctx, master, name, Math.max(t + LOOKAHEAD, WARMUP), opts, Math.random));
+  }
+
+  function unlock() {
+    try {
+      if (!AC) return;
+      if (ctx && ctx.state === 'closed') { ctx = null; master = null; voices = []; }
+      if (!ctx) {
+        try { ctx = new AC({ latencyHint: 'interactive' }); } catch (e) { ctx = new AC(); }
+        master = makeMaster(ctx, masterLevel());
+        buffers(ctx);   // build the noise / shard buffers now, not during the first line clear
+      }
+      if (!unlocked || ctx.state !== 'running') {
+        var blip = ctx.createBufferSource();   // a silent sample from inside the gesture opens the output on mobile
+        blip.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        blip.connect(ctx.destination);
+        blip.start(0);
+      }
+      unlocked = true;
+      hidden = false;   // a user gesture proves the page is visible, even if resume() was never called
+      wake();
+    } catch (e) { /* audio is optional */ }
+  }
+
+  function play(name, opts) {
+    try {
+      if (muted || hidden || !unlocked || !ctx || !known(name)) return;
+      if (ctx.state === 'running') { fire(name, opts); return; }
+      // suspended / interrupted (or still starting up): resume, and play only if that happens promptly
+      var asked = nowMs(), p = wake();
+      if (p && p.then) {
+        p.then(function () {
+          try {
+            if (!muted && !hidden && ctx && ctx.state === 'running' && nowMs() - asked < RESUME_GRACE) fire(name, opts);
+          } catch (e) { /* ignore */ }
+        }, noop);
+      }
+    } catch (e) { /* never let audio break the game */ }
+  }
+
+  function suspend() {
+    hidden = true;
+    try {
+      if (ctx && ctx.suspend && ctx.state === 'running') {
+        var p = ctx.suspend();
+        if (p && p.catch) p.catch(noop);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function resume() {
+    hidden = false;
+    try { if (unlocked) wake(); } catch (e) { /* ignore */ }
+  }
+
+  /** Copies the span from..to (seconds) of a rendered buffer into a new, tight buffer. */
+  function trim(c, buf, from, to) {
+    var a = Math.round(from * buf.sampleRate), b = clamp(Math.ceil(to * buf.sampleRate), a + 1, buf.length);
+    var out = c.createBuffer(buf.numberOfChannels, b - a, buf.sampleRate);
+    for (var ch = 0; ch < buf.numberOfChannels; ch++) out.getChannelData(ch).set(buf.getChannelData(ch).subarray(a, b));
+    return out;
+  }
+
+  /**
+   * Test hook: renders one sound through the same graph (including the master chain at
+   * full volume) in an OfflineAudioContext. Deterministic for a given seed.
+   * Resolves with a stereo AudioBuffer; rejects if unsupported or the name is unknown.
+   */
+  function renderOffline(name, opts, config) {
+    var cfg = config || {}, sampleRate = cfg.sampleRate || 44100, seed = cfg.seed == null ? 1 : cfg.seed;
+    if (typeof Promise === 'undefined') return null;
+    return new Promise(function (resolve, reject) {
+      if (!OAC) { reject(new Error('OfflineAudioContext is not available')); return; }
+      if (!known(name)) { reject(new Error('Unknown sound: ' + name)); return; }
+      var c = new OAC(2, Math.ceil((WARMUP + OFFLINE_MAX) * sampleRate), sampleRate);
+      // like the live path: the sound starts once the limiter has settled; the lead-in is cut off again
+      var end = build(c, makeMaster(c, 1), name, WARMUP, opts, prng(seed));
+      var done = function (buf) { resolve(trim(c, buf, WARMUP, end + 0.03)); };   // + limiter look-ahead
+      c.oncomplete = function (e) { done(e.renderedBuffer); };            // callback form (old WebKit)
+      var p = c.startRendering();
+      if (p && p.then) { c.oncomplete = null; p.then(done, reject); }
+    });
+  }
+
+  KF.Audio = {
+    unlock: unlock,
+    play: play,
+    setMuted: function (flag) { muted = !!flag; applyLevel(); },
+    get muted() { return muted; },
+    setVolume: function (v) { v = +v; volume = v >= 0 ? Math.min(v, 1) : 0; applyLevel(); },
+    get volume() { return volume; },
+    suspend: suspend,
+    resume: resume,
+    NAMES: NAMES,
+    renderOffline: renderOffline
+  };
+})(globalThis.KF = globalThis.KF || {});
+
+// ---- src/game.js
+// Crystal Drop – app shell: layout, rendering, input, HUD, menu, title screen.
+// Rules live in logic.js (KF.Logic), the crystal look + shatter effect in crystal.js (KF.Crystal),
+// the animated cave backdrop in cave.js (KF.Cave), sound in audio.js (KF.Audio).
+(function (KF) {
+  'use strict';
+
+  const L = KF.Logic;
+  const C = KF.Crystal;
+  const A = KF.Audio || { unlock() {}, play() {}, setMuted() {}, suspend() {}, resume() {} };
+  const { COLS, ROWS, SPAWN_ROWS, Phase } = L;
+
+  const ENTRY_ROWS = 2;                  // rows above the field where the incoming piece is already visible
+  const STORE_KEY = 'kristallfall.v1';   // unchanged so existing records survive the rename
+  const TITLE_LINES = ['CRYSTAL', 'DROP'];
+  const FONT = "'Fredoka', ui-rounded, 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif";
+  const SOFT_REPEAT_FIRST_MS = 150;
+  const SOFT_REPEAT_MS = 45;
+  const CLEAR_WORDS = { 2: 'DOPPELT!', 3: 'DREIFACH!', 4: 'KRISTALLBRUCH!' };
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  // ------------------------------------------------------------------ settings
+
+  const settings = { best: 0, sound: true, ghost: true, vibrate: true };
+
+  function loadSettings() {
+    try {
+      const raw = window.localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      const o = JSON.parse(raw);
+      if (!o || typeof o !== 'object') return;
+      if (Number.isFinite(o.best)) settings.best = Math.max(0, Math.floor(o.best));
+      for (const k of ['sound', 'ghost', 'vibrate']) if (typeof o[k] === 'boolean') settings[k] = o[k];
+    } catch (e) { /* storage unavailable: play without persistence */ }
+  }
+
+  function saveSettings() {
+    try { window.localStorage.setItem(STORE_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  }
+
+  // ------------------------------------------------------------------ state
+
+  const game = new L.GameState();
+  const fx = C.createFx();
+
+  let gameTime = 0;      // advances only while a game is running and not paused; all rule timing uses it
+  let animTime = 0;      // advances whenever effects may animate (frozen during pause)
+  let lastTs = 0;
+
+  // W/H: window size (all canvases cover it); colX/colW: the game column; board*: the playfield, in window coordinates
+  const view = { W: 0, H: 0, dpr: 1, dprCap: 3, caveRatio: 1, colX: 0, colW: 0, cell: 20, boardX: 0, boardY: 0, boardW: 0, boardH: 0 };
+  let els = null;
+  let bgCtx = null;
+  let fgCtx = null;
+  let caveCtx = null;
+  let cave = null;              // KF.Cave instance (animated backdrop), null if unavailable
+  let caveLevel = 1;
+  let caveAcc = 0;
+  let caveKick = 0;
+  let caveDirty = true;
+  let reduceMotion = false;
+
+  let boardCells = [];
+  let boardDirty = true;
+  let needRender = true;
+  let lastIdleRender = 0;
+
+  let collapse = null;          // { t0, dur, shift[] } rows settling after a clear
+  let pendingShatter = null;    // pixel cells captured when the rows start cracking
+  let suppressLockSound = false;
+  let overAt = 0;
+  const shake = { amp: 0 };
+  const bump = { amp: 0 };
+  const popups = [];
+  const trails = [];
+  const vis = { pid: 0, x: 0, y: 0, ox: 0, oy: 0 };   // eased offset of the falling piece (in cells)
+
+  const input = { keyLeft: false, keyRight: false, keyDir: 0, pointerDir: 0, pointers: [], softKey: false, softBtn: false, softNext: 0 };
+  const perf = { sum: 0, n: 0 };
+  let modal = null;             // null | 'menu' | 'help'
+  let newGameArmed = false;
+  let uiKey = '';
+  let nextKey = '';
+
+  // ------------------------------------------------------------------ helpers
+
+  function play(name, opts) { if (settings.sound) A.play(name, opts); }
+
+  function buzz(pattern) {
+    if (!settings.vibrate || typeof navigator === 'undefined' || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (e) { /* not allowed here */ }
+  }
+
+  function requestRender() { needRender = true; }
+
+  // Keep the record as soon as a game is left (game over, pause, new game, page closed).
+  function commitBest() {
+    if (game.score > settings.best) { settings.best = game.score; saveSettings(); }
+  }
+
+  function inProgress() { return game.gameRunning; }
+
+  // ------------------------------------------------------------------ layout
+
+  function isTitle() { return game.phase === Phase.IDLE; }
+
+  function sizeCanvas(cv, w, h) {
+    if (cv.width !== w) cv.width = w;
+    if (cv.height !== h) cv.height = h;
+  }
+
+  // All three canvases cover the whole window; the game column (#kf-app) sits centred on top of them.
+  function layout() {
+    const app = els.app;
+    const body = document.body.getBoundingClientRect();
+    if (body.width < 60 || body.height < 120) return;
+    // Phones (tall, narrow windows) use the full width; wide windows get a narrow column that hugs the field.
+    const colW = body.width / body.height <= 0.6 ? body.width : Math.min(body.width, Math.round(body.height * 0.44));
+    app.style.width = colW + 'px';
+    app.style.setProperty('--u', (colW / 100).toFixed(3) + 'px');
+    const rect = app.getBoundingClientRect();
+
+    const vw = Math.max(colW, els.cave.clientWidth || window.innerWidth || colW);
+    const vh = Math.max(rect.height, els.cave.clientHeight || window.innerHeight || rect.height);
+    const topB = els.top.getBoundingClientRect().bottom;
+    const botT = els.bottom.getBoundingClientRect().top;
+    const pad = 4;
+    const availH = Math.max(40, botT - topB - pad * 2);
+    const cell = Math.max(6, Math.floor(Math.min(availH / (ROWS + ENTRY_ROWS), (colW * 0.9) / COLS)));
+    const dpr = Math.min(window.devicePixelRatio || 1, view.dprCap);
+
+    view.W = vw; view.H = vh; view.dpr = dpr; view.cell = cell;
+    view.colX = rect.left; view.colW = colW;
+    view.boardW = cell * COLS;
+    view.boardH = cell * ROWS;
+    view.boardX = Math.round(rect.left + (colW - view.boardW) / 2);
+    view.boardY = Math.round(topB + pad + (availH - (ROWS + ENTRY_ROWS) * cell) / 2 + ENTRY_ROWS * cell);
+    view.caveRatio = Math.min(window.devicePixelRatio || 1, view.dprCap, 2);   // the backdrop needs less detail
+
+    sizeCanvas(els.bg, Math.round(vw * dpr), Math.round(vh * dpr));
+    sizeCanvas(els.fg, Math.round(vw * dpr), Math.round(vh * dpr));
+    app.style.setProperty('--board-w', view.boardW + 'px');
+    app.style.setProperty('--card-y', (view.boardY + view.boardH * 0.4 - topB).toFixed(1) + 'px');
+    app.style.setProperty('--toast-y', (view.boardY + view.boardH * 0.2 - topB).toFixed(1) + 'px');
+
+    C.invalidate();
+    caveResize();
+    drawFrame();
+    drawLogo();
+    boardDirty = true;
+    nextKey = '';
+    requestRender();
+  }
+
+  // ------------------------------------------------------------------ cave backdrop (KF.Cave), level themes
+
+  function paintFallbackCave() {
+    const g = caveCtx, r = view.caveRatio || 1;
+    g.setTransform(r, 0, 0, r, 0, 0);
+    const sky = g.createLinearGradient(0, 0, 0, view.H);
+    sky.addColorStop(0, '#12295a');
+    sky.addColorStop(0.55, '#0a1630');
+    sky.addColorStop(1, '#050a18');
+    g.fillStyle = sky;
+    g.fillRect(0, 0, view.W, view.H);
+  }
+
+  // The backdrop must never take the game down with it.
+  function caveCall(fn) {
+    if (!cave) return;
+    try { fn(cave); } catch (e) { cave = null; paintFallbackCave(); }
+  }
+
+  function caveFocus(c) {
+    if (isTitle() || !c.setFocus) return;
+    const { cell, boardX, boardY, boardW, boardH } = view;
+    c.setFocus(boardX, boardY - ENTRY_ROWS * cell, boardW, boardH + ENTRY_ROWS * cell);
+  }
+
+  function caveResize() {
+    const r = view.caveRatio;
+    sizeCanvas(els.cave, Math.round(view.W * r), Math.round(view.H * r));
+    if (!cave) { paintFallbackCave(); return; }
+    caveCall((c) => { c.resize(view.W, view.H, r); caveFocus(c); c.setLevel(caveLevel, true); });
+    caveDirty = true;
+  }
+
+  function setCaveLevel(level, immediate) {
+    caveLevel = level;
+    caveKick = 2600;            // keep animating through the crossfade even with reduced motion
+    caveDirty = true;
+    caveCall((c) => { caveFocus(c); c.setLevel(level, !!immediate); });
+  }
+
+  function tickCave(dt) {
+    if (!cave) return;
+    caveAcc += dt;
+    if (caveAcc < 32 && !caveDirty) return;                     // ~30 fps is plenty for a slow backdrop
+    const step = Math.min(caveAcc, 120);
+    caveAcc = 0;
+    const animate = !reduceMotion || caveKick > 0;
+    if (!animate && !caveDirty) return;
+    caveKick = Math.max(0, caveKick - step);
+    caveDirty = false;
+    caveCall((c) => {
+      if (animate) c.update(step);
+      const r = view.caveRatio;
+      caveCtx.setTransform(r, 0, 0, r, 0, 0);
+      c.draw(caveCtx);
+    });
+  }
+
+  // ------------------------------------------------------------------ static playfield frame
+
+  function drawFrame() {
+    const g = bgCtx;
+    const { W, H, dpr, cell, boardX, boardY, boardW, boardH } = view;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+
+    const f = Math.max(4, Math.round(cell * 0.24));       // rail thickness
+    const o = 2.5;                                        // ink outline
+    const ey = boardY - ENTRY_ROWS * cell;
+    const xl = boardX - f, xr = boardX + boardW, yb = boardY + boardH;
+
+    // chunky 3D rails: left, right, bottom (lit from the top-left)
+    g.fillStyle = '#06102a';
+    g.fillRect(xl - o, ey, f + o * 2, yb + f + o - ey);
+    g.fillRect(xr - o, ey, f + o * 2, yb + f + o - ey);
+    g.fillRect(xl - o, yb - o, boardW + f * 2 + o * 2, f + o * 2);
+    const rail = (x) => {
+      g.fillStyle = '#4f9df0'; g.fillRect(x, ey, f, yb + f - ey);
+      g.fillStyle = '#c4e9ff'; g.fillRect(x, ey, f * 0.32, yb + f - ey);
+      g.fillStyle = '#2459b4'; g.fillRect(x + f * 0.72, ey, f * 0.28, yb + f - ey);
+    };
+    rail(xl); rail(xr);
+    g.fillStyle = '#4f9df0'; g.fillRect(xl, yb, boardW + f * 2, f);
+    g.fillStyle = '#c4e9ff'; g.fillRect(xl + f * 0.32, yb, boardW + f * 2 - f * 0.6, f * 0.3);
+    g.fillStyle = '#2459b4'; g.fillRect(xl, yb + f * 0.7, boardW + f * 2, f * 0.3);
+    // corner studs
+    for (const cx of [xl + f / 2, xr + f / 2]) {
+      g.fillStyle = '#06102a'; g.beginPath(); g.arc(cx, yb + f / 2, f * 0.95, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffd23e'; g.beginPath(); g.arc(cx, yb + f / 2, f * 0.62, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#fff6ae'; g.beginPath(); g.arc(cx - f * 0.18, yb + f / 2 - f * 0.2, f * 0.22, 0, Math.PI * 2); g.fill();
+    }
+    // the rails fade out upwards through the entry shaft
+    g.globalCompositeOperation = 'destination-out';
+    const fade = g.createLinearGradient(0, ey, 0, boardY);
+    fade.addColorStop(0, 'rgba(0,0,0,1)');
+    fade.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = fade;
+    g.fillRect(xl - o - 1, ey - 1, boardW + f * 2 + o * 2 + 2, boardY - ey + 1);
+    g.globalCompositeOperation = 'source-over';
+
+    // entry shaft and field: dark glass, the cave stays faintly visible behind it
+    const shaft = g.createLinearGradient(0, ey, 0, boardY);
+    shaft.addColorStop(0, 'rgba(4,9,24,0)');
+    shaft.addColorStop(1, 'rgba(4,9,24,0.66)');
+    g.fillStyle = shaft;
+    g.fillRect(boardX, ey, boardW, ENTRY_ROWS * cell);
+    const field = g.createLinearGradient(0, boardY, 0, yb);
+    field.addColorStop(0, 'rgba(6,13,32,0.78)');
+    field.addColorStop(1, 'rgba(4,9,24,0.86)');
+    g.fillStyle = field;
+    g.fillRect(boardX, boardY, boardW, boardH);
+
+    g.strokeStyle = 'rgba(150,200,255,0.07)';
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let c = 1; c < COLS; c++) { g.moveTo(boardX + c * cell + 0.5, boardY); g.lineTo(boardX + c * cell + 0.5, yb); }
+    for (let r = 1; r < ROWS; r++) { g.moveTo(boardX, boardY + r * cell + 0.5); g.lineTo(boardX + boardW, boardY + r * cell + 0.5); }
+    g.stroke();
+    g.strokeStyle = 'rgba(160,210,255,0.3)';
+    g.setLineDash([cell * 0.35, cell * 0.3]);
+    g.beginPath(); g.moveTo(boardX, boardY + 0.5); g.lineTo(boardX + boardW, boardY + 0.5); g.stroke();
+    g.setLineDash([]);
+    // inner shade so the field reads as recessed
+    g.fillStyle = 'rgba(0,0,0,0.28)';
+    g.fillRect(boardX, boardY, Math.max(2, cell * 0.09), boardH);
+    g.fillRect(boardX, yb - Math.max(2, cell * 0.09), boardW, Math.max(2, cell * 0.09));
+
+    // small chevrons mark the tap zones beside the field (only where the column leaves room for them)
+    const zone = xl - o - view.colX;
+    if (zone >= 12) {
+      const s = Math.min(zone * 0.3, cell * 0.36);
+      const cy = boardY + boardH * 0.5;
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      for (const side of [-1, 1]) {
+        const cx = side < 0 ? view.colX + zone / 2 : view.colX + view.colW - zone / 2;
+        for (const dy of [-cell * 3, 0, cell * 3]) {
+          for (const pass of [0, 1]) {
+            g.lineWidth = pass ? Math.max(1.5, s * 0.4) : Math.max(3.5, s * 0.4 + 3);
+            g.strokeStyle = pass ? 'rgba(220,240,255,0.55)' : 'rgba(6,16,42,0.55)';
+            g.beginPath();
+            g.moveTo(cx - side * s * 0.5, cy + dy - s);
+            g.lineTo(cx + side * s * 0.5, cy + dy);
+            g.lineTo(cx - side * s * 0.5, cy + dy + s);
+            g.stroke();
+          }
+        }
+      }
+      g.lineCap = 'butt'; g.lineJoin = 'miter';
+    }
+  }
+
+  // ------------------------------------------------------------------ title logo (drawn, not typed)
+
+  const LOGO_INK = '#06102a';
+  const LOGO_STYLES = [
+    { hi: '#ffffff', mid: '#bfe8ff', lo: '#63b4f4', side: '#2a67bd' },     // ice
+    { hi: '#fff8c4', mid: '#ffd23e', lo: '#ff9a14', side: '#b05a00' },     // citrine
+  ];
+
+  function drawLogo() {
+    const cv = els.logo;
+    if (!cv) return;
+    const ratio = Math.min(window.devicePixelRatio || 1, 3);
+    const wCss = Math.max(120, Math.min(view.colW - 32, 460));
+    const font = (px) => '600 ' + px.toFixed(1) + 'px ' + FONT;
+    const probe = cv.getContext('2d');
+    const track = 0.03;                                    // letter spacing as a fraction of the size
+    const widthAt = (text, px) => {
+      probe.font = font(px);
+      let w = 0;
+      for (const ch of text) w += probe.measureText(ch).width + px * track;
+      return w - px * track;
+    };
+    // line sizes: each line is fitted to the available width, the second one is the bigger word
+    const fit = (text, share, cap) => Math.min(cap, 100 * (wCss * share) / widthAt(text, 100));
+    const sizes = [fit(TITLE_LINES[0], 0.92, wCss * 0.26), fit(TITLE_LINES[1], 0.8, wCss * 0.36)];
+    const padY = sizes[1] * 0.2;
+    const hCss = sizes[0] * 0.98 + sizes[1] * 1.02 + padY * 2;
+    cv.style.width = wCss + 'px';
+    cv.style.height = hCss + 'px';
+    cv.width = Math.round(wCss * ratio);
+    cv.height = Math.round(hCss * ratio);
+    const g = cv.getContext('2d');
+    const face = document.createElement('canvas');
+    face.width = cv.width; face.height = cv.height;
+    const fg = face.getContext('2d');
+    g.setTransform(ratio, 0, 0, ratio, 0, 0);
+    fg.setTransform(ratio, 0, 0, ratio, 0, 0);
+    g.clearRect(0, 0, wCss, hCss);
+
+    const rnd = mulberry32(77031);
+    let baseline = padY + sizes[0] * 0.78;
+    TITLE_LINES.forEach((text, li) => {
+      const px = sizes[li], st = LOGO_STYLES[li % LOGO_STYLES.length];
+      const depth = px * 0.1;
+      // letter placement: slight alternating tilt and bounce
+      const letters = [];
+      let x = (wCss - widthAt(text, px)) / 2;
+      probe.font = font(px);
+      let i = 0;
+      for (const ch of text) {
+        const w = probe.measureText(ch).width;
+        letters.push({ ch, x: x + w / 2, y: baseline + Math.sin(i * 1.9 + li) * px * 0.035, rot: (i % 2 ? 1 : -1) * (0.025 + rnd() * 0.03) });
+        x += w + px * track;
+        i++;
+      }
+      const each = (ctx, fn) => { for (const l of letters) { ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.rot); fn(l); ctx.restore(); } };
+
+      // 1) ink body including the extruded side
+      g.font = font(px); g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.lineJoin = 'round';
+      g.strokeStyle = LOGO_INK; g.lineWidth = px * 0.15;
+      each(g, (l) => { for (let d = depth; d >= 0; d -= 1.5) g.strokeText(l.ch, 0, d); g.strokeText(l.ch, 0, 0); });
+      g.fillStyle = st.side;
+      each(g, (l) => { for (let d = depth; d >= 1; d -= 1) g.fillText(l.ch, 0, d); });
+
+      // 2) crystal face on a scratch layer: letters as a mask, then tones, facets and gloss inside them
+      fg.globalCompositeOperation = 'source-over';
+      fg.clearRect(0, 0, wCss, hCss);
+      fg.font = font(px); fg.textAlign = 'center'; fg.textBaseline = 'alphabetic';
+      fg.fillStyle = '#ffffff';
+      each(fg, (l) => { fg.fillText(l.ch, 0, 0); });
+      fg.globalCompositeOperation = 'source-atop';
+      const top = baseline - px * 0.78, bottom = baseline + px * 0.06;
+      const grd = fg.createLinearGradient(0, top, 0, bottom);
+      grd.addColorStop(0, st.hi); grd.addColorStop(0.45, st.mid); grd.addColorStop(1, st.lo);
+      fg.fillStyle = grd;
+      fg.fillRect(0, top - px * 0.2, wCss, px * 1.4);
+      // hard-edged facet planes running diagonally through the word
+      const span = wCss + px;
+      for (let k = 0; k < 9; k++) {
+        const fx0 = -px * 0.5 + rnd() * span, fw = px * (0.12 + rnd() * 0.3);
+        fg.fillStyle = k % 3 === 2 ? 'rgba(0,30,90,0.10)' : 'rgba(255,255,255,' + (0.28 + rnd() * 0.3).toFixed(2) + ')';
+        fg.beginPath();
+        fg.moveTo(fx0, bottom + px * 0.1); fg.lineTo(fx0 + fw, bottom + px * 0.1);
+        fg.lineTo(fx0 + fw + px * 0.55, top - px * 0.1); fg.lineTo(fx0 + px * 0.55, top - px * 0.1);
+        fg.closePath(); fg.fill();
+      }
+      // darker foot and a glossy cap
+      fg.fillStyle = 'rgba(0,25,80,0.16)';
+      fg.fillRect(0, baseline - px * 0.2, wCss, px * 0.4);
+      fg.fillStyle = 'rgba(255,255,255,0.55)';
+      fg.beginPath(); fg.ellipse(wCss / 2, top - px * 0.02, wCss * 0.62, px * 0.3, 0, 0, Math.PI * 2); fg.fill();
+      g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(face, 0, 0); g.restore();
+
+      // 3) sparkles
+      const stars = li === 0 ? [[0.06, -0.72, 0.16], [0.93, -0.16, 0.1]] : [[0.9, -0.74, 0.19], [0.1, -0.1, 0.11]];
+      const x0 = (wCss - widthAt(text, px)) / 2, ww = widthAt(text, px);
+      for (const [ux, uy, ur] of stars) {
+        const sx = x0 + ww * ux, sy = baseline + px * uy, R = px * ur, r = R * 0.22;
+        const path = () => { g.beginPath(); g.moveTo(sx, sy - R); g.lineTo(sx + r, sy - r); g.lineTo(sx + R, sy); g.lineTo(sx + r, sy + r); g.lineTo(sx, sy + R); g.lineTo(sx - r, sy + r); g.lineTo(sx - R, sy); g.lineTo(sx - r, sy - r); g.closePath(); };
+        path(); g.lineWidth = px * 0.07; g.strokeStyle = LOGO_INK; g.stroke();
+        g.fillStyle = '#ffffff'; g.fill();
+      }
+      baseline += sizes[0] * 0.2 + sizes[1] * 0.86;
+    });
+  }
+
+  // ------------------------------------------------------------------ cell lists for the crystal renderer
+
+  function connOfGrid(grid, r, c) {
+    const me = grid[r][c];
+    let m = 0;
+    if (r > 0 && grid[r - 1][c] && grid[r - 1][c].pid === me.pid) m |= 1;
+    if (c < COLS - 1 && grid[r][c + 1] && grid[r][c + 1].pid === me.pid) m |= 2;
+    if (r < grid.length - 1 && grid[r + 1][c] && grid[r + 1][c].pid === me.pid) m |= 4;
+    if (c > 0 && grid[r][c - 1] && grid[r][c - 1].pid === me.pid) m |= 8;
+    return m;
+  }
+
+  function rebuildBoardCells() {
+    const grid = game.board.grid;
+    const { cell, boardX, boardY } = view;
+    const out = [];
+    for (let r = SPAWN_ROWS - ENTRY_ROWS; r < grid.length; r++) {
+      for (let c = 0; c < COLS; c++) {
+        const k = grid[r][c];
+        if (!k) continue;
+        const y = boardY + (r - SPAWN_ROWS) * cell;
+        out.push({ x: boardX + c * cell, y, baseY: y, size: cell, type: k.type, seed: k.seed, conn: connOfGrid(grid, r, c), crack: 0, row: r });
+      }
+    }
+    boardCells = out;
+    boardDirty = false;
+  }
+
+  // Cells of a free piece. px/py are in field cells and may be fractional (eased movement).
+  function shapeCells(piece, px, py, ox, oy, size, minRow) {
+    const sh = piece.shape;
+    const out = [];
+    for (let r = 0; r < sh.length; r++) {
+      for (let c = 0; c < sh[r].length; c++) {
+        const k = sh[r][c];
+        if (!k) continue;
+        if (py + r < minRow) continue;
+        let m = 0;
+        if (r > 0 && sh[r - 1][c]) m |= 1;
+        if (c < sh[r].length - 1 && sh[r][c + 1]) m |= 2;
+        if (r < sh.length - 1 && sh[r + 1][c]) m |= 4;
+        if (c > 0 && sh[r][c - 1]) m |= 8;
+        out.push({ x: ox + (px + c) * size, y: oy + (py + r) * size, size, type: piece.type, seed: L.cellSeed(piece.pid, k), conn: m, crack: 0 });
+      }
+    }
+    return out;
+  }
+
+  // ------------------------------------------------------------------ rule events -> sound / effects
+
+  function cellPx(c, conn) {
+    const { cell, boardX, boardY } = view;
+    return { x: boardX + c.col * cell, y: boardY + c.row * cell, size: cell, type: c.type, seed: c.seed, conn, crack: 0 };
+  }
+
+  function onHardDrop(p) {
+    suppressLockSound = true;
+    play('hardDrop');
+    buzz(12);
+    if (!reduceMotion) bump.amp = Math.min(5, 1.5 + p.distance * 0.22);
+    if (p.distance <= 0) return;
+    const { cell, boardX, boardY } = view;
+    const sh = p.shape;
+    for (let c = 0; c < sh[0].length; c++) {
+      let top = -1;
+      for (let r = 0; r < sh.length; r++) if (sh[r][c]) { top = r; break; }
+      if (top < 0) continue;
+      const y0 = Math.max(boardY - ENTRY_ROWS * cell, boardY + (p.fromY + top) * cell);
+      const y1 = boardY + (p.toY + top) * cell;
+      if (y1 > y0) trails.push({ x: boardX + (p.x + c) * cell, y0, y1, w: cell, t0: animTime });
+    }
+  }
+
+  function onLock(p) {
+    boardDirty = true;
+    if (!suppressLockSound) play('lock');
+    suppressLockSound = false;
+    if (fx.sparkle) fx.sparkle(p.cells.filter((c) => c.row >= -ENTRY_ROWS).map((c) => cellPx(c, 0)));
+  }
+
+  function onClearStart(p) {
+    const grid = game.board.grid;
+    pendingShatter = p.cells.map((c) => cellPx(c, connOfGrid(grid, c.row + SPAWN_ROWS, c.col)));
+    play('crack', { rows: p.count });
+    boardDirty = true;
+  }
+
+  function onClearEnd(p) {
+    const cells = pendingShatter || p.cells.map((c) => cellPx(c, 0));
+    pendingShatter = null;
+    fx.shatter(cells, { rows: p.count });
+    play('shatter', { rows: p.count });
+    buzz(p.count >= 4 ? [0, 30, 40, 60] : 14 + p.count * 8);
+    if (!reduceMotion) shake.amp = [0, 2.2, 3.4, 4.8, 8][p.count] || 3;
+
+    // rows above settle into place
+    const total = ROWS + SPAWN_ROWS;
+    const cleared = new Set(p.rows.map((r) => r + SPAWN_ROWS));
+    const shift = new Array(total).fill(0);
+    let below = 0, ni = total - 1;
+    for (let old = total - 1; old >= 0; old--) {
+      if (cleared.has(old)) { below++; continue; }
+      shift[ni--] = below;
+    }
+    collapse = { t0: animTime, dur: 110 + 28 * p.count, shift };
+    boardDirty = true;
+
+    const { cell, boardX, boardY, boardW } = view;
+    const y = boardY + (Math.min.apply(null, p.rows) + 0.5) * cell;
+    const big = p.count >= 4;
+    if (CLEAR_WORDS[p.count]) {
+      popups.push({ text: CLEAR_WORDS[p.count], x: boardX + boardW / 2, y: y - cell * 1.1, t0: animTime, dur: big ? 1500 : 1100, size: cell * (big ? 0.95 : 0.82), color: big ? '#ffd257' : '#e0f4ff' });
+    }
+    popups.push({ text: '+' + p.gained, x: boardX + boardW / 2, y, t0: animTime, dur: 1000, size: cell * 0.9, color: '#ffd257' });
+  }
+
+  function onLevelUp(p) {
+    toast('LEVEL ' + p.level);
+    setCaveLevel(p.level, false);
+    window.setTimeout(() => play('levelUp'), 380);
+  }
+
+  function onGameOver(p) {
+    commitBest();
+    overAt = animTime;
+    clearHeld();
+    play('gameOver');
+    buzz([40, 60, 120]);
+  }
+
+  game.onEvent = function (name, p) {
+    switch (name) {
+      case 'start':
+        fx.reset(); popups.length = 0; trails.length = 0; collapse = null; pendingShatter = null;
+        shake.amp = 0; bump.amp = 0; boardDirty = true; suppressLockSound = false;
+        setCaveLevel(1, false);
+        play('start');
+        break;
+      case 'move': play('move'); break;
+      case 'rotate': play('rotate'); break;
+      case 'softDrop': play('softDrop'); break;
+      case 'hardDrop': onHardDrop(p); break;
+      case 'lock': onLock(p); break;
+      case 'clearStart': onClearStart(p); break;
+      case 'clearEnd': onClearEnd(p); break;
+      case 'levelUp': onLevelUp(p); break;
+      case 'gameOver': onGameOver(p); break;
+      case 'pause': play(p.paused ? 'pause' : 'resume'); break;
+      default: break;
+    }
+    requestRender();
+  };
+
+  // ------------------------------------------------------------------ rendering
+
+  function render() {
+    const g = fgCtx;
+    const { W, H, dpr, cell, boardX, boardY, boardW, boardH } = view;
+    const t = animTime;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    if (isTitle()) return;                     // title screen: only the cave and the logo
+
+    let sx = 0, sy = 0;
+    if (shake.amp > 0.05) { sx = Math.sin(t * 0.093) * shake.amp; sy = Math.cos(t * 0.127) * shake.amp * 0.7; }
+    if (bump.amp > 0.05) sy += bump.amp;
+    g.save();
+    g.translate(sx, sy);
+
+    {
+      if (boardDirty) rebuildBoardCells();
+
+      const clearing = game.clearing;
+      if (clearing) {
+        const k = clamp((gameTime - clearing.startTime) / Math.max(1, game.clearDelayMs), 0, 1);
+        for (const c of boardCells) c.crack = clearing.rows.indexOf(c.row) >= 0 ? k : 0;
+      }
+      if (collapse) {
+        const k = (t - collapse.t0) / collapse.dur;
+        if (k >= 1) {
+          collapse = null;
+          for (const c of boardCells) c.y = c.baseY;
+        } else {
+          const e = 1 - k * k;
+          for (const c of boardCells) c.y = c.baseY - collapse.shift[c.row] * cell * e;
+        }
+      }
+      C.drawCells(g, boardCells, { t, dpr });
+
+      const piece = game.currentPiece;
+      if (piece && game.gameRunning) {
+        const px = piece.x + vis.ox;
+        if (settings.ghost && game.phase === Phase.FALLING) {
+          const gy = game.getGhostY();
+          if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true });
+        }
+        C.drawCells(g, shapeCells(piece, px, piece.y + vis.oy, boardX, boardY, cell, -ENTRY_ROWS - 1), { t, dpr });
+      }
+    }
+
+    for (const tr of trails) {
+      const k = (t - tr.t0) / 180;
+      if (k >= 1) continue;
+      const grd = g.createLinearGradient(0, tr.y0, 0, tr.y1);
+      grd.addColorStop(0, 'rgba(224,244,255,0)');
+      grd.addColorStop(1, 'rgba(224,244,255,' + (0.4 * (1 - k)).toFixed(3) + ')');
+      g.fillStyle = grd;
+      g.fillRect(tr.x + tr.w * 0.14, tr.y0, tr.w * 0.72, tr.y1 - tr.y0);
+    }
+
+    // veil over the field when no piece is in play
+    let veil = 0;
+    if (game.phase === Phase.GAME_OVER) veil = 0.55 * clamp((t - overAt) / 500, 0, 1);
+    else if (game.paused) veil = 0.92;
+    if (veil > 0) {
+      g.fillStyle = 'rgba(5,12,26,' + veil.toFixed(3) + ')';
+      g.fillRect(boardX, boardY - ENTRY_ROWS * cell, boardW, boardH + ENTRY_ROWS * cell);
+    }
+    g.restore();
+
+    if (!game.paused) fx.draw(g, { dpr });
+
+    if (popups.length && !game.paused) {
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.lineJoin = 'round';
+      for (const p of popups) {
+        const k = (t - p.t0) / p.dur;
+        if (k < 0 || k >= 1) continue;
+        const rise = 1 - (1 - k) * (1 - k);
+        const s = p.size * (k < 0.12 ? 0.6 + (k / 0.12) * 0.5 : Math.max(1, 1.1 - (k - 0.12) * 0.8));
+        g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
+        g.font = '600 ' + s.toFixed(1) + 'px ' + FONT;
+        g.lineWidth = s * 0.3;
+        g.strokeStyle = '#050d1c';
+        g.strokeText(p.text, p.x, p.y - cell * 1.2 * rise);
+        g.fillStyle = p.color;
+        g.fillText(p.text, p.x, p.y - cell * 1.2 * rise);
+      }
+      g.globalAlpha = 1;
+    }
+  }
+
+  function drawNext() {
+    const piece = game.nextPiece && game.phase !== Phase.IDLE ? game.nextPiece : null;
+    const pc = clamp(Math.round(view.colW * 0.026), 7, 13);
+    const key = (piece ? piece.pid + piece.type : '-') + ':' + pc + ':' + view.dpr;
+    if (key === nextKey) return;
+    nextKey = key;
+    const cv = els.next;
+    const cw = pc * 4.3, ch = pc * 2.2;
+    cv.style.width = cw + 'px';
+    cv.style.height = ch + 'px';
+    cv.width = Math.round(cw * view.dpr);
+    cv.height = Math.round(ch * view.dpr);
+    const g = cv.getContext('2d');
+    g.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+    g.clearRect(0, 0, cw, ch);
+    if (!piece) return;
+    const sh = piece.shape;
+    let minR = 9, maxR = -1, minC = 9, maxC = -1;
+    for (let r = 0; r < sh.length; r++) for (let c = 0; c < sh[r].length; c++) if (sh[r][c]) {
+      if (r < minR) minR = r; if (r > maxR) maxR = r; if (c < minC) minC = c; if (c > maxC) maxC = c;
+    }
+    const ox = (cw - (maxC - minC + 1) * pc) / 2 - minC * pc;
+    const oy = (ch - (maxR - minR + 1) * pc) / 2 - minR * pc;
+    C.drawCells(g, shapeCells(piece, 0, 0, ox, oy, pc, -99), { t: 1000, dpr: view.dpr });
+  }
+
+  // ------------------------------------------------------------------ HUD / cards / menu
+
+  function toast(text) {
+    const el = els.toast;
+    el.textContent = text;
+    el.classList.remove('is-on');
+    void el.offsetWidth;          // restart the animation
+    el.classList.add('is-on');
+  }
+
+  function setBest(el, always) {
+    el.querySelector('b').textContent = String(settings.best);
+    el.hidden = !always && settings.best <= 0;
+  }
+
+  function syncUi() {
+    const st = game.phase === Phase.GAME_OVER ? 'over' : !game.gameRunning ? 'idle' : game.paused ? 'paused' : 'run';
+    const showOver = st === 'over' && animTime - overAt > 650;
+    const key = [st, modal || '', showOver ? 1 : 0, game.level, game.score, settings.best].join('|');
+    drawNext();
+    if (key === uiKey) return;
+    uiKey = key;
+
+    els.level.textContent = String(game.level);
+    els.score.textContent = String(game.score);
+    els.main.textContent = st === 'run' ? 'PAUSE' : st === 'paused' ? 'WEITER' : 'START';
+
+    els.app.classList.toggle('is-title', st === 'idle');
+    els.title.hidden = !(st === 'idle' && !modal);
+    els.bg.hidden = st === 'idle';
+    els.cardPause.hidden = !(st === 'paused' && !modal);
+    els.cardOver.hidden = !(showOver && !modal);
+    if (showOver) els.finalScore.textContent = String(game.score);
+    setBest(els.bestStart, false);
+    setBest(els.bestOver, true);
+    setBest(els.bestMenu, true);
+
+    els.menu.hidden = modal !== 'menu';
+    els.help.hidden = modal !== 'help';
+    els.menuResume.hidden = st !== 'paused';
+    requestRender();
+  }
+
+  function syncSwitches() {
+    els.optSound.setAttribute('aria-checked', String(settings.sound));
+    els.optGhost.setAttribute('aria-checked', String(settings.ghost));
+    els.optVibrate.setAttribute('aria-checked', String(settings.vibrate));
+    if (A.setMuted) A.setMuted(!settings.sound);
+  }
+
+  function clearHeld() {
+    input.keyLeft = input.keyRight = false;
+    input.keyDir = 0; input.pointerDir = 0; input.pointers.length = 0;
+    input.softKey = input.softBtn = false;
+    game.stopDAS();
+  }
+
+  function startNewGame() {
+    commitBest();
+    modal = null;
+    newGameArmed = false;
+    clearHeld();
+    vis.pid = 0;
+    game.startGame(gameTime);
+  }
+
+  function pauseGame() {
+    if (game.gameRunning && !game.paused) game.togglePause(gameTime);
+    commitBest();
+    clearHeld();
+  }
+
+  function resumeGame() {
+    modal = null;
+    if (game.gameRunning && game.paused) game.togglePause(gameTime);
+  }
+
+  function mainButton() {
+    if (!game.gameRunning) startNewGame();
+    else if (game.paused) resumeGame();
+    else pauseGame();
+  }
+
+  function openMenu() {
+    pauseGame();
+    newGameArmed = false;
+    els.menuNew.textContent = 'NEUES SPIEL';
+    modal = 'menu';
+  }
+
+  function menuNewGame() {
+    // A running game is only thrown away after a second tap.
+    if (inProgress() && !newGameArmed) {
+      newGameArmed = true;
+      els.menuNew.textContent = 'WIRKLICH NEU STARTEN?';
+      return;
+    }
+    startNewGame();
+  }
+
+  // The game-over card appears where the thumbs were just tapping: ignore it for a moment.
+  function playAgain() {
+    if (animTime - overAt >= 1300) startNewGame();
+  }
+
+  // ------------------------------------------------------------------ input
+
+  function setDir(dir) {
+    // called when a direction is newly pressed
+    if (!game.canAcceptInput()) return;
+    if (dir < 0) game.moveLeft(gameTime); else game.moveRight(gameTime);
+    game.startDAS(dir, gameTime);
+  }
+
+  function softPress() {
+    if (game.canAcceptInput()) game.softDrop(gameTime);
+    input.softNext = gameTime + SOFT_REPEAT_FIRST_MS;
+  }
+
+  // Right after a game over the drop key must not start the next game by accident.
+  function canRestartByKey() {
+    return game.phase !== Phase.GAME_OVER || animTime - overAt > 900;
+  }
+
+  function onKeyDown(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    A.unlock();
+    if (modal) {
+      if (e.key === 'Escape') { modal = modal === 'help' ? 'menu' : null; e.preventDefault(); }
+      return;
+    }
+    let handled = true;
+    switch (e.key) {
+      case 'ArrowLeft':
+        if (!e.repeat) { input.keyLeft = true; input.keyDir = -1; setDir(-1); }
+        break;
+      case 'ArrowRight':
+        if (!e.repeat) { input.keyRight = true; input.keyDir = 1; setDir(1); }
+        break;
+      case 'ArrowDown':
+        if (!e.repeat) { input.softKey = true; softPress(); }
+        break;
+      case 'ArrowUp': case 'x': case 'X':
+        if (!e.repeat && game.canAcceptInput()) game.tryRotate(gameTime);
+        break;
+      case ' ': case 'Spacebar':
+        if (!e.repeat) {
+          if (!game.gameRunning) { if (canRestartByKey()) startNewGame(); }
+          else if (game.canAcceptInput()) game.hardDrop(gameTime);
+        }
+        break;
+      case 'Enter':
+        if (e.target && e.target.tagName === 'BUTTON') { handled = false; break; }
+        if (!e.repeat && !game.gameRunning) { if (canRestartByKey()) startNewGame(); } else handled = false;
+        break;
+      case 'p': case 'P':
+        if (!e.repeat && game.gameRunning) { if (game.paused) resumeGame(); else pauseGame(); }
+        break;
+      case 'Escape':
+        openMenu();
+        break;
+      default:
+        handled = false;
+    }
+    if (handled) e.preventDefault();
+  }
+
+  function onKeyUp(e) {
+    switch (e.key) {
+      case 'ArrowLeft': input.keyLeft = false; break;
+      case 'ArrowRight': input.keyRight = false; break;
+      case 'ArrowDown': input.softKey = false; return;
+      default: return;
+    }
+    const dir = input.keyRight ? 1 : input.keyLeft ? -1 : 0;
+    if (dir === input.keyDir) return;
+    input.keyDir = dir;
+    if (input.pointerDir) return;
+    if (dir === 0) game.stopDAS();
+    else if (game.canAcceptInput()) game.startDAS(dir, gameTime);
+  }
+
+  function onFieldPointerDown(e) {
+    const target = e.target;
+    if (target !== els.mid && target !== els.cave && target !== document.body && target !== document.documentElement) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    A.unlock();
+    if (!game.gameRunning || game.paused || modal) return;
+    const x = e.clientX;
+    const y = e.clientY;
+    const { cell, boardX, boardY, boardW } = view;
+
+    let dir = 0;
+    if (x < boardX) dir = -1;
+    else if (x > boardX + boardW) dir = 1;
+    else {
+      // inside the field: a tap near the piece rotates it, anywhere else moves towards that half
+      if (!game.canAcceptInput()) return;
+      const piece = game.currentPiece;
+      const gx = Math.floor((x - boardX) / cell);
+      const gy = Math.floor((y - boardY) / cell);
+      let minX = 99, maxX = -99, minY = 99, maxY = -99;
+      for (let r = 0; r < piece.shape.length; r++) for (let c = 0; c < piece.shape[r].length; c++) if (piece.shape[r][c]) {
+        const bx = piece.x + c, by = piece.y + r;
+        if (bx < minX) minX = bx; if (bx > maxX) maxX = bx; if (by < minY) minY = by; if (by > maxY) maxY = by;
+      }
+      const dx = gx - (minX + maxX + 1) / 2;
+      const dy = gy - (minY + maxY + 1) / 2;
+      const radius = Math.max(maxX - minX, maxY - minY) / 2 + 2.5;
+      if (Math.sqrt(dx * dx + dy * dy) <= radius) { game.tryRotate(gameTime); return; }
+      dir = gx < COLS / 2 ? -1 : 1;
+    }
+    // Remember the finger even if no piece can move right now (row cracking): the frame loop starts
+    // the auto-shift as soon as the next piece accepts input.
+    input.pointers.push({ id: e.pointerId, dir });
+    input.pointerDir = dir;
+    try { if (target.setPointerCapture) target.setPointerCapture(e.pointerId); } catch (err) { /* older WebView */ }
+    setDir(dir);
+  }
+
+  function onFieldPointerUp(e) {
+    const i = input.pointers.findIndex((p) => p.id === e.pointerId);
+    if (i < 0) return;
+    input.pointers.splice(i, 1);
+    // a finger that is still down keeps (or takes back) its direction
+    const n = input.pointers.length;
+    const dir = n ? input.pointers[n - 1].dir : 0;
+    if (dir === input.pointerDir) return;
+    input.pointerDir = dir;
+    const eff = dir || input.keyDir;
+    if (eff !== 0 && game.canAcceptInput()) game.startDAS(eff, gameTime);
+    else game.stopDAS();
+  }
+
+  // Immediate reaction on touch (pointerdown), keyboard activation via the synthetic click.
+  function bindPress(el, down, up) {
+    const release = () => { el.classList.remove('is-down'); if (up) up(); };
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      A.unlock();
+      el.classList.add('is-down');
+      down();
+    });
+    el.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el.addEventListener('pointerleave', release);
+    el.addEventListener('click', (e) => { if (e.detail === 0) { A.unlock(); down(); if (up) up(); } });
+    el.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  function bindClick(el, fn) {
+    el.addEventListener('click', () => { A.unlock(); play('uiTap'); fn(); uiKey = ''; });
+  }
+
+  function bindSwitch(el, key) {
+    bindClick(el, () => { settings[key] = !settings[key]; saveSettings(); syncSwitches(); if (key === 'vibrate') buzz(20); });
+  }
+
+  // ------------------------------------------------------------------ main loop
+
+  function frame(ts) {
+    window.requestAnimationFrame(frame);
+    if (!lastTs) lastTs = ts;
+    let dt = ts - lastTs;
+    lastTs = ts;
+    if (!(dt >= 0)) dt = 0;
+    const rawDt = dt;
+    if (dt > 100) dt = 100;      // tab was in the background: do not fast-forward the game
+    tickCave(dt);
+
+    const running = game.gameRunning && !game.paused;
+    if (running) {
+      gameTime += dt;
+      const dir = input.pointerDir || input.keyDir;
+      if (dir !== 0 && (!game.dasActive || game.dasDirection !== dir) && game.canAcceptInput()) game.startDAS(dir, gameTime);
+      if ((input.softKey || input.softBtn) && gameTime >= input.softNext && game.canAcceptInput()) {
+        game.softDrop(gameTime);
+        input.softNext = gameTime + SOFT_REPEAT_MS;
+      }
+      game.update(gameTime);
+    }
+
+    if (!game.paused) {
+      animTime += dt;
+      fx.update(dt);
+      if (shake.amp > 0) shake.amp *= Math.exp(-dt / 90);
+      if (bump.amp > 0) bump.amp *= Math.exp(-dt / 55);
+      while (popups.length && animTime - popups[0].t0 >= popups[0].dur) popups.shift();
+      while (trails.length && animTime - trails[0].t0 >= 180) trails.shift();
+    }
+
+    // eased movement of the falling piece (purely visual; rules stay on the grid)
+    const piece = game.currentPiece;
+    if (piece) {
+      if (vis.pid !== piece.pid) { vis.pid = piece.pid; vis.ox = 0; vis.oy = 0; }
+      else {
+        vis.ox = clamp(vis.ox + (vis.x - piece.x), -1.5, 1.5);
+        vis.oy = clamp(vis.oy + (vis.y - piece.y), -1.5, 1.5);
+      }
+      vis.x = piece.x; vis.y = piece.y;
+      const decay = reduceMotion ? 0 : Math.exp(-dt / 26);
+      vis.ox *= decay; vis.oy *= decay;
+      if (Math.abs(vis.ox) < 0.01) vis.ox = 0;
+      if (Math.abs(vis.oy) < 0.01) vis.oy = 0;
+    } else {
+      vis.pid = 0;
+    }
+
+    syncUi();
+
+    const animating = running || fx.active || shake.amp > 0.05 || bump.amp > 0.05 || popups.length > 0 || trails.length > 0 || collapse !== null ||
+      (game.phase === Phase.GAME_OVER && animTime - overAt < 800);
+    if (animating || needRender || (!game.paused && !isTitle() && ts - lastIdleRender > 90)) {
+      render();
+      needRender = false;
+      lastIdleRender = ts;
+    }
+
+    // If the device cannot hold the frame rate, render at a lower pixel density.
+    if (running) {
+      perf.sum += rawDt; perf.n++;
+      if (perf.n >= 150) {
+        const avg = perf.sum / perf.n;
+        perf.sum = 0; perf.n = 0;
+        if (avg > 25 && view.dprCap > 1.5 && view.dpr > 1.5) {
+          view.dprCap = Math.max(1.5, Math.min(view.dprCap, view.dpr) - 0.5);
+          layout();
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------ boot
+
+  function boot() {
+    els = {
+      app: $('kf-app'), cave: $('kf-cave'), bg: $('kf-bg'), fg: $('kf-fg'), top: $('kf-top'), mid: $('kf-mid'), bottom: $('kf-bottom'),
+      title: $('kf-title'), logo: $('kf-logo'),
+      main: $('kf-btn-main'), level: $('kf-level'), score: $('kf-score'), next: $('kf-next'), toast: $('kf-toast'),
+      cardPause: $('kf-card-pause'), cardOver: $('kf-card-over'),
+      finalScore: $('kf-final-score'), bestStart: $('kf-best-start'), bestOver: $('kf-best-over'), bestMenu: $('kf-best-menu'),
+      menu: $('kf-menu'), help: $('kf-help'), menuResume: $('kf-menu-resume'), menuNew: $('kf-menu-new'),
+      optSound: $('kf-opt-sound'), optGhost: $('kf-opt-ghost'), optVibrate: $('kf-opt-vibrate'),
+    };
+    bgCtx = els.bg.getContext('2d');
+    fgCtx = els.fg.getContext('2d');
+    caveCtx = els.cave.getContext('2d');
+    try { cave = KF.Cave && KF.Cave.create ? KF.Cave.create() : null; } catch (e) { cave = null; }
+
+    try {
+      const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+      reduceMotion = mq.matches;
+      const onMq = (ev) => { reduceMotion = ev.matches; };
+      if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+    } catch (e) { /* matchMedia unavailable */ }
+
+    loadSettings();
+    syncSwitches();
+    if (typeof navigator === 'undefined' || !navigator.vibrate) $('kf-row-vibrate').hidden = true;
+
+    // game controls
+    bindPress($('kf-btn-drop'), () => { if (game.canAcceptInput()) game.hardDrop(gameTime); });
+    bindPress($('kf-btn-rot'), () => { if (game.canAcceptInput()) game.tryRotate(gameTime); });
+    bindPress($('kf-btn-soft'), () => { input.softBtn = true; softPress(); }, () => { input.softBtn = false; });
+    window.addEventListener('pointerdown', onFieldPointerDown);
+    window.addEventListener('pointerup', onFieldPointerUp);
+    window.addEventListener('pointercancel', onFieldPointerUp);
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', clearHeld);
+
+    // HUD, cards, menu
+    bindClick(els.main, mainButton);
+    bindClick($('kf-btn-menu'), openMenu);
+    bindClick($('kf-start'), startNewGame);
+    bindClick($('kf-title-menu'), openMenu);
+    bindClick($('kf-again'), playAgain);
+    bindClick($('kf-resume'), resumeGame);
+    bindClick(els.menuResume, resumeGame);
+    bindClick(els.menuNew, menuNewGame);
+    bindClick($('kf-menu-help'), () => { modal = 'help'; });
+    bindClick($('kf-menu-close'), () => { modal = null; });
+    bindClick($('kf-help-back'), () => { modal = 'menu'; });
+    bindSwitch(els.optSound, 'sound');
+    bindSwitch(els.optGhost, 'ghost');
+    bindSwitch(els.optVibrate, 'vibrate');
+    for (const m of [els.menu, els.help]) {
+      m.addEventListener('click', (e) => { if (e.target === m) { modal = m === els.help ? 'menu' : null; uiKey = ''; } });
+    }
+
+    // leaving the page pauses the game (like the app going to the background)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { pauseGame(); commitBest(); if (A.suspend) A.suspend(); }
+      else { lastTs = 0; if (A.resume) A.resume(); }
+    });
+
+    window.addEventListener('pagehide', commitBest);
+
+    if (typeof ResizeObserver === 'function') new ResizeObserver(layout).observe(document.body);
+    window.addEventListener('resize', layout);
+    window.addEventListener('orientationchange', () => window.setTimeout(layout, 120));
+    layout();
+    if (document.fonts && document.fonts.load) {
+      document.fonts.load("600 20px 'Fredoka'").then(layout).catch(() => {});
+    }
+    window.requestAnimationFrame(frame);
+  }
+
+  // Small surface for tests and debugging.
+  KF.App = {
+    game, view, settings, input,
+    get gameTime() { return gameTime; },
+    get cave() { return cave; },
+    setCaveLevel,
+    start: startNewGame, pause: pauseGame, resume: resumeGame, openMenu, layout,
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})(globalThis.KF = globalThis.KF || {});
+
+</script>
+</body>
+</html>

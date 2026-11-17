@@ -1,0 +1,87 @@
+<canvas id="kf-cave" class="kf-layer" aria-hidden="true"></canvas>
+<canvas id="kf-bg" class="kf-layer" aria-hidden="true"></canvas>
+<canvas id="kf-fg" class="kf-layer" aria-hidden="true"></canvas>
+
+<div id="kf-app" class="kf-app is-title">
+  <header id="kf-top" class="kf-top">
+    <button id="kf-btn-menu" class="kf-btn kf-btn--icon kf-btn--ghost" type="button" aria-label="Menü">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M5 7h14M5 12h14M5 17h14"/><path class="i" d="M5 7h14M5 12h14M5 17h14"/></svg>
+    </button>
+    <button id="kf-btn-main" class="kf-btn kf-btn--gold" type="button">PAUSE</button>
+    <div class="kf-stats">
+      <div class="kf-stat"><span class="kf-stat__label">LEVEL</span><span id="kf-level" class="kf-stat__value">1</span></div>
+      <div class="kf-stat kf-stat--score"><span class="kf-stat__label">PUNKTE</span><span id="kf-score" class="kf-stat__value">0</span></div>
+      <div class="kf-stat kf-stat--next"><span class="kf-stat__label">NEXT</span><canvas id="kf-next" width="1" height="1" aria-label="Nächster Stein"></canvas></div>
+    </div>
+  </header>
+
+  <main id="kf-mid" class="kf-mid">
+    <div id="kf-toast" class="kf-toast" aria-live="polite"></div>
+
+    <section id="kf-card-pause" class="kf-panel kf-card" hidden>
+      <h2>PAUSE</h2>
+      <button id="kf-resume" class="kf-btn kf-btn--gold kf-btn--wide" type="button">WEITER</button>
+    </section>
+
+    <section id="kf-card-over" class="kf-panel kf-card" hidden>
+      <h2 class="kf-over">GAME OVER</h2>
+      <div class="kf-big" id="kf-final-score">0</div>
+      <p class="kf-best" id="kf-best-over">Rekord: <b>0</b></p>
+      <button id="kf-again" class="kf-btn kf-btn--gold kf-btn--wide" type="button">NOCHMAL</button>
+    </section>
+  </main>
+
+  <footer id="kf-bottom" class="kf-bottom">
+    <button id="kf-btn-soft" class="kf-btn" type="button" aria-label="Langsam fallen lassen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M12 4v14M5.5 11.5 12 18l6.5-6.5"/><path class="i" d="M12 4v14M5.5 11.5 12 18l6.5-6.5"/></svg>
+    </button>
+    <button id="kf-btn-drop" class="kf-btn kf-btn--gold" type="button" aria-label="Sofort fallen lassen">DROP</button>
+    <button id="kf-btn-rot" class="kf-btn" type="button" aria-label="Drehen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="o" d="M19 12a7 7 0 1 1-2.4-5.3M19 4.5v4.4h-4.4"/><path class="i" d="M19 12a7 7 0 1 1-2.4-5.3M19 4.5v4.4h-4.4"/></svg>
+    </button>
+  </footer>
+
+  <section id="kf-title" class="kf-title">
+    <canvas id="kf-logo" class="kf-title__logo" width="1" height="1" role="img" aria-label="Crystal Drop"></canvas>
+    <button id="kf-start" class="kf-btn kf-btn--gold kf-btn--big" type="button">SPIELEN</button>
+    <p class="kf-best" id="kf-best-start" hidden>Rekord: <b>0</b></p>
+    <button id="kf-title-menu" class="kf-btn kf-btn--ghost" type="button">OPTIONEN</button>
+  </section>
+
+  <div id="kf-menu" class="kf-modal" hidden>
+    <div class="kf-panel" role="dialog" aria-modal="true" aria-labelledby="kf-menu-title">
+      <h2 id="kf-menu-title">MENÜ</h2>
+      <button id="kf-menu-resume" class="kf-btn kf-btn--gold kf-btn--wide" type="button">WEITER</button>
+      <button id="kf-menu-new" class="kf-btn kf-btn--wide" type="button">NEUES SPIEL</button>
+      <button id="kf-menu-help" class="kf-btn kf-btn--wide" type="button">STEUERUNG</button>
+      <div class="kf-row"><span id="kf-lbl-sound">Ton</span><button id="kf-opt-sound" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-sound"></button></div>
+      <div class="kf-row"><span id="kf-lbl-ghost">Landehilfe</span><button id="kf-opt-ghost" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-ghost"></button></div>
+      <div class="kf-row" id="kf-row-vibrate"><span id="kf-lbl-vibrate">Vibration</span><button id="kf-opt-vibrate" class="kf-switch" type="button" role="switch" aria-checked="true" aria-labelledby="kf-lbl-vibrate"></button></div>
+      <p class="kf-best" id="kf-best-menu">Rekord: <b>0</b></p>
+      <button id="kf-menu-close" class="kf-btn kf-btn--rose kf-btn--wide" type="button">SCHLIESSEN</button>
+    </div>
+  </div>
+
+  <div id="kf-help" class="kf-modal" hidden>
+    <div class="kf-panel" role="dialog" aria-modal="true" aria-labelledby="kf-help-title">
+      <h2 id="kf-help-title">STEUERUNG</h2>
+      <h3>Touch</h3>
+      <ul>
+        <li><b>Neben dem Feld</b><span>tippen = bewegen, halten = weiterlaufen</span></li>
+        <li><b>Auf den Stein</b><span>tippen = drehen</span></li>
+        <li><b>Pfeil unten</b><span>langsam fallen (halten)</span></li>
+        <li><b>DROP</b><span>sofort fallen</span></li>
+        <li><b>Drehpfeil</b><span>drehen</span></li>
+      </ul>
+      <h3>Tastatur</h3>
+      <ul>
+        <li><b>← →</b><span>bewegen</span></li>
+        <li><b>↑ oder X</b><span>drehen</span></li>
+        <li><b>↓</b><span>langsam fallen</span></li>
+        <li><b>Leertaste</b><span>sofort fallen / Start</span></li>
+        <li><b>P</b><span>Pause</span></li>
+      </ul>
+      <button id="kf-help-back" class="kf-btn kf-btn--rose kf-btn--wide" type="button">ZURÜCK</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,238 @@
+/* Crystal Drop – layout: animated cave behind everything; one narrow portrait column on top of it
+   (HUD bar · playfield with a 2-row entry shaft · control bar). Controls are chunky 3D cartoon buttons. */
+:root {
+  color-scheme: dark;
+  --ground: #050a18;      /* behind the cave canvas while it boots */
+  --ink: #06102a;         /* cartoon outline */
+  --ice: #eef8ff;         /* primary text */
+  --ice-dim: #a9cdf5;     /* secondary text */
+  --gold: #ffd23e;        /* accent numbers */
+  --rose: #ff8fb0;
+  --font: 'Fredoka', ui-rounded, 'Arial Rounded MT Bold', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --u: 4px;               /* 1% of the column width, set from JS */
+  --board-w: 280px;       /* playfield width, set from JS */
+  --card-y: 45%;          /* where cards sit inside .kf-mid, set from JS */
+  --toast-y: 25%;         /* where level-up banners sit inside .kf-mid, set from JS */
+  /* text outline built from shadows (works in every WebView) */
+  --outline: 3px 0 0 var(--ink), -3px 0 0 var(--ink), 0 3px 0 var(--ink), 0 -3px 0 var(--ink), 2.2px 2.2px 0 var(--ink), -2.2px 2.2px 0 var(--ink), 2.2px -2.2px 0 var(--ink), -2.2px -2.2px 0 var(--ink), 0 6px 0 var(--ink), 2.2px 5px 0 var(--ink), -2.2px 5px 0 var(--ink);
+  --outline-s: 1.6px 0 0 var(--ink), -1.6px 0 0 var(--ink), 0 1.6px 0 var(--ink), 0 -1.6px 0 var(--ink), 1.2px 1.2px 0 var(--ink), -1.2px 1.2px 0 var(--ink), 1.2px -1.2px 0 var(--ink), -1.2px -1.2px 0 var(--ink), 0 3px 0 var(--ink);
+}
+
+html { box-sizing: border-box; height: 100%; background: var(--ground); }
+*, *::before, *::after { box-sizing: inherit; }
+[hidden] { display: none !important; }
+body {
+  height: 100%; margin: 0; overflow: hidden;
+  display: flex; justify-content: center;
+  background: var(--ground); color: var(--ice);
+  font-family: var(--font); font-weight: 600;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* full-window layers: cave (animated) · playfield frame (static) · pieces and effects */
+.kf-layer { position: fixed; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+#kf-cave { z-index: 0; pointer-events: auto; }
+#kf-bg { z-index: 1; }
+#kf-fg { z-index: 2; }
+
+.kf-app {
+  position: relative; z-index: 3; height: 100%; width: 100%; max-width: 100%;   /* width is set from JS: full width on phones, a narrow column on wide windows */
+  display: flex; flex-direction: column;
+  touch-action: none;
+}
+
+/* ------------------------------------------------------------------ 3D cartoon surfaces
+   Structure: ::after is the slab underneath (the visible side), ::before is the glossy face on top.
+   --d is the height of the side; pressing moves the face down onto the slab. */
+.kf-btn, .kf-panel {
+  --d: 6px; --r: 14px; --b: 3px; --press: 0px;
+  --hi: #86d6ff; --mid: #2f93ec; --lo: #1c6fd4; --side: #134a9e;
+  position: relative; isolation: isolate;
+  border-radius: var(--r);
+}
+.kf-btn::before, .kf-panel::before,
+.kf-btn::after, .kf-panel::after { content: ''; position: absolute; left: 0; right: 0; border: var(--b) solid var(--ink); }
+.kf-btn::after, .kf-panel::after {                 /* slab */
+  z-index: -2; top: 40%; bottom: calc(-1 * var(--d) + var(--press));
+  border-radius: 0 0 var(--r) var(--r);
+  background: var(--side);
+  box-shadow: 0 5px 7px rgba(0, 0, 0, 0.5);
+}
+.kf-btn::before, .kf-panel::before {               /* face */
+  z-index: -1; top: 0; bottom: 0;
+  border-radius: var(--r);
+  background:
+    radial-gradient(8px 4.5px at 14% 26%, rgba(255, 255, 255, 0.98) 0 60%, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(4px 3px at calc(14% + 13px) 22%, rgba(255, 255, 255, 0.9) 0 60%, rgba(255, 255, 255, 0) 62%),
+    radial-gradient(120% 96% at 50% -46%, rgba(255, 255, 255, 0.62) 0 60%, rgba(255, 255, 255, 0) 61%),
+    linear-gradient(180deg, var(--hi) 0%, var(--mid) 50%, var(--lo) 100%);
+  box-shadow: inset 0 2.5px 0 rgba(255, 255, 255, 0.9), inset 0 -5px 0 rgba(0, 0, 0, 0.24), inset 0 0 0 2px rgba(255, 255, 255, 0.2);
+}
+
+.kf-btn {
+  border: 0; margin: 0 0 var(--d); padding: 0 calc(var(--u) * 3.2);
+  min-height: clamp(26px, calc(var(--u) * 10), 46px);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: none;
+  font: 600 calc(var(--u) * 3.7)/1 var(--font); letter-spacing: 0.05em;
+  color: #ffffff; text-shadow: var(--outline-s);
+  cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  transform: translateY(var(--press));
+}
+.kf-btn:active, .kf-btn.is-down { --press: calc(var(--d) - 1px); }
+.kf-btn:active::before, .kf-btn.is-down::before { filter: brightness(1.08); }
+.kf-btn:focus-visible { outline: none; }
+.kf-btn:focus-visible::before { border-color: #ffffff; }
+.kf-btn svg { width: 1.4em; height: 1.4em; display: block; overflow: visible; }
+.kf-btn svg .o { fill: none; stroke: var(--ink); stroke-width: 6.4; stroke-linecap: round; stroke-linejoin: round; }
+.kf-btn svg .i { fill: none; stroke: #ffffff; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+.kf-btn--gold { --hi: #fff6ae; --mid: #ffcc2e; --lo: #ff9d12; --side: #b65f00; }
+.kf-btn--rose { --hi: #ffc6d8; --mid: #ff6f9e; --lo: #e9447b; --side: #9a1d4d; }
+.kf-btn--ghost { --hi: #6c8fd6; --mid: #3b5ba6; --lo: #2a468a; --side: #162a5c; }
+.kf-btn--icon { padding: 0; width: clamp(28px, calc(var(--u) * 11), 48px); flex: none; }
+.kf-btn--wide { width: 100%; min-height: clamp(30px, calc(var(--u) * 12), 54px); }
+.kf-btn--big { --d: 10px; --r: 20px; min-height: clamp(40px, calc(var(--u) * 17), 76px); font-size: calc(var(--u) * 6.2); text-shadow: var(--outline); }
+
+/* ------------------------------------------------------------------ top bar */
+.kf-top {
+  position: relative; flex: none;
+  display: flex; align-items: stretch; gap: calc(var(--u) * 1.6);
+  padding-block: calc(var(--u) * 2) calc(var(--u) * 1);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity 260ms ease;
+}
+#kf-btn-main { min-width: calc(var(--u) * 22); font-size: calc(var(--u) * 3.5); padding-inline: calc(var(--u) * 2); }
+.kf-stats { margin-left: auto; display: flex; gap: calc(var(--u) * 1.4); min-width: 0; margin-bottom: 6px; }
+.kf-stat {                                          /* recessed display */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  padding: calc(var(--u) * 0.8) calc(var(--u) * 2); min-width: calc(var(--u) * 11.5);
+  border: 3px solid var(--ink); border-radius: 12px;
+  background: linear-gradient(180deg, #081431 0%, #12295a 100%);
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.55), inset 0 -2px 0 rgba(130, 190, 255, 0.3), inset 0 0 0 1.5px rgba(130, 190, 255, 0.14), 0 0 0 2px rgba(120, 175, 255, 0.35), 0 4px 5px rgba(0, 0, 0, 0.45);
+}
+.kf-stat__label { font-size: calc(var(--u) * 2.3); letter-spacing: 0.1em; color: var(--ice-dim); line-height: 1; }
+.kf-stat__value { font-size: calc(var(--u) * 4.2); line-height: 1; color: var(--ice); font-variant-numeric: tabular-nums; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5); }
+.kf-stat--score { min-width: calc(var(--u) * 19); }
+.kf-stat--score .kf-stat__value { color: var(--gold); }
+.kf-stat--next { padding: 2px calc(var(--u) * 1.2); gap: 1px; }
+.kf-stat--next canvas { display: block; }
+
+/* ------------------------------------------------------------------ playfield area */
+.kf-mid { position: relative; flex: 1 1 auto; min-height: 0; }
+
+.kf-panel {
+  --d: 9px; --r: 22px;
+  --hi: #3f6fd0; --mid: #23449a; --lo: #1a3580; --side: #0d1d52;
+  margin-bottom: var(--d);
+  width: min(100%, 340px);
+  padding: calc(var(--u) * 5) calc(var(--u) * 5);
+  display: flex; flex-direction: column; gap: calc(var(--u) * 3.4);
+}
+.kf-panel::before {
+  background:
+    radial-gradient(140% 70% at 50% -30%, rgba(255, 255, 255, 0.16) 0 60%, rgba(255, 255, 255, 0) 61%),
+    linear-gradient(180deg, var(--hi) 0%, var(--mid) 46%, var(--lo) 100%);
+  box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.4), inset 0 -5px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+.kf-panel::after { box-shadow: 0 10px 18px rgba(0, 0, 0, 0.55); }
+.kf-panel h2 { margin: 0 0 2px; text-align: center; font-size: calc(var(--u) * 7); line-height: 1; letter-spacing: 0.05em; color: #ffffff; text-shadow: var(--outline); }
+.kf-panel h3 { margin: 6px 0 0; font-size: calc(var(--u) * 3.8); letter-spacing: 0.06em; color: var(--ice); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.kf-panel p, .kf-panel li { margin: 0; font-size: calc(var(--u) * 3.5); line-height: 1.4; color: var(--ice-dim); font-weight: 600; }
+.kf-panel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.kf-panel li { display: grid; grid-template-columns: calc(var(--u) * 26) 1fr; gap: 8px; align-items: baseline; }
+.kf-panel li b { color: var(--ice); font-weight: 600; }
+
+.kf-panel.kf-card {
+  position: absolute; left: 50%; top: var(--card-y); transform: translate(-50%, -50%);
+  width: min(calc(var(--board-w) - 18px), 320px);
+  align-items: center; text-align: center;
+}
+.kf-card p { text-wrap: balance; }
+.kf-card .kf-big { font-size: calc(var(--u) * 10); color: var(--gold); text-shadow: var(--outline); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kf-card .kf-over { color: var(--rose); }
+
+.kf-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: calc(var(--u) * 3.9); color: var(--ice); min-height: 40px; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4); }
+.kf-best { text-align: center; color: var(--ice-dim); font-size: calc(var(--u) * 3.8); text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45); }
+.kf-best b { color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.kf-toast {
+  position: absolute; left: 50%; top: var(--toast-y); transform: translate(-50%, -50%);
+  pointer-events: none; white-space: nowrap; opacity: 0;
+  font-size: calc(var(--u) * 9); color: var(--gold); text-shadow: var(--outline); letter-spacing: 0.03em;
+}
+.kf-toast.is-on { animation: kf-pop 1300ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes kf-pop {
+  0% { opacity: 0; transform: translate(-50%, -30%) scale(0.5) rotate(-4deg); }
+  14% { opacity: 1; transform: translate(-50%, -50%) scale(1.12) rotate(2deg); }
+  24% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  78% { opacity: 1; transform: translate(-50%, -58%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -90%) scale(0.96); }
+}
+
+/* ------------------------------------------------------------------ bottom controls */
+.kf-bottom {
+  position: relative; flex: none;
+  display: grid; grid-template-columns: 1fr 2.4fr 1fr; gap: calc(var(--u) * 2.4);
+  padding-block: calc(var(--u) * 1) calc(var(--u) * 1.6);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  transition: opacity 260ms ease;
+}
+.kf-bottom .kf-btn { --d: 9px; --r: 18px; min-height: clamp(34px, calc(var(--u) * 13), 72px); font-size: calc(var(--u) * 5.8); padding-inline: 0; text-shadow: var(--outline); }
+.kf-bottom .kf-btn svg { width: 1.45em; height: 1.45em; }
+
+/* ------------------------------------------------------------------ title screen */
+.kf-title {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(var(--u) * 6);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: calc(var(--u) * 8);
+}
+.kf-title__logo { display: block; max-width: 100%; margin-bottom: calc(var(--u) * 4); animation: kf-float 3800ms ease-in-out infinite; }
+.kf-title .kf-btn--big { width: min(78%, 300px); animation: kf-breathe 1900ms ease-in-out infinite; }
+.kf-title .kf-btn--ghost { min-width: 46%; }
+.kf-title .kf-best { font-size: calc(var(--u) * 4.4); text-shadow: var(--outline-s); color: var(--ice); }
+@keyframes kf-float { 0%, 100% { transform: translateY(-1.2%); } 50% { transform: translateY(1.2%); } }
+@keyframes kf-breathe { 0%, 100% { scale: 1; } 50% { scale: 1.045; } }
+.kf-app.is-title .kf-top, .kf-app.is-title .kf-bottom { opacity: 0; visibility: hidden; }
+
+/* ------------------------------------------------------------------ menu / help */
+.kf-modal {
+  position: absolute; inset: 0; z-index: 10;
+  display: grid; place-items: center;
+  background: rgba(2, 5, 14, 0.72);
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-y: auto; touch-action: pan-y;
+}
+
+.kf-switch {                                         /* 3D toggle */
+  flex: none; position: relative; width: 62px; height: 34px; border: 3px solid var(--ink); padding: 0; cursor: pointer;
+  border-radius: 17px; background: linear-gradient(180deg, #0a1736, #17306a);
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.5), inset 0 -2px 0 rgba(130, 190, 255, 0.25);
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: background 140ms;
+}
+.kf-switch::after {
+  content: ''; position: absolute; top: 1px; left: 1px; width: 24px; height: 22px; border-radius: 12px;
+  border: 2.5px solid var(--ink);
+  background: radial-gradient(60% 45% at 40% 22%, rgba(255, 255, 255, 0.95) 0 60%, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #e8f1ff, #9fb6dc);
+  box-shadow: 0 3px 0 #5a6f97, 0 3px 0 2.5px var(--ink);
+  transition: transform 140ms;
+}
+.kf-switch[aria-checked="true"] { background: linear-gradient(180deg, #0f7a4f, #25c483); }
+.kf-switch[aria-checked="true"]::after { transform: translateX(28px); background: radial-gradient(60% 45% at 40% 22%, rgba(255, 255, 255, 0.95) 0 60%, rgba(255, 255, 255, 0) 62%), linear-gradient(180deg, #fffbe0, #ffd23e); box-shadow: 0 3px 0 #b67a00, 0 3px 0 2.5px var(--ink); }
+.kf-switch:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kf-toast.is-on { animation-duration: 1ms; opacity: 0; }
+  .kf-title__logo, .kf-title .kf-btn--big { animation: none; }
+  .kf-switch, .kf-switch::after, .kf-top, .kf-bottom { transition: none; }
+}
