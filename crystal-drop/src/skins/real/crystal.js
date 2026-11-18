@@ -34,18 +34,18 @@
   // crystal. Their colour lives in the reflections, the frosted faces and the edges (light, pale, glow).
   ['O', 'T', 'S', 'Z', 'J', 'L'].forEach(function (k) {
     const p = palette[k], g = palette.I;
-    p.mid = mix(p.mid, g.mid, 0.16); p.deep = mix(p.deep, g.deep, 0.2); p.shade = mix(p.shade, g.shade, 0.26);
+    p.mid = mix(p.mid, g.mid, 0.04); p.deep = mix(p.deep, g.deep, 0.06); p.shade = mix(p.shade, g.shade, 0.1);
   });
   const TYPE_INDEX = { I: 0, O: 1, T: 2, S: 3, Z: 4, J: 5, L: 6 };
   // Material per type: [body alpha, body tone, milkiness, gloss, light gathered in the far edges]
   const MAT = [
-    [0.50, 0.46, 1.00, 1.25, 0.36],   // I  clear, smoky
-    [0.58, 0.50, 1.05, 1.00, 0.50],   // O  milky rose
-    [0.56, 0.50, 0.90, 1.25, 0.66],   // T  honey
-    [0.58, 0.50, 1.00, 1.15, 0.58],   // S
-    [0.58, 0.50, 0.95, 1.20, 0.58],   // Z
-    [0.56, 0.50, 1.00, 1.15, 0.54],   // J
-    [0.58, 0.50, 0.95, 1.10, 0.70],   // L
+    [0.62, 0.50, 0.85, 1.30, 0.50],   // I  rock crystal: clear, glassy
+    [0.86, 0.56, 0.95, 0.95, 0.60],   // O  rose quartz: milky, soft
+    [0.80, 0.54, 0.70, 1.30, 0.90],   // T  citrine: glowing honey
+    [0.82, 0.52, 0.75, 1.20, 0.75],   // S
+    [0.82, 0.50, 0.75, 1.25, 0.80],   // Z  amethyst: deep, luminous
+    [0.80, 0.53, 0.80, 1.15, 0.70],   // J
+    [0.84, 0.52, 0.75, 1.15, 0.90],   // L
   ];
   const PALS = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'].map(function (k) {
     const p = palette[k];
@@ -102,14 +102,15 @@
     margin: 0.02,            // gap between silhouette and cell boundary on outer edges
     // Small sawtooth nick the silhouette dips into at every joint (keeps the cells of a chunk countable):
     // depth, and the length of its slope at the start / end of an edge (clockwise).
-    pinch: 0.034, pinchStart: 0.13, pinchEnd: 0.04,
+    pinch: 0.045, pinchStart: 0.13, pinchEnd: 0.04,
   };
   // The block is a slab seen slightly from the top-left: its side faces show through the top as bands of
   // these widths along the outer edges N E S W. Everything that touches an open edge (joint) is the same
   // in every sprite, whatever its variant: slab, periodic textures and the two cleavage "ports" below.
-  const BAND = [0.34, 0.26, 0.28, 0.32];
+  const BAND = [0.42, 0.62, 0.62, 0.42];
   const PORT_H = 0.37, PORT_V = 0.61;   // a cleavage line crosses every E/W joint at v = PORT_H, every N/S joint at u = PORT_V
   const LX = 0.64, LY = 0.77;           // direction of the light (it comes from the top-left)
+  const CALM = 0.5;                     // strength of cleavage lines, veils and planes inside the stone
 
   function mapPt(S, k, a, d) {
     switch (k) {
@@ -129,8 +130,8 @@
       // Outer corner: broken off irregularly - two unequal legs and a seeded vertex between them that
       // bulges or hollows the cut. Most corners are small nicks, now and then a big unequal chamfer.
       // Crystal terminations: the free end of an arm and a lone nugget are cut to a point, other corners less.
-      const base = ghost ? 0.2 : (nOpen === 1 ? 0.23 : nOpen === 0 ? 0.19 : 0.14) + rnd() * 0.08, skew = ghost ? 1 : 0.68 + rnd() * 0.75;
-      const L0 = S * Math.min(0.38, base * skew), L1 = S * Math.min(0.38, base / skew);
+      const base = ghost ? 0.2 : (nOpen === 1 ? 0.26 : nOpen === 0 ? 0.2 : 0.17) + rnd() * 0.08, skew = ghost ? 1 : 0.68 + rnd() * 0.75;
+      const L0 = S * Math.min(0.4, base * skew), L1 = S * Math.min(0.4, base / skew);
       const t = ghost ? 0.5 : 0.3 + rnd() * 0.4, off = ghost ? 0 : (rnd() - 0.42) * 0.36, L = Math.hypot(L0, L1);
       ch.push([0, L1, L0 * t - L1 / L * off * Math.min(L0, L1), L1 * (1 - t) - L0 / L * off * Math.min(L0, L1), L0, 0]);
       leg.push(L0 / S, L1 / S);
@@ -369,7 +370,7 @@
     }
 
     // (c) Seeded interior (never reaches a joint at full strength).
-    const det = S < 44 ? 0.45 + 0.55 * S / 44 : 1;           // small sprites: calmer, or they turn to mud
+    const det = (S < 44 ? 0.45 + 0.55 * S / 44 : 1) * CALM;  // small sprites: calmer, or they turn to mud
     // The side faces change their width in steps along an edge (broken terraces, not a ruled bevel):
     // one seeded profile per edge, 0.5 .. 1.6 times BAND. Faded out towards the joints, see `win`.
     const steps = new Float32Array(4 * 34);
@@ -538,9 +539,9 @@
           const lit = F_LIT[k1], g = 1 - h;
           const sN = tnoise(tab, ((k1 & 1) ? v : u) * 4 + 0.3 + k1 * 0.17, 0.77 + h * 0.07) - 0.5;
           // prism faces: the lit ones bright and glassy, the others dark and clear
-          tone += (lit ? 0.2 : -0.02) + (lit ? 0.14 : 0.03) * g + sN * 0.16;
-          a += (lit ? 0.2 : 0.12) + 0.1 * g + sN * 0.1;
-          milk += (lit ? 0.12 : 0.05) * (0.5 + nA) + (sN > 0 ? sN * 0.16 : 0);
+          tone += (lit ? 0.2 : -0.13) + (lit ? 0.1 : 0.06) * g + sN * 0.12;
+          a += (lit ? 0.1 : 0.02) + 0.06 * g + sN * 0.08;
+          milk += (lit ? 0.07 : 0.02) * (0.5 + nA) + (sN > 0 ? sN * 0.1 : 0);
         } else if (k1 < 8) { tone += C_TONE[k1 - 4]; a += 0.2; milk += 0.1 * (0.5 + nA); }
         // contour of the top face, hips of the corners: fine broken lines
         const eD = (h2 - h1) * (k1 < 4 ? BAND[k1] : k1 < 8 ? 0.1 : k2 >= 0 && k2 < 4 ? BAND[k2] : 0.1);
@@ -1065,7 +1066,7 @@
   function overlayPiece(g, cv, w, h, S, cells, idx, gx, gy, seed) {
     const n = idx.length, B = PIECE_B, vc = PALS[TYPE_INDEX[cells[idx[0]].type] | 0].rgb.veil;
     const rnd = mulberry32(hash32(seed, 0x9A7E11));
-    const det = S < 44 ? 0.45 + 0.55 * S / 44 : 1, diag = Math.hypot(w, h), fine = S >= 24;
+    const det = (S < 44 ? 0.45 + 0.55 * S / 44 : 1) * CALM, diag = Math.hypot(w, h), fine = S >= 24;
     const veil = function (a) { return 'rgba(' + vc[0] + ',' + vc[1] + ',' + vc[2] + ',' + a.toFixed(3) + ')'; };
     const white = function (a) { return 'rgba(255,255,255,' + a.toFixed(3) + ')'; };
     const clear = function (a) { return 'rgba(0,0,0,' + a.toFixed(3) + ')'; };
