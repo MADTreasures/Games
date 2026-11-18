@@ -19,11 +19,23 @@ mit jedem Level wechselt.
 ## Schnellstart
 
 ```bash
-node build.mjs                      # baut index.html aus src/
+node build.mjs                      # baut index.html (Cartoon-Look) aus src/
+node build.mjs real                 # baut real.html (realistischer Look, src/skins/real/)
 node --test tests/logic.test.mjs    # Regel-Tests
 ```
 
-`index.html` direkt im Browser öffnen – fertig. Es wird nichts nachgeladen.
+`index.html` oder `real.html` direkt im Browser öffnen – fertig. Es wird nichts nachgeladen.
+
+## Zwei Looks, ein Spiel
+
+| Datei | Look | Kristalle | Höhle | Oberfläche |
+| ----- | ---- | --------- | ----- | ---------- |
+| `index.html` | Cartoon | kräftige Konturen, flache Farbflächen | gezeichnete Höhle | bunte 3D-Knöpfe |
+| `real.html` | Realistisch | geschliffene, durchscheinende Steine ohne Kontur | beleuchteter Fels mit Tiefe und Dunst | Gesteinsplatten mit farbigen Einschlüssen, Bronze, Gravurschrift |
+
+Regeln, Steuerung, Sound und Landevorschau sind in beiden gleich. Ein Skin ist ein Ordner unter
+`src/skins/<name>/`: `crystal.js` und `cave.js` ersetzen das Standardmodul, `skin.js` liefert Rahmen, Logo
+und Texturen (`KF.Skin`), `style.css` wird an das Standard-Stylesheet angehängt.
 
 ## Steuerung
 
@@ -48,6 +60,8 @@ node --test tests/logic.test.mjs    # Regel-Tests
 | `src/game.js` | Layout, Rendering, Eingabe, HUD, Menü, Startbildschirm, Logo |
 | `src/style.css`, `src/body.html` | Oberfläche |
 | `assets/Fredoka-latin.woff2` | Schrift (SIL Open Font License 1.1), wird in die HTML-Datei eingebettet |
+| `assets/Cinzel-latin.woff2` | Gravurschrift des realistischen Looks (SIL Open Font License 1.1) |
+| `src/skins/real/` | Realistischer Look: Kristalle, Höhle, Rahmen, Logo, Gesteins-Texturen, Stylesheet |
 | `tests/` | Regel-Tests (`node --test`) |
 | `RESEARCH.md` | Was aus der Vorlage übernommen wurde und was bewusst anders ist |
 
@@ -59,3 +73,4 @@ Der Titel steht in `src/game.js` (`TITLE_LINES`), ein neues Höhlen-Thema ist ei
 - Eigener Code, eigene Grafik (alles zur Laufzeit gezeichnet), eigene Sounds (synthetisch).
 - Der Name «Tetris» ist eine geschützte Marke und wird deshalb weder im Spiel noch im Paketnamen verwendet.
 - Schrift «Fredoka»: © The Fredoka Project Authors, SIL Open Font License 1.1.
+- Schrift «Cinzel»: © The Cinzel Project Authors, SIL Open Font License 1.1.

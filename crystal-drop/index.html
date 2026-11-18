@@ -3341,6 +3341,7 @@ body {
     app.style.setProperty('--toast-y', (view.boardY + view.boardH * 0.2 - topB).toFixed(1) + 'px');
 
     C.invalidate();
+    startWarmup();
     caveResize();
     drawFrame();
     drawLogo();
@@ -3652,6 +3653,36 @@ body {
       }
     }
     return out;
+  }
+
+  // Sprites are baked the first time a block shape is drawn, which can stutter on a phone right when a
+  // game starts. So while nothing else is going on, draw every piece once to a throwaway canvas (one
+  // piece per frame): that fills the caches and gets the baking code warmed up.
+  let warmQueue = [];
+  let warmCtx = null;
+
+  function startWarmup() {
+    warmQueue = [];
+    let pid = 9000;
+    for (const type of L.TYPES) {
+      let k = 0;
+      let shape = L.SHAPES[type].map((row) => row.map((v) => (v ? ++k : 0)));
+      for (let rot = 0; rot < 4; rot++) {
+        warmQueue.push({ type, shape, pid: ++pid, x: 0, y: 0 });
+        shape = L.rotateCW(shape);
+      }
+    }
+  }
+
+  function warmStep() {
+    if (!warmQueue.length || view.cell < 6) return;
+    const piece = warmQueue.shift();
+    try {
+      if (!warmCtx) { const cv = document.createElement('canvas'); cv.width = cv.height = 8; warmCtx = cv.getContext('2d'); }
+      const cells = shapeCells(piece, 0, 0, 0, 0, view.cell, -99);
+      C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr });
+      C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr, ghost: true });
+    } catch (e) { warmQueue = []; }
   }
 
   // ------------------------------------------------------------------ rule events -> sound / effects
@@ -4150,6 +4181,7 @@ body {
     const rawDt = dt;
     if (dt > 100) dt = 100;      // tab was in the background: do not fast-forward the game
     tickCave(dt);
+    warmStep();
 
     const running = game.gameRunning && !game.paused;
     if (running) {
