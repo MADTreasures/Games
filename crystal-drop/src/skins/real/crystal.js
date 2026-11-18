@@ -25,21 +25,27 @@
     I: { name: 'Bergkristall', hi: '#ffffff', pale: '#f1f4f8', light: '#c6ccd6', mid: '#8d95a2', deep: '#565d69', shade: '#2b3038', line: '#1c2027', glow: '#dfe9f7' },
     O: { name: 'Rosenquarz',   hi: '#fff7f9', pale: '#ffe3ec', light: '#f7b4c9', mid: '#e5809f', deep: '#a8496a', shade: '#5c2239', line: '#451628', glow: '#ff9dba' },
     T: { name: 'Citrin',       hi: '#fffbe8', pale: '#fff0b4', light: '#f6d05e', mid: '#e3a31d', deep: '#a66d0a', shade: '#5c3c05', line: '#432a03', glow: '#ffc533' },
-    S: { name: 'Blauquarz',    hi: '#f0f6ff', pale: '#d3e4ff', light: '#7eaaf4', mid: '#2e68de', deep: '#183b9a', shade: '#0a1c54', line: '#07143c', glow: '#4f8eff' },
-    Z: { name: 'Amethyst',     hi: '#f9f2ff', pale: '#ebdaff', light: '#bc8cf4', mid: '#8b49da', deep: '#5424a2', shade: '#2a0e5c', line: '#1e0944', glow: '#a768ff' },
+    S: { name: 'Blauquarz',    hi: '#f0f6ff', pale: '#d3e6ff', light: '#78aef4', mid: '#2e6ede', deep: '#183f9a', shade: '#0a1e54', line: '#07143c', glow: '#4b94ff' },
+    Z: { name: 'Amethyst',     hi: '#fbf2ff', pale: '#f1daff', light: '#cb8cf2', mid: '#a047d4', deep: '#68249c', shade: '#360e58', line: '#250944', glow: '#bf66ff' },
     J: { name: 'Prasiolith',   hi: '#f4fff8', pale: '#dcf8e7', light: '#92ddb2', mid: '#43b47c', deep: '#1d7650', shade: '#0e3f2a', line: '#092d1e', glow: '#5ee69b' },
     L: { name: 'Karneol',      hi: '#fff3e6', pale: '#ffdcbd', light: '#f8985a', mid: '#e5551b', deep: '#a52e0b', shade: '#5e1504', line: '#450e02', glow: '#ff6c20' },
   };
+  // Nature is smoky, not candy: the body tones of the tinted types lean towards the grey of the clear
+  // crystal. Their colour lives in the reflections, the frosted faces and the edges (light, pale, glow).
+  ['O', 'T', 'S', 'Z', 'J', 'L'].forEach(function (k) {
+    const p = palette[k], g = palette.I;
+    p.mid = mix(p.mid, g.mid, 0.16); p.deep = mix(p.deep, g.deep, 0.2); p.shade = mix(p.shade, g.shade, 0.26);
+  });
   const TYPE_INDEX = { I: 0, O: 1, T: 2, S: 3, Z: 4, J: 5, L: 6 };
   // Material per type: [body alpha, body tone, milkiness, gloss, light gathered in the far edges]
   const MAT = [
-    [0.40, 0.40, 1.00, 1.00, 0.30],   // I  clear, smoky
-    [0.56, 0.50, 1.15, 0.80, 0.50],   // O  milky rose
-    [0.52, 0.50, 0.90, 1.00, 0.70],   // T  honey
-    [0.58, 0.47, 1.00, 0.90, 0.60],   // S
-    [0.58, 0.47, 0.95, 0.95, 0.60],   // Z
-    [0.52, 0.48, 1.00, 0.90, 0.55],   // J
-    [0.60, 0.50, 0.95, 0.85, 0.80],   // L
+    [0.50, 0.46, 1.00, 1.25, 0.36],   // I  clear, smoky
+    [0.58, 0.50, 1.05, 1.00, 0.50],   // O  milky rose
+    [0.56, 0.50, 0.90, 1.25, 0.66],   // T  honey
+    [0.58, 0.50, 1.00, 1.15, 0.58],   // S
+    [0.58, 0.50, 0.95, 1.20, 0.58],   // Z
+    [0.56, 0.50, 1.00, 1.15, 0.54],   // J
+    [0.58, 0.50, 0.95, 1.10, 0.70],   // L
   ];
   const PALS = ['I', 'O', 'T', 'S', 'Z', 'J', 'L'].map(function (k) {
     const p = palette[k];
@@ -88,19 +94,20 @@
    * corner k is the start of edge k (NW=0 NE=1 SE=2 SW=3). All shapes are described in the frame of a
    * corner: a = distance along edge k, d = depth into the cell; mapPt rotates that into cell space.
    * ------------------------------------------------------------------------------------------------ */
-  const VARIANTS = 4;        // seeded variations per type/conn, picked by cell seed
+  const VARIANTS = 8;        // seeded variations per type/conn, picked by cell seed
   const PAD = 2;             // transparent border around a crack sprite (device px); body sprites: padOf()
-  const SPRITE_BUDGET = 6e6; // sprite cache cap in pixels (~24 MB); the cache is dropped when it is exceeded
+  const SPRITE_BUDGET = 4e6; // soft cap of the sprite cache in pixels (~16 MB): beyond it, sprites that are neither on the board nor recently used are dropped
+  const PIECE_BUDGET = 3e6;  // the same for the cache of fused pieces
   const K = {                // fractions of the cell edge
     margin: 0.02,            // gap between silhouette and cell boundary on outer edges
     // Small sawtooth nick the silhouette dips into at every joint (keeps the cells of a chunk countable):
     // depth, and the length of its slope at the start / end of an edge (clockwise).
-    pinch: 0.03, pinchStart: 0.11, pinchEnd: 0.035,
+    pinch: 0.034, pinchStart: 0.13, pinchEnd: 0.04,
   };
   // The block is a slab seen slightly from the top-left: its side faces show through the top as bands of
   // these widths along the outer edges N E S W. Everything that touches an open edge (joint) is the same
   // in every sprite, whatever its variant: slab, periodic textures and the two cleavage "ports" below.
-  const BAND = [0.17, 0.075, 0.085, 0.12];
+  const BAND = [0.34, 0.26, 0.28, 0.32];
   const PORT_H = 0.37, PORT_V = 0.61;   // a cleavage line crosses every E/W joint at v = PORT_H, every N/S joint at u = PORT_V
   const LX = 0.64, LY = 0.77;           // direction of the light (it comes from the top-left)
 
@@ -116,21 +123,30 @@
   function makeGeo(ti, conn, variant, S, ghost) {
     const rnd = mulberry32(hash32(ti * 64 + conn * 4 + variant, 0x51ED));
     const closed = [!(conn & 1), !(conn & 2), !(conn & 4), !(conn & 8)];
-    const ch = [], chips = [];
+    const ch = [], chips = [], leg = [];
+    const nOpen = (conn & 1) + (conn >> 1 & 1) + (conn >> 2 & 1) + (conn >> 3 & 1);
     for (let k = 0; k < 4; k++) {
       // Outer corner: broken off irregularly - two unequal legs and a seeded vertex between them that
-      // bulges or hollows the cut. Stays within ~8 % of the cell.
-      const base = ghost ? 0.09 : 0.055 + rnd() * 0.06, skew = ghost ? 1 : 0.62 + rnd() * 0.85;
-      const L0 = S * Math.min(0.13, base * skew), L1 = S * Math.min(0.13, base / skew);
+      // bulges or hollows the cut. Most corners are small nicks, now and then a big unequal chamfer.
+      // Crystal terminations: the free end of an arm and a lone nugget are cut to a point, other corners less.
+      const base = ghost ? 0.2 : (nOpen === 1 ? 0.23 : nOpen === 0 ? 0.19 : 0.14) + rnd() * 0.08, skew = ghost ? 1 : 0.68 + rnd() * 0.75;
+      const L0 = S * Math.min(0.38, base * skew), L1 = S * Math.min(0.38, base / skew);
       const t = ghost ? 0.5 : 0.3 + rnd() * 0.4, off = ghost ? 0 : (rnd() - 0.42) * 0.36, L = Math.hypot(L0, L1);
       ch.push([0, L1, L0 * t - L1 / L * off * Math.min(L0, L1), L1 * (1 - t) - L0 / L * off * Math.min(L0, L1), L0, 0]);
-      // Outer edge: zero to two shallow conchoidal chips (a = position along the edge, d = extra depth).
+      leg.push(L0 / S, L1 / S);
+    }
+    for (let k = 0; k < 4; k++) {
+      // Outer edge: at most one break - a conchoidal chip or a shallow stepped ledge - between the corners
+      // (a = position along the edge, d = extra depth).
       const list = [];
-      if (!ghost && closed[k]) {
-        const n = rnd() < 0.8 ? (rnd() < 0.4 ? 2 : 1) : 0;
-        for (let j = 0; j < n; j++) {
-          const a0 = n === 2 ? (j ? 0.52 + rnd() * 0.12 : 0.2 + rnd() * 0.12) : 0.2 + rnd() * 0.42;
-          const w = 0.06 + rnd() * (n === 2 ? 0.1 : 0.14), dp = rnd() < 0.2 ? -0.009 : 0.012 + rnd() * 0.03, tt = 0.25 + rnd() * 0.5;
+      const lo = Math.max(0.15, leg[k * 2] + 0.05), hi = 1 - Math.max(0.09, leg[((k + 1) & 3) * 2 + 1] + 0.05);
+      if (!ghost && closed[k] && hi - lo > 0.14 && rnd() < 0.55) {
+        const w = Math.min(hi - lo, 0.1 + rnd() * 0.2), a0 = lo + rnd() * (hi - lo - w), dp = 0.014 + rnd() * 0.046;
+        if (rnd() < 0.45) {
+          const r1 = Math.min(w * 0.3, 0.012 + rnd() * 0.02), r2 = Math.min(w * 0.3, 0.012 + rnd() * 0.035), d1 = dp * 0.62;
+          list.push(S * a0, 0, S * (a0 + r1), S * d1, S * (a0 + w - r2), S * d1 * (0.65 + rnd() * 0.5), S * (a0 + w), 0);
+        } else {
+          const tt = 0.2 + rnd() * 0.6;
           list.push(S * a0, 0, S * (a0 + w * tt), S * dp, S * (a0 + w), 0);
         }
       }
@@ -184,10 +200,24 @@
    *     the same from both sides.
    * ------------------------------------------------------------------------------------------------ */
   const sprites = new Map();
-  let spritePixels = 0;
+  let spritePixels = 0, spriteLimit = SPRITE_BUDGET;
+  // Cache policy (sprites and fused pieces): an entry stays while it is part of the settled board
+  // (`ep` = the epoch of the last board paint) or was used lately (`used`); everything else goes once
+  // the soft budget is exceeded. A board that needs more than the budget is never thrashed.
+  let useClock = 0, boardEpoch = 0, onBoard = false;
+  function touch(e) { e.used = useClock; if (onBoard) e.ep = boardEpoch; return e; }
+  function sweep(map) {
+    let left = 0;
+    map.forEach(function (e, key) {
+      if (e.ep >= boardEpoch || e.used > useClock - 400) left += e.cost; else map.delete(key);
+    });
+    return left;
+  }
 
-  // Padding around a body sprite (device px): AA + room for the contact shadow / the preview halo.
+  // Padding around a body sprite (device px): AA + room for the contact shadow.
   function padOf(px) { return Math.max(PAD, Math.round(px * 0.075)); }
+  // ... and around a preview light map: room for its soft halo.
+  function ghostPad(px) { return Math.max(PAD, Math.round(px * 0.17)); }
 
   // Tileable value noise, period 1 in both directions, shared by all sprites.
   let noiseTab = null;
@@ -238,9 +268,7 @@
     const key = ((((px * 2 + (ghost ? 1 : 0)) * 7 + ti) * 16 + conn) * VARIANTS) + variant;
     let cv = sprites.get(key);
     if (!cv) {
-      const P = padOf(px), side = px + P * 2, cost = side * side * (ghost ? 1 : 2);
-      if (spritePixels + cost > SPRITE_BUDGET && sprites.size > 64) { sprites.clear(); spritePixels = 0; }
-      spritePixels += cost;
+      const P = ghost ? ghostPad(px) : padOf(px), side = px + P * 2, cost = side * side * (ghost ? 1 : 2);
       cv = document.createElement('canvas');
       cv.width = cv.height = side;
       const baked = shadeBody(makeGeo(ti, conn, variant, px, ghost), PALS[ti], ti, P, ghost);
@@ -251,8 +279,13 @@
         sh.getContext('2d').putImageData(baked.shadow, 0, 0);
         cv.shadow = sh;
       }
+      cv.cost = cost; cv.ep = ghost ? Infinity : -1; cv.used = useClock;
       sprites.set(key, cv);
+      spritePixels += cost;
+      if (spritePixels > spriteLimit) { spritePixels = sweep(sprites); spriteLimit = Math.max(SPRITE_BUDGET, spritePixels * 1.3); }
     }
+    cv.used = useClock;
+    if (onBoard && cv.ep < boardEpoch) cv.ep = boardEpoch;
     return cv;
   }
 
@@ -270,7 +303,7 @@
 
   // Response by face: 0..3 = N E S W side faces, 4..7 = corner cuts NW NE SE SW, 8 = flat top.
   const F_LIT = [1, 0, 0, 1, 1, 1, 0, 0, 1];
-  const F_LINE = [1.0, 0.42, 0.36, 0.8, 1.0, 0.6, 0.3, 0.5, 0.6];        // brightness of the face's contour lines
+  const F_LINE = [0.4, 0.17, 0.14, 0.32, 0.4, 0.24, 0.12, 0.2, 0.24];    // brightness of the face's contour lines (faint: the faces are frosted, not outlined)
   const F_SHIFT = [0, 0.37, 0.61, 0.17, 0.52, 0.83, 0.26, 0.71, 0.45];   // the reflection breaks where it enters a side face
   const C_TONE = [0.26, 0.14, 0.03, 0.10];
   const UNIT_CORNERS = [[0, 0], [1, 0], [1, 1], [0, 1]];
@@ -301,8 +334,9 @@
     for (let k = 0; k < 4; k++) reflex.push(!cl[k] && !cl[(k + 3) & 3] && geo.concave);
 
     if (ghost) {
-      // Landing preview: a white light map - bright along the contour, faint inside, a soft halo outside.
-      const w1 = S * 0.07, w2 = S * 0.042;
+      // Landing preview: a white light map - a soft pool of light inside the shape that gathers gently
+      // towards the contour, and a wide soft halo outside. No hard line anywhere.
+      const w1 = S * 0.16, w2 = S * 0.07;
       for (let yy = 0, o = 0; yy < side; yy++) {
         const y = yy - P + 0.5;
         for (let xx = 0; xx < side; xx++, o += 4) {
@@ -317,8 +351,8 @@
             const ex = ax - segs[s + 2] * t, ey = ay - segs[s + 3] * t, q = ex * ex + ey * ey;
             if (q < d2) d2 = q;
           }
-          const a = cov >= 128 ? 0.075 + 0.545 * Math.exp(-d2 / (w1 * w1)) : 0.62 * Math.exp(-d2 / (w2 * w2));
-          px[o + 3] = a * 255;
+          const ai = 0.11 + 0.38 * Math.exp(-d2 / (w1 * w1)), ao = 0.40 * Math.exp(-d2 / (w2 * w2)), c = cov / 255;
+          px[o + 3] = (ao + (ai - ao) * c) * 255;
         }
       }
       return { body: img, shadow: null };
@@ -330,63 +364,83 @@
     for (let k = 0; k < 4; k++) {
       if (cl[k] && cl[(k + 3) & 3]) {
         const c = geo.ch[k], L0 = c[4], L1 = c[1], L = Math.hypot(L0, L1);
-        cham.push([L1 / L, L0 / L, L0 * L1 / L, 1 / (S * (0.09 + rnd() * 0.07))]);
+        cham.push([L1 / L, L0 / L, L0 * L1 / L, 1 / (S * (0.07 + rnd() * 0.05) + L * 0.3)]);
       } else cham.push(null);
     }
 
     // (c) Seeded interior (never reaches a joint at full strength).
     const det = S < 44 ? 0.45 + 0.55 * S / 44 : 1;           // small sprites: calmer, or they turn to mud
-    // straight cleavage planes: thin steps and broad reflecting panes
+    // The side faces change their width in steps along an edge (broken terraces, not a ruled bevel):
+    // one seeded profile per edge, 0.5 .. 1.6 times BAND. Faded out towards the joints, see `win`.
+    const steps = new Float32Array(4 * 34);
+    for (let k = 0; k < 4; k++) {
+      // (prism faces: nearly straight, with an occasional small growth step)
+      let val = 0.94 + rnd() * 0.12, next = 0.3 + rnd() * 0.5;
+      for (let i = 0; i < 34; i++) {
+        if (i / 32 > next) { val = rnd() < 0.3 ? 1.04 + rnd() * 0.1 : 0.88 + rnd() * 0.14; next += 0.3 + rnd() * 0.5; }
+        steps[k * 34 + i] = val;
+      }
+    }
+    // straight cleavage planes: thin steps and (fewer) broad reflecting panes - the big planes that
+    // cross a whole stone are laid over the fused piece, see overlayPiece()
     const cuts = [];
-    for (let n = 2 + (rnd() * 3 | 0); n > 0; n--) {
-      const pane = cuts.length === 0 || rnd() < 0.5, fam = rnd();
-      const ang = (fam < 0.3 ? 0 : fam < 0.55 ? Math.PI / 2 : fam < 0.82 ? -0.72 : 0.95) + (rnd() - 0.5) * 0.24;
+    for (let n = 1 + (rnd() * 2.5 | 0); n > 0; n--) {
+      const pane = rnd() < 0.4, fam = rnd();
+      const ang = (fam < 0.3 ? 0 : fam < 0.55 ? Math.PI / 2 : fam < 0.82 ? -0.63 : 0.94) + (rnd() - 0.5) * 0.24;
       const len = 0.3 + rnd() * 0.5, mx = 0.25 + rnd() * 0.5, my = 0.25 + rnd() * 0.5;
       const dx = Math.cos(ang) * len, dy = Math.sin(ang) * len, sgn = rnd() < 0.5 ? 1 : -1;
       cuts.push(mx - dx / 2, my - dy / 2, dx, dy, 1 / (len * len), -dy / len * sgn, dx / len * sgn,
-        pane ? 0.14 + rnd() * 0.2 : 0.035 + rnd() * 0.05, ((pane ? 0.55 : 0.8) + rnd() * 0.5) * det, pane ? 1 : 0, rnd(), len);
+        pane ? 0.14 + rnd() * 0.2 : 0.035 + rnd() * 0.05, ((pane ? 0.45 : 0.8) + rnd() * 0.5) * det, pane ? 1 : 0, rnd(), len);
     }
     // facets: the stone is a patchwork of angular zones that differ a little in depth
     const facets = [];
     for (let n = 0; n < 2; n++) {
-      const fam = rnd(), ang = (fam < 0.3 ? 0 : fam < 0.55 ? Math.PI / 2 : fam < 0.82 ? -0.72 : 0.95) + (rnd() - 0.5) * 0.3;
+      const fam = rnd(), ang = (fam < 0.3 ? 0 : fam < 0.55 ? Math.PI / 2 : fam < 0.82 ? -0.63 : 0.94) + (rnd() - 0.5) * 0.3;
       facets.push(0.3 + rnd() * 0.4, 0.3 + rnd() * 0.4, -Math.sin(ang), Math.cos(ang), (0.05 + rnd() * 0.07) * (rnd() < 0.5 ? 1 : -1));
-    }
-    // feathery fracture veils: wandering polylines with a wispy sheet on one side
-    const veils = [], glintAt = [];
-    for (let n = 1 + (rnd() < 0.7 ? 1 : 0) + (rnd() < 0.3 ? 1 : 0); n > 0; n--) {
-      let x = 0.14 + rnd() * 0.72, y = 0.14 + rnd() * 0.72, ang = rnd() * TAU, s0 = 0;
-      const segN = 3 + (rnd() * 2 | 0), str = (0.6 + rnd() * 0.6) * det, fwv = 0.08 + rnd() * 0.12, sgn = rnd() < 0.5 ? 1 : -1;
-      const slant = 0.6 + rnd() * 1.2, seed = rnd() * 8, first = veils.length;
-      glintAt.push(x, y);
-      for (let j = 0; j < segN; j++) {
-        const len = 0.1 + rnd() * 0.14, dx = Math.cos(ang) * len, dy = Math.sin(ang) * len;
-        veils.push(x, y, dx, dy, 1 / (len * len), -dy / len, dx / len, s0, len, str, fwv, sgn, slant, seed, 0);
-        x += dx; y += dy; s0 += len; ang += (rnd() - 0.5) * 0.9;
-      }
-      for (let j = first; j < veils.length; j += 15) veils[j + 14] = s0;
-    }
-    let vx0 = 9, vy0 = 9, vx1 = -9, vy1 = -9;                // everything the veils can touch (feather + warp)
-    for (let j = 0; j < veils.length; j += 15) {
-      const r = veils[j + 10] + 0.045, ex = veils[j] + veils[j + 2], ey = veils[j + 1] + veils[j + 3];
-      vx0 = Math.min(vx0, veils[j] - r, ex - r); vx1 = Math.max(vx1, veils[j] + r, ex + r);
-      vy0 = Math.min(vy0, veils[j + 1] - r, ey - r); vy1 = Math.max(vy1, veils[j + 1] + r, ey + r);
     }
     // the two cleavage lines through the ports: seeded strength inside the cell, seeded end where the
     // far side is closed (or at the crossing with the other line: an L-shaped step)
-    const hOn = !cl[1] || !cl[3] || rnd() < 0.6, vOn = !cl[0] || !cl[2] || rnd() < 0.55;
+    const hOn = !cl[1] || !cl[3] || rnd() < 0.42, vOn = !cl[0] || !cl[2] || rnd() < 0.36;
     const hAmp = (0.1 + rnd() * 1.1) * det, vAmp = (0.1 + rnd() * 1.1) * det;
     const stop = function (open, cross, on) { return open ? 9 : on && rnd() < 0.5 ? cross : 0.12 + rnd() * 0.3; };
     const hA0 = cl[3] ? stop(false, PORT_V, vOn && cl[1] === false) : -9, hA1 = cl[1] ? 1 - stop(false, 1 - PORT_V, vOn && cl[3] === false) : 9;
     const vA0 = cl[0] ? stop(false, PORT_H, hOn && cl[2] === false) : -9, vA1 = cl[2] ? 1 - stop(false, 1 - PORT_H, hOn && cl[0] === false) : 9;
-    // soft specular points: the lit corner of a chunk and one veil root
+    // fracture hairlines: long, faint, wandering polylines with a thin milky sheet on one side. Each one
+    // starts on a port line, a cleavage plane or an older hairline, so they meet and form a network.
+    const veils = [], VS = 15;
+    let v0n = 1;
+    for (let n = 0, nV = 3 + (rnd() < 0.4 ? 1 : 0); n < nV; n++) {
+      const turn = (0.5 + rnd() * 0.8) * (rnd() < 0.5 ? 1 : -1) + (rnd() < 0.5 ? Math.PI : 0);
+      let x, y, ang, s0 = 0;
+      if (n === 0) { x = 0.18 + rnd() * 0.64; y = PORT_H; ang = turn; }
+      else if (n === 1) { x = PORT_V; y = 0.18 + rnd() * 0.64; ang = Math.PI / 2 + turn; }
+      else if (n === 2) { const t = 0.25 + rnd() * 0.5; x = cuts[0] + cuts[2] * t; y = cuts[1] + cuts[3] * t; ang = Math.atan2(cuts[3], cuts[2]) + turn; }
+      else { const j = VS * Math.min(v0n - 1, 1 + (rnd() * 2 | 0)); x = veils[j]; y = veils[j + 1]; ang = Math.atan2(veils[j + 3], veils[j + 2]) + turn; }
+      const segN = 4 + (rnd() * 3 | 0), str = (0.45 + rnd() * 0.75) * det, fwv = 0.14 + rnd() * 0.12, sgn = rnd() < 0.5 ? 1 : -1;
+      const slant = 0.6 + rnd() * 1.2, seed = rnd() * 8, first = veils.length;
+      for (let j = 0; j < segN; j++) {
+        const len = 0.14 + rnd() * 0.16, dx = Math.cos(ang) * len, dy = Math.sin(ang) * len;
+        veils.push(x, y, dx, dy, 1 / (len * len), -dy / len, dx / len, s0, len, str, fwv, sgn, slant, seed, 0);
+        x += dx; y += dy; s0 += len; ang += (rnd() - 0.5) * 0.5;
+        if (x < 0.04 || x > 0.96 || y < 0.04 || y > 0.96) break;
+      }
+      for (let j = first; j < veils.length; j += VS) veils[j + 14] = s0;
+      if (n === 0) v0n = (veils.length - first) / VS;
+    }
+    let vx0 = 9, vy0 = 9, vx1 = -9, vy1 = -9;                // everything the hairlines can touch (sheet + warp)
+    for (let j = 0; j < veils.length; j += VS) {
+      const r = veils[j + 10] + 0.03, ex = veils[j] + veils[j + 2], ey = veils[j + 1] + veils[j + 3];
+      vx0 = Math.min(vx0, veils[j] - r, ex - r); vx1 = Math.max(vx1, veils[j] + r, ex + r);
+      vy0 = Math.min(vy0, veils[j + 1] - r, ey - r); vy1 = Math.max(vy1, veils[j + 1] + r, ey + r);
+    }
+    // one soft specular point: the lit corner of a chunk
     const spots = [];
-    if (cl[3] && cl[0]) spots.push(0.15, 0.13, 1 / (0.03 * 0.03), 0.8, 0.15, 0.13, 1 / (0.1 * 0.1), 0.16);
-    if (rnd() < 0.7) spots.push(glintAt[0], glintAt[1], 1 / (0.024 * 0.024), 0.55 * det);
-    const bandAmp = [rnd() * rnd() * 2.6, rnd() * rnd() * 2.6, rnd() * rnd() * 2.6, rnd() * rnd() * 2.6];   // mostly faint, now and then a strong one
+    if (cl[3] && cl[0]) spots.push(0.15, 0.13, 1 / (0.03 * 0.03), 0.4, 0.15, 0.13, 1 / (0.1 * 0.1), 0.1);
+    const gPh = rnd(), gPh2 = rnd();                         // where along its edges this stone catches the light
+    const bandAmp = [rnd() * rnd() * 1.5, rnd() * rnd() * 1.5, rnd() * rnd() * 1.5, rnd() * rnd() * 1.5];   // mostly faint, now and then a stronger one
     const ox = rnd(), oy = rnd();
     const fib = new Float32Array(side);                      // vertical fibres: one soft profile per column
-    for (let xx = 0; xx < side; xx++) fib[xx] = (tnoise(tab, (xx - P + 0.5) * inv * 2 + 0.21, 0.4) - 0.5) * 0.15;
+    for (let xx = 0; xx < side; xx++) fib[xx] = (tnoise(tab, (xx - P + 0.5) * inv * 2 + 0.21, 0.4) - 0.5) * 0.08;
 
     const aa = 1.3 * inv;                                    // one device pixel (soft edges)
     const lw = Math.max(0.85 * inv, 0.011);                  // half width of a fine line
@@ -433,14 +487,27 @@
         }
         if (!cov) continue;
 
+        // seeded details fade out towards the joints
+        let win = 1;
+        for (let k = 0; k < 4; k++) {
+          if (cl[k]) continue;
+          const dk = k === 0 ? v : k === 1 ? 1 - u : k === 2 ? 1 - v : u;
+          win *= dk < 0.02 ? 0 : dk > 0.17 ? 1 : (dk - 0.02) * 6.67;
+        }
         // slab: the lowest face wins
         hv[0] = v * ih[0]; hv[1] = (1 - u) * ih[1]; hv[2] = (1 - v) * ih[2]; hv[3] = u * ih[3];
-        let h1 = 9, h2 = 9, k1 = -1, k2 = -1, vd1 = 9, win = 1;
+        if (win > 0) {
+          const su = u <= 0 ? 0 : u >= 1 ? 32 : u * 32, sv = v <= 0 ? 0 : v >= 1 ? 32 : v * 32;
+          const iu = su | 0, fu = su - iu, iv = sv | 0, fv = sv - iv;
+          if (cl[0]) hv[0] /= 1 + win * (steps[iu] + (steps[iu + 1] - steps[iu]) * fu - 1);
+          if (cl[1]) hv[1] /= 1 + win * (steps[34 + iv] + (steps[35 + iv] - steps[34 + iv]) * fv - 1);
+          if (cl[2]) hv[2] /= 1 + win * (steps[68 + iu] + (steps[69 + iu] - steps[68 + iu]) * fu - 1);
+          if (cl[3]) hv[3] /= 1 + win * (steps[102 + iv] + (steps[103 + iv] - steps[102 + iv]) * fv - 1);
+        }
+        let h1 = 9, h2 = 9, k1 = -1, k2 = -1, vd1 = 9;
         for (let k = 0; k < 4; k++) {
           let hk = hv[k], pk = k, vd = 9;
           if (!cl[k]) {
-            const dk = k === 0 ? v : k === 1 ? 1 - u : k === 2 ? 1 - v : u;     // seeded details fade out here
-            win *= dk < 0.02 ? 0 : dk > 0.17 ? 1 : (dk - 0.02) * 6.67;
             if (!reflex[k]) continue;
             const kp = (k + 3) & 3, hb = hv[kp];
             if (hk > hb) vd = hk - hb; else { vd = hb - hk; hk = hb; pk = kp; }
@@ -462,17 +529,19 @@
         // body: thin smoke, a soft cloud and vertical fibres (all periodic)
         const nA = tnoise(tab, u + 0.13, v + 0.71);
         const nC = tnoise(tab, 2 * u + v + 0.31, 2 * v - u + 0.57);
-        let tone = T0 + (nA - 0.5) * 0.36 + fib[xx] * (0.4 + 1.2 * nC);
-        let a = A0 + (nA - 0.5) * 0.26 + fib[xx] * 0.7 - (k1 === 8 ? 0.04 : 0);
+        let tone = T0 + (nA - 0.5) * 0.26 + fib[xx] * (0.4 + 1.2 * nC);
+        let a = A0 + (nA - 0.5) * 0.2 + fib[xx] * 0.7 - (k1 === 8 ? 0.04 : 0);
         let milk = 0, spec = 0, glow = 0;
 
         // side faces seen through the top: denser, striated across; corner cuts
         if (k1 < 4) {
           const lit = F_LIT[k1], g = 1 - h;
           const sN = tnoise(tab, ((k1 & 1) ? v : u) * 4 + 0.3 + k1 * 0.17, 0.77 + h * 0.07) - 0.5;
-          tone += (lit ? 0.13 : 0.04) + (lit ? 0.13 : 0.05) * g + sN * 0.26;
-          a += 0.13 + 0.1 * g + sN * 0.18;
-        } else if (k1 < 8) { tone += C_TONE[k1 - 4]; a += 0.2; }
+          // prism faces: the lit ones bright and glassy, the others dark and clear
+          tone += (lit ? 0.2 : -0.02) + (lit ? 0.14 : 0.03) * g + sN * 0.16;
+          a += (lit ? 0.2 : 0.12) + 0.1 * g + sN * 0.1;
+          milk += (lit ? 0.12 : 0.05) * (0.5 + nA) + (sN > 0 ? sN * 0.16 : 0);
+        } else if (k1 < 8) { tone += C_TONE[k1 - 4]; a += 0.2; milk += 0.1 * (0.5 + nA); }
         // contour of the top face, hips of the corners: fine broken lines
         const eD = (h2 - h1) * (k1 < 4 ? BAND[k1] : k1 < 8 ? 0.1 : k2 >= 0 && k2 < 4 ? BAND[k2] : 0.1);
         if (eD < lw * 1.5 && k2 >= 0) {
@@ -483,7 +552,7 @@
         if (k1 === 8 && k2 >= 0 && k2 < 4 && F_LIT[k2] && h2 < 1.7) {     // back edge of the lit faces, seen through the slab
           tone += 0.03; a += 0.04;
           const e2 = (1.7 - h2) * BAND[k2];
-          if (e2 < lw) milk += 0.15 * (1 - e2 / lw) * (0.2 + 1.2 * nA);
+          if (e2 < lw) milk += 0.06 * (1 - e2 / lw) * (0.2 + 1.2 * nA);
         }
         if (vd1 * 0.12 < lw * 1.5) milk += 0.3 * (1 - vd1 * 0.12 / (lw * 1.5));
 
@@ -493,7 +562,7 @@
         f -= Math.floor(f);
         const band = f < 0.3 ? 0 : f < 0.3 + aa ? (f - 0.3) / aa : f < 0.38 ? 1 : f < 0.62 ? (0.62 - f) * 4.17 : 0;
         if (band > 0) {
-          const bb = band * (0.2 + win * (bandAmp[fi] - 0.2)) * (0.3 + 1.4 * tnoise(tab, f * 5 + 0.1, 0.23)) * (0.5 + nA);
+          const bb = band * (0.14 + win * (bandAmp[fi] - 0.14)) * (0.3 + 1.4 * tnoise(tab, f * 5 + 0.1, 0.23)) * (0.5 + nA);
           tone += 0.13 * bb; a += 0.12 * bb; spec += 0.03 * bb * gloss;
         }
 
@@ -548,11 +617,11 @@
             const e = (q < -1 ? -1 : q > 1 ? 1 : q) * facets[s + 4] * win;
             tone += e; a += e * 0.8;
           }
-          // veils (their coordinates are warped a little: fractures wander, they are not ruled lines)
+          // hairlines (their coordinates are warped a little: fractures wander, they are not ruled lines)
           let mv = 0, wu = 0, wv = 0, nv = 0;
           if (u > vx0 && u < vx1 && v > vy0 && v < vy1) {
             nv = veils.length;
-            wu = u + (tnoise(tab, u * 1.5 + ox, v * 1.5 + oy) - 0.5) * 0.08; wv = v + (tnoise(tab, u * 1.5 + oy + 0.5, v * 1.5 + ox) - 0.5) * 0.08;
+            wu = u + (tnoise(tab, u * 1.5 + ox, v * 1.5 + oy) - 0.5) * 0.05; wv = v + (tnoise(tab, u * 1.5 + oy + 0.5, v * 1.5 + ox) - 0.5) * 0.05;
           }
           for (let s = 0; s < nv; s += 15) {
             const ax = wu - veils[s], ay = wv - veils[s + 1];
@@ -561,17 +630,20 @@
             const ex = ax - veils[s + 2] * t, ey = ay - veils[s + 3] * t, d2 = ex * ex + ey * ey, fwv = veils[s + 10];
             if (d2 > fwv * fwv) continue;
             const d = Math.sqrt(d2), sl = veils[s + 7] + t * veils[s + 8], q = 1 - d / fwv;
-            let c = 0.3 * q * q;
-            if (d < lw) c += (1 - d / lw) * (0.12 + 0.75 * tnoise(tab, sl * 7 + veils[s + 13], 0.3));
-            const barb = tnoise(tab, (sl + d * veils[s + 12]) * 9 + veils[s + 13], d * 2.5 + 0.6) - 0.34;
-            if (barb > 0) c += ((ex * veils[s + 5] + ey * veils[s + 6]) * veils[s + 11] > 0 ? 2.8 : 0.9) * barb * q * Math.sqrt(q);
-            c *= veils[s + 9] * Math.min(1, sl * 12 + 0.25) * Math.min(1, (veils[s + 14] - sl) * 5 + 0.05);
+            const lee = (ex * veils[s + 5] + ey * veils[s + 6]) * veils[s + 11] > 0;
+            let c = (lee ? 0.18 : 0.05) * q * q * (0.4 + 1.2 * nA);                // the thin milky sheet
+            if (d < lw) c += (1 - d / lw) * (0.05 + 0.4 * tnoise(tab, sl * 7 + veils[s + 13], 0.3));
+            if (lee && d < fwv * 0.6) {
+              const barb = tnoise(tab, (sl + d * veils[s + 12]) * 9 + veils[s + 13], d * 2.5 + 0.6) - 0.4;
+              if (barb > 0) c += 1.3 * barb * q * Math.sqrt(q);
+            }
+            c *= veils[s + 9] * Math.min(1, sl * 12 + 0.6) * Math.min(1, (veils[s + 14] - sl) * 5 + 0.05);
             if (c > mv) mv = c;
           }
-          milk += win * mv; spec += win * mv * 0.06 * gloss;
+          milk += win * mv; spec += win * mv * 0.04 * gloss;
           // seeded density of the stone
           const nB = tnoise(tab, u * 0.8 + ox, v * 0.8 + oy) - 0.5;
-          tone += win * nB * 0.3; a += win * nB * 0.22;
+          tone += win * nB * 0.4; a += win * nB * 0.28;
         }
 
         // the silhouette: crisp broken highlights on the lit side, frosted thickness right behind
@@ -579,10 +651,17 @@
         const dn = dOut * inv;
         if (dn < 0.26) {
           const ld = -(bnx * LX + bny * LY), le = ld > 0 ? ld : 0, se = ld < 0 ? -ld : 0;
-          const eb = 1 - Math.abs(dn - fc) / fw;
-          if (eb > 0) spec += eb * (0.5 + 1.0 * nC) * (le > 0 ? Math.sqrt(le) * (0.5 + 0.75 * bg) : 0.03 + (bg > 0.7 ? se * (bg - 0.7) * 1.5 : 0));
-          if (dn < 0.07) { const q = 1 - dn * 14.3; milk += q * q * le * (0.22 + 0.22 * bg); a += q * 0.2 * se; tone -= q * 0.07 * se; }
-          if (se > 0 && dn > 0.02) { const q = 1 - Math.abs(dn - 0.11) * 9; if (q > 0) glow += se * q * (0.25 + 1.4 * nA) * mat[4]; }
+          const eb = 1 - Math.abs(dn - fc) / fw, gq = se > 0 && dn > 0.02 ? 1 - Math.abs(dn - 0.11) * 9 : 0;
+          if (eb > 0 || gq > 0) {
+            // Only stretches of an edge catch the light hard (low-frequency noise along the edge: periodic,
+            // so a run bridges a joint; inside a cell it is shifted per stone). The rest stays frosted.
+            const al = u * bny - v * bnx;
+            let gate = (tnoise(tab, al + bnx * 0.37 + bny * 0.21 + 0.5, 0.9) + win * (tnoise(tab, al * 1.3 + gPh, 0.35 + gPh2) - 0.5) * 0.9 - 0.5) * 5;
+            gate = gate < 0 ? 0 : gate > 1 ? 1 : gate;
+            if (eb > 0) spec += eb * (le > 0 ? Math.sqrt(le) * (0.5 + 0.75 * bg) * (0.07 + (0.2 + 1.0 * nC) * gate) : 0.02 + (bg > 0.7 ? se * (bg - 0.7) * 1.5 * gate : 0));
+            if (gq > 0) glow += se * gq * (0.25 + 1.4 * nA) * mat[4] * (0.22 + 0.78 * gate);
+          }
+          if (dn < 0.07) { const q = 1 - dn * 14.3; milk += q * q * le * (0.24 + 0.22 * bg); a += q * 0.2 * se; tone -= q * 0.07 * se; }
         }
         for (let s = 0; s < spots.length; s += 4) {
           const dx = u - spots[s], dy = v - spots[s + 1], q = (dx * dx + dy * dy) * spots[s + 2];
@@ -681,7 +760,7 @@
     if (style < 2) {
       // cleavage break
       polys = [[0, 0, 1, 0, 1, 1, 0, 1]];
-      const a0 = rnd() * Math.PI, steps = 4 + (rnd() * 3 | 0);
+      const a0 = 0, steps = 4 + (rnd() * 3 | 0);
       for (let s = 0; s < steps; s++) {
         let bi = 0, ba = 0;
         for (let i = 0; i < polys.length; i++) { const ar = Math.abs(polyArea(polys[i])); if (ar > ba) { ba = ar; bi = i; } }
@@ -689,14 +768,17 @@
         let cx = 0, cy = 0;
         for (let i = 0; i < q.length; i += 2) { cx += q[i]; cy += q[i + 1]; }
         cx = cx / (q.length / 2) + (rnd() - 0.5) * 0.22; cy = cy / (q.length / 2) + (rnd() - 0.5) * 0.22;
-        const ang = a0 + s * 1.05 + (rnd() - 0.5) * 0.8;                 // each crack about 60 degrees off the last: wedges and daggers
+        // the first crack runs straight through the cell from port to port (it goes on in the neighbours),
+        // each further one about 60 degrees off the last: wedges and daggers
+        let ang = a0 + s * 1.05 + (rnd() - 0.5) * 0.8;
+        if (s === 0) { cx = 0.5; cy = PORT_H; ang = 0; }
         const r = splitPoly(q, cx, cy, Math.cos(ang), Math.sin(ang));
         if (!r) continue;
         polys.splice(bi, 1, r[0], r[1]);
         const c = r[2];
         // a crack branches off an older one: it starts at the end that lies deeper inside the cell
         const e0 = Math.min(c[0], 1 - c[0], c[1], 1 - c[1]), e1 = Math.min(c[2], 1 - c[2], c[3], 1 - c[3]);
-        lines.push({ pts: e0 >= e1 ? c : [c[2], c[3], c[0], c[1]], at: s / steps * 0.62 });
+        lines.push({ pts: (s === 0 ? id & 4 : e0 < e1) ? [c[2], c[3], c[0], c[1]] : c, at: s / steps * 0.62 });
         if (lines.length === 1) { px = (c[0] + c[2]) / 2; py = (c[1] + c[3]) / 2; }
         if (polys.length === 4) wedges = polys.slice();
       }
@@ -709,9 +791,23 @@
         px = rnd() < 0.5 ? near : 1 - near; py = far;
         if (flip) { const t = px; px = py; py = t; }
       } else { px = 0.32 + rnd() * 0.36; py = 0.32 + rnd() * 0.36; }
-      const n = 4 + (rnd() * 2 | 0), base = rnd() * TAU, rays = [];
+      const n = 4 + (rnd() * 2 | 0), base = rnd() * TAU, rays = [], angs = [];
+      for (let i = 0; i < n; i++) angs.push(base + (i + (rnd() - 0.5) * 0.55) * TAU / n);
+      // Two cracks (four in every other pattern) leave the cell through the ports it shares with its
+      // neighbours, so a fracture runs on from cell to cell: the ray that points there best is bent to it.
+      const ports = id & 4 ? [0, PORT_H, 1, PORT_H, PORT_V, 0, PORT_V, 1] : [0, PORT_H, 1, PORT_H], taken = [];
+      for (let k = 0; k < ports.length; k += 2) {
+        const want = Math.atan2(ports[k + 1] - py, ports[k] - px);
+        let best = -1, bd = 9;
+        for (let i = 0; i < n; i++) {
+          if (taken.indexOf(i) >= 0) continue;
+          const d = Math.abs(Math.atan2(Math.sin(angs[i] - want), Math.cos(angs[i] - want)));
+          if (d < bd) { bd = d; best = i; }
+        }
+        if (best >= 0) { angs[best] = want; taken.push(best); }
+      }
       for (let i = 0; i < n; i++) {
-        const ang = base + (i + (rnd() - 0.5) * 0.55) * TAU / n;
+        const ang = angs[i];
         const dx = Math.cos(ang), dy = Math.sin(ang);
         const tx = dx > 1e-9 ? (1 - px) / dx : dx < -1e-9 ? -px / dx : 1e9;
         const ty = dy > 1e-9 ? (1 - py) / dy : dy < -1e-9 ? -py / dy : 1e9;
@@ -719,7 +815,7 @@
         const bx = Math.min(1, Math.max(0, px + dx * t)), by = Math.min(1, Math.max(0, py + dy * t));
         // position on the perimeter, clockwise from the top-left corner (0..4)
         const s = tx < ty ? (dx > 0 ? 1 + by : 3 + (1 - by)) : (dy > 0 ? 2 + (1 - bx) : bx);
-        const kt = t * (0.36 + rnd() * 0.28), kn = t * (rnd() - 0.5) * 0.3;    // the kink
+        const kt = t * (0.36 + rnd() * 0.28), kn = t * (rnd() - 0.5) * 0.26;   // the kink
         rays.push({ kx: px + dx * kt - dy * kn, ky: py + dy * kt + dx * kn, bx: bx, by: by, s: s });
         lines.push({ pts: [px, py, rays[i].kx, rays[i].ky, bx, by], at: i ? rnd() * 0.5 : 0 });
       }
@@ -819,9 +915,9 @@
     g.translate(off * 1.6, off * 1.2);                             // the milky sheet lies to one side of the crack
     trace(-1);
     g.strokeStyle = 'rgba(255,255,255,0.07)'; g.lineWidth = Math.max(3, S * 0.2); g.stroke();
-    g.strokeStyle = 'rgba(255,255,255,0.1)'; g.lineWidth = Math.max(2, S * 0.09); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,0.06)'; g.lineWidth = Math.max(2, S * 0.09); g.stroke();
     g.translate(-off * 0.9, -off * 0.5);
-    g.strokeStyle = 'rgba(4,8,22,0.26)'; g.lineWidth = Math.max(1, S * 0.018); g.stroke();         // refraction shadow
+    g.strokeStyle = 'rgba(4,8,22,0.15)'; g.lineWidth = Math.max(1, S * 0.018); g.stroke();         // refraction shadow (faint: no second line)
     g.translate(-off * 0.7, -off * 0.7);
     g.beginPath();                                                 // feathers
     for (let i = 0; i < feathers.length; i += 4) {
@@ -848,6 +944,244 @@
   }
 
   /* ------------------------------------------------------------------------------------------------ *
+   * Fused pieces. The cells of one stone (linked by their conn bits) are composed once into a small
+   * canvas, and what is bigger than a cell is laid over the whole stone there: one or two cleavage
+   * planes that cross it from edge to edge with a bright striated band, long faint fracture hairlines
+   * that branch off each other, a clearer and a milkier region. That is what makes a tetromino read as
+   * ONE crystal and no two stones alike. The canvases are cached per piece (cells, seeds, conn), so the
+   * falling piece and the settled board cost what they did before: one blit per cell at most.
+   * ------------------------------------------------------------------------------------------------ */
+  const PIECE_B = 2;                                 // transparent border of a piece canvas (device px)
+  const pieces = new Map(), pieceOfSeed = new Map();
+  let piecePixels = 0, pieceLimit = PIECE_BUDGET, ovCv = null, ovMask = null;
+
+  function spriteOf(c, px) { return getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, ((c.seed >>> 0) >>> 7) % VARIANTS, px, false); }
+
+  // Where the pixels of a cell come from: its fused piece if that is known (so that shards carry the
+  // big planes too), else its own sprite. Returns [canvas, x, y] of the cell's top-left corner.
+  function cellSource(c, px) {
+    const r = pieceOfSeed.get(c.seed >>> 0);
+    if (r && r.e.px === px && r.conn === (c.conn & 15) && r.type === c.type) return [r.e.cv, PIECE_B + r.gx * px, PIECE_B + r.gy * px];
+    const P = padOf(px);
+    return [spriteOf(c, px), P, P];
+  }
+
+  // Groups the cells of a call into pieces. Cells of one piece are neighbours and say so in their conn
+  // bits; while rows collapse, the lower partner of a vertical joint may still be on its way (then it
+  // is the next cell below in that column). Returns a list of { e: cached piece | null, idx: cell
+  // indices, exact, X0, Y0 } with .gx / .gy (grid position of every cell inside its piece).
+  function resolvePieces(cells, size, px, dpr) {
+    const n = cells.length, X = new Int32Array(n), Y = new Int32Array(n), at = new Map();
+    const lE = new Int32Array(n).fill(-1), lW = new Int32Array(n).fill(-1), lS = new Int32Array(n).fill(-1), lN = new Int32Array(n).fill(-1);
+    for (let i = 0; i < n; i++) {
+      const c = cells[i];
+      X[i] = Math.round(c.x * dpr); Y[i] = Math.round(c.y * dpr);
+      at.set((X[i] + 32768) * 65536 + Y[i] + 32768, i);
+    }
+    for (let i = 0; i < n; i++) {
+      const c = cells[i], conn = c.conn & 15;
+      if (conn & 2) {
+        const j = at.get((Math.round((c.x + size) * dpr) + 32768) * 65536 + Y[i] + 32768);
+        if (j !== undefined && j !== i && (cells[j].conn & 8) && cells[j].type === c.type) { lE[i] = j; lW[j] = i; }
+      }
+      if (conn & 4) {
+        let j = at.get((X[i] + 32768) * 65536 + Math.round((c.y + size) * dpr) + 32768);
+        if (j === undefined) {
+          let by = Y[i] + px * 5.5;
+          j = -1;
+          for (let q = 0; q < n; q++) if (X[q] === X[i] && Y[q] > Y[i] && Y[q] < by) { by = Y[q]; j = q; }
+        }
+        if (j >= 0 && j !== i && (cells[j].conn & 1) && cells[j].type === c.type && lN[j] < 0) { lS[i] = j; lN[j] = i; }
+      }
+    }
+    const seen = new Uint8Array(n), gx = new Int16Array(n), gy = new Int16Array(n), out = [], stack = [];
+    const byGrid = function (p, q) { return (gy[p] - gy[q]) || (gx[p] - gx[q]); };
+    for (let i = 0; i < n; i++) {
+      if (seen[i]) continue;
+      const idx = [];
+      let x0 = 0, y0 = 0, x1 = 0, y1 = 0;
+      seen[i] = 1; gx[i] = 0; gy[i] = 0; stack.push(i);
+      while (stack.length) {
+        const a = stack.pop();
+        idx.push(a);
+        if (gx[a] < x0) x0 = gx[a]; if (gx[a] > x1) x1 = gx[a]; if (gy[a] < y0) y0 = gy[a]; if (gy[a] > y1) y1 = gy[a];
+        let b = lE[a]; if (b >= 0 && !seen[b]) { seen[b] = 1; gx[b] = gx[a] + 1; gy[b] = gy[a]; stack.push(b); }
+        b = lW[a]; if (b >= 0 && !seen[b]) { seen[b] = 1; gx[b] = gx[a] - 1; gy[b] = gy[a]; stack.push(b); }
+        b = lS[a]; if (b >= 0 && !seen[b]) { seen[b] = 1; gx[b] = gx[a]; gy[b] = gy[a] + 1; stack.push(b); }
+        b = lN[a]; if (b >= 0 && !seen[b]) { seen[b] = 1; gx[b] = gx[a]; gy[b] = gy[a] - 1; stack.push(b); }
+      }
+      const nx = x1 - x0 + 1, ny = y1 - y0 + 1, m = idx.length;
+      let e = null, exact = false, X0 = 0, Y0 = 0;
+      if (nx <= 5 && ny <= 5 && m <= 9 && (nx * px + 4) * (ny * px + 4) <= 1.5e6) {
+        if (m > 1) idx.sort(byGrid);
+        let h = px | 0, sum = 0;
+        for (let j = 0; j < m; j++) {
+          const a = idx[j], c = cells[a];
+          gx[a] -= x0; gy[a] -= y0;
+          h = Math.imul(h ^ (gx[a] + gy[a] * 8 + 1), 0x9E3779B1);
+          h = Math.imul(h ^ (c.seed >>> 0) ^ ((c.conn & 15) << 4) ^ (TYPE_INDEX[c.type] | 0), 0xC2B2AE35); h ^= h >>> 15;
+          sum = (sum + (c.seed >>> 0)) | 0;
+        }
+        h = ((h ^ m) >>> 0) || 1;
+        e = pieces.get(h);
+        if (e && (e.px !== px || e.n !== m || e.nx !== nx || e.ny !== ny)) e = null;
+        if (!e) {
+          e = bakePiece(cells, idx, gx, gy, nx, ny, px, sum);
+          pieces.set(h, e);
+          piecePixels += e.cost;
+          if (piecePixels > pieceLimit) { piecePixels = sweep(pieces); pieceLimit = Math.max(PIECE_BUDGET, piecePixels * 1.3); if (pieceOfSeed.size > 3000) pieceOfSeed.clear(); }
+        }
+        touch(e);
+        X0 = X[idx[0]] - gx[idx[0]] * px; Y0 = Y[idx[0]] - gy[idx[0]] * px;
+        exact = true;
+        for (let j = 0; j < m; j++) {
+          const a = idx[j], c = cells[a], sd = c.seed >>> 0, r = pieceOfSeed.get(sd);
+          if (X[a] !== X0 + gx[a] * px || Y[a] !== Y0 + gy[a] * px) exact = false;
+          if (!r || r.e !== e || r.gx !== gx[a] || r.gy !== gy[a] || r.conn !== (c.conn & 15)) pieceOfSeed.set(sd, { e: e, gx: gx[a], gy: gy[a], conn: c.conn & 15, type: c.type });
+        }
+      }
+      out.push({ e: e, idx: idx, exact: exact, X0: X0, Y0: Y0 });
+    }
+    out.gx = gx; out.gy = gy; out.X = X; out.Y = Y;
+    return out;
+  }
+
+  function bakePiece(cells, idx, gx, gy, nx, ny, px, seed) {
+    const B = PIECE_B, w = nx * px + B * 2, h = ny * px + B * 2, P = padOf(px);
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const g = cv.getContext('2d');
+    for (let i = 0; i < idx.length; i++) {
+      const a = idx[i];
+      g.drawImage(spriteOf(cells[a], px), P, P, px, px, B + gx[a] * px, B + gy[a] * px, px, px);
+    }
+    overlayPiece(g, cv, w, h, px, cells, idx, gx, gy, seed);
+    return { cv: cv, px: px, n: idx.length, nx: nx, ny: ny, cost: w * h, ep: -1, used: useClock };
+  }
+
+  // What is bigger than a cell. Light things (planes, striations, hairlines, milk) are drawn into a
+  // scratch layer, masked with the stone and laid over it - they make the stone denser and brighter;
+  // the clear region is taken out of the stone's alpha - you look through it, so it goes dark.
+  function overlayPiece(g, cv, w, h, S, cells, idx, gx, gy, seed) {
+    const n = idx.length, B = PIECE_B, vc = PALS[TYPE_INDEX[cells[idx[0]].type] | 0].rgb.veil;
+    const rnd = mulberry32(hash32(seed, 0x9A7E11));
+    const det = S < 44 ? 0.45 + 0.55 * S / 44 : 1, diag = Math.hypot(w, h), fine = S >= 24;
+    const veil = function (a) { return 'rgba(' + vc[0] + ',' + vc[1] + ',' + vc[2] + ',' + a.toFixed(3) + ')'; };
+    const white = function (a) { return 'rgba(255,255,255,' + a.toFixed(3) + ')'; };
+    const clear = function (a) { return 'rgba(0,0,0,' + a.toFixed(3) + ')'; };
+    const pick = function (lo) {
+      const a = idx[rnd() * n | 0], span = 1 - lo * 2;
+      return [B + (gx[a] + lo + rnd() * span) * S, B + (gy[a] + lo + rnd() * span) * S];
+    };
+    ovMask = growCanvas(ovMask, w, h); ovCv = growCanvas(ovCv, w, h);
+    const mg = ovMask.getContext('2d'), o = ovCv.getContext('2d');
+    mg.globalCompositeOperation = 'source-over';
+    mg.clearRect(0, 0, ovMask.width, ovMask.height);
+    for (let i = 0; i < 4; i++) mg.drawImage(cv, 0, 0);            // the stone as a mask (thin smoke still counts)
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.globalCompositeOperation = 'source-over'; o.globalAlpha = 1;
+    o.clearRect(0, 0, ovCv.width, ovCv.height);
+    o.lineCap = 'butt';
+    const dash = typeof o.setLineDash === 'function';
+
+    // a clearer region and a milkier one
+    let q = pick(0.3), R = S * (0.7 + rnd() * 0.6) * (n > 1 ? 1 : 0.7);
+    let grd = g.createRadialGradient(q[0], q[1], 0, q[0], q[1], R);
+    grd.addColorStop(0, clear(0.2 * det)); grd.addColorStop(1, clear(0));
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = grd; g.fillRect(q[0] - R, q[1] - R, R * 2, R * 2);
+    q = pick(0.2); R = S * (0.5 + rnd() * 0.55);
+    grd = o.createRadialGradient(q[0], q[1], 0, q[0], q[1], R);
+    grd.addColorStop(0, veil(0.13 * det)); grd.addColorStop(1, veil(0));
+    o.fillStyle = grd; o.fillRect(q[0] - R, q[1] - R, R * 2, R * 2);
+
+    // cleavage planes across the whole stone: the two directions of the crystal (-36 and 54 degrees)
+    const nPl = n >= 3 ? (rnd() < 0.6 ? 2 : 1) : n === 2 ? 1 : rnd() < 0.5 ? 1 : 0;
+    let fam = rnd() < 0.62 ? 0 : 1, p0 = null, a0 = 0;
+    for (let i = 0; i < nPl; i++) {
+      const p = pick(0.2), ang = (fam ? 0.942 : -0.628) + (rnd() - 0.5) * 0.21, sd = rnd() < 0.5 ? 1 : -1;
+      const wd = S * (0.5 + rnd() * 0.4) * (i ? 0.55 : 1), al = (i ? 0.17 : 0.27) * det;
+      if (!i) { p0 = p; a0 = ang; }
+      // behind the plane the stone is clear
+      g.save();
+      g.translate(p[0], p[1]); g.rotate(ang); g.scale(1, -sd);
+      grd = g.createLinearGradient(0, 0, 0, S * 0.45);
+      grd.addColorStop(0, clear((i ? 0.1 : 0.17) * det)); grd.addColorStop(1, clear(0));
+      g.fillStyle = grd; g.fillRect(-diag, 0, diag * 2, S * 0.45);
+      g.restore();
+      // the bright band beside it, striated parallel to the plane
+      o.save();
+      o.translate(p[0], p[1]); o.rotate(ang); o.scale(1, sd);
+      grd = o.createLinearGradient(0, 0, 0, wd);
+      grd.addColorStop(0, veil(al)); grd.addColorStop(0.3, veil(al * 0.5)); grd.addColorStop(1, veil(0));
+      o.fillStyle = grd; o.fillRect(-diag, 0, diag * 2, wd);
+      o.lineWidth = 1;
+      for (let j = fine ? 6 + (rnd() * 5 | 0) : 0; j > 0; j--) {
+        const y = wd * (0.04 + 0.9 * rnd() * rnd());
+        if (dash) { o.setLineDash([S * (0.25 + rnd() * 0.9), S * (0.08 + rnd() * 0.5)]); o.lineDashOffset = rnd() * S * 2; }
+        o.strokeStyle = white((0.05 + rnd() * 0.07) * det * (i ? 0.7 : 1));
+        o.beginPath(); o.moveTo(-diag, y); o.lineTo(diag, y); o.stroke();
+      }
+      if (dash) { o.setLineDash([S * (0.45 + rnd()), S * (0.05 + rnd() * 0.12), S * (0.15 + rnd() * 0.5), S * (0.03 + rnd() * 0.08)]); o.lineDashOffset = rnd() * S * 2; }
+      o.strokeStyle = white((i ? 0.34 : 0.5) * (0.6 + 0.4 * det));
+      o.beginPath(); o.moveTo(-diag, 0); o.lineTo(diag, 0); o.stroke();
+      if (dash) o.setLineDash([]);
+      o.restore();
+      if (rnd() < 0.7) fam = 1 - fam;
+    }
+    g.globalCompositeOperation = 'source-over';
+
+    // fracture hairlines: long, faint, of changing brightness; each starts on the plane or on an older one
+    const nodes = [];
+    for (let i = 0, nH = !fine ? 0 : n >= 3 ? 2 + (rnd() < 0.5 ? 1 : 0) : n; i < nH; i++) {
+      let x, y, ang;
+      if (i === 0 && p0) {
+        const t = (rnd() - 0.5) * S * 1.2;
+        x = p0[0] + Math.cos(a0) * t; y = p0[1] + Math.sin(a0) * t; ang = a0 + (rnd() < 0.5 ? 1 : -1) * (1.0 + rnd() * 0.9);
+      } else if (nodes.length) {
+        const j = (rnd() * (nodes.length / 3) | 0) * 3;
+        x = nodes[j]; y = nodes[j + 1]; ang = nodes[j + 2] + (rnd() < 0.5 ? 1 : -1) * (0.7 + rnd() * 0.9);
+      } else { const p = pick(0.2); x = p[0]; y = p[1]; ang = rnd() * TAU; }
+      for (let j = 0; j < 6; j++) {
+        const len = S * (0.28 + rnd() * 0.45), ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len, al = (0.08 + 0.3 * rnd() * rnd()) * det;
+        o.beginPath(); o.moveTo(x, y); o.lineTo(ex, ey);
+        o.strokeStyle = veil(al * 0.18); o.lineWidth = Math.max(2, S * 0.07); o.stroke();
+        o.strokeStyle = white(al); o.lineWidth = 1; o.stroke();
+        x = ex; y = ey; ang += (rnd() - 0.5) * 0.6;
+        nodes.push(x, y, ang);
+        if (x < 0 || x > w || y < 0 || y > h) break;
+      }
+    }
+    o.globalCompositeOperation = 'destination-in';
+    o.drawImage(ovMask, 0, 0);
+    o.globalCompositeOperation = 'source-over';
+    g.drawImage(ovCv, 0, 0, w, h, 0, 0, w, h);
+  }
+
+  // Paints a group of cells: all contact shadows first (they never darken a neighbour's edge light),
+  // then the stones, piece by piece. k: device px -> units of g, (ox, oy): origin in device px.
+  function paintCells(g, cells, size, px, dpr, k, ox, oy) {
+    const P = padOf(px), res = resolvePieces(cells, size, px, dpr), gx = res.gx, gy = res.gy, X = res.X, Y = res.Y;
+    for (let i = 0; i < cells.length; i++) blit(g, spriteOf(cells[i], px).shadow, cells[i], size, dpr, P, k, ox, oy);
+    for (let j = 0; j < res.length; j++) {
+      const G = res[j], e = G.e, idx = G.idx;
+      if (!e) {
+        for (let i = 0; i < idx.length; i++) blit(g, spriteOf(cells[idx[i]], px), cells[idx[i]], size, dpr, P, k, ox, oy);
+      } else if (G.exact) {
+        const w = e.nx * px, h = e.ny * px;
+        g.drawImage(e.cv, PIECE_B, PIECE_B, w, h, (G.X0 - ox) * k, (G.Y0 - oy) * k, w * k, h * k);
+      } else {
+        for (let i = 0; i < idx.length; i++) {                     // cell by cell, cropped to the device-pixel rectangle on open edges
+          const a = idx[i], c = cells[a], conn = c.conn & 15;
+          const w = conn & 2 ? Math.min(px + 1, Math.round((c.x + size) * dpr) - X[a]) : px;
+          const h = conn & 4 ? Math.min(px + 1, Math.round((c.y + size) * dpr) - Y[a]) : px;
+          if (w > 0 && h > 0) g.drawImage(e.cv, PIECE_B + gx[a] * px, PIECE_B + gy[a] * px, w, h, (X[a] - ox) * k, (Y[a] - oy) * k, w * k, h * k);
+        }
+      }
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------------ *
    * drawCells
    * ------------------------------------------------------------------------------------------------ */
   // Big groups that hold still (the settled board) are flattened into one layer canvas, so a static
@@ -855,7 +1189,7 @@
   // Translucent groups are flattened too (into a scratch layer): their contact shadows overlap.
   const LAYER_MIN_CELLS = 24, MAX_LAYERS = 2, MAX_LAYER_PIXELS = 6e6;
   const layers = [], seenSigs = [0, 0, 0, 0];
-  let seenAt = 0, layerClock = 0, scratch = null, lastDpr = 0;
+  let seenAt = 0, layerClock = 0, scratch = null, lastDpr = 0, fieldBottom = -Infinity, fieldSize = 0;
 
   // Returns { cv, x, y, w, h } (device px) holding the whole group, or null if it should be drawn directly.
   function groupLayer(cells, size, px, dpr, cacheable, mustFlatten) {
@@ -894,28 +1228,25 @@
     } else if (L.cv.width !== w || L.cv.height !== hh) { L.cv.width = w; L.cv.height = hh; }
     const g = L.cv.getContext('2d');
     g.clearRect(0, 0, w, hh);
-    for (let pass = 0; pass < 2; pass++) {                       // all contact shadows first, then the bodies
-      for (let i = 0; i < cells.length; i++) {
-        const c = cells[i];
-        const sp = getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, ((c.seed >>> 0) >>> 7) % VARIANTS, px, false);
-        blit(g, pass ? sp : sp.shadow, c, size, dpr, P, 1, x0 - P, y0 - P);
-      }
-    }
+    if (cacheable) { boardEpoch++; onBoard = true; }             // what the settled board shows stays cached
+    paintCells(g, cells, size, px, dpr, 1, x0 - P, y0 - P);
+    onBoard = false;
     L.x = x0 - P; L.y = y0 - P; L.w = w; L.h = hh;
     return L;
   }
 
   /* ------------------------------------------------------------------------------------------------ *
-   * Landing preview: light resting where the piece will land. A steady, soft-edged glow in the shape of
-   * the piece - brightest along its contour, faint inside, a short halo outside - with a delicate
-   * spectral tint. Nothing moves, nothing pulses: the picture only changes when the piece does.
+   * Landing preview: light resting where the piece will land. A steady pool of light in the shape of
+   * the piece - soft inside, gently brighter towards its rim, a wide soft halo outside. It is white
+   * light, a touch warmer on one side and cooler on the other; no colours, no line. Nothing moves,
+   * nothing pulses: the picture only changes when the piece does.
    * ------------------------------------------------------------------------------------------------ */
-  const SPECTRUM = [[255, 77, 109], [255, 159, 67], [255, 230, 109], [92, 255, 157], [77, 216, 255], [91, 124, 255], [199, 125, 255]];
-  const GLOW_TINT = 0.6, GLOW_ALPHA = 0.56;                       // share of colour in the light; overall strength
+  const LIGHT_WARM = [255, 243, 222], LIGHT_COOL = [222, 235, 255];
+  const GLOW_ALPHA = 0.5;                                         // overall strength of the resting light
   let glowCv = null, glowSig = 0;
 
   function drawGlow(ctx, cells, size, px, dpr, alpha) {
-    const inv = 1 / dpr, P = padOf(px);
+    const inv = 1 / dpr, P = ghostPad(px);
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, sig = px | 0;
     for (let i = 0; i < cells.length; i++) {
       const X = Math.round(cells[i].x * dpr), Y = Math.round(cells[i].y * dpr);
@@ -939,13 +1270,12 @@
         const c = cells[i];
         blit(g, getSprite(c.type === 'O' ? O_INDEX : 0, c.conn & 15, 0, px, true), c, size, dpr, P, 1, x0 - P, y0 - P);
       }
-      // a pale spectrum resting across the shape (anchored to the piece, so it never travels)
+      // white light, warm on one side and cool on the other (anchored to the piece, so it never travels)
       g.globalCompositeOperation = 'source-in';
-      const grd = g.createLinearGradient(P, P, w - P, h - P), n = SPECTRUM.length;
-      for (let i = 0; i < n; i++) {
-        const c = SPECTRUM[i], k = 255 * (1 - GLOW_TINT);
-        grd.addColorStop(i / (n - 1), 'rgb(' + Math.round(c[0] * GLOW_TINT + k) + ',' + Math.round(c[1] * GLOW_TINT + k) + ',' + Math.round(c[2] * GLOW_TINT + k) + ')');
-      }
+      const grd = g.createLinearGradient(P, P, w - P, h - P);
+      grd.addColorStop(0, 'rgb(' + LIGHT_WARM.join(',') + ')');
+      grd.addColorStop(0.5, 'rgb(255,255,255)');
+      grd.addColorStop(1, 'rgb(' + LIGHT_COOL.join(',') + ')');
       g.fillStyle = grd;
       g.fillRect(0, 0, w, h);
       g.globalCompositeOperation = 'source-over';
@@ -959,7 +1289,7 @@
 
   /* ------------------------------------------------------------------------------------------------ *
    * Light from above: a soft white shaft falls onto the falling crystal and leaves it as a short, faint
-   * spectrum glow. Steady - it only moves with the piece.
+   * pale glow (warm on one side, cool on the other). Steady - it only moves with the piece.
    * cells: the falling piece. opts: { t, top (y where the shaft starts), maxLen (free space below), alpha }
    * ------------------------------------------------------------------------------------------------ */
   function drawLight(ctx, cells, opts) {
@@ -1001,24 +1331,19 @@
       }
     }
 
-    // The light leaves the crystal split into colours: a short glow that fades out quickly.
+    // The light leaves the crystal as a short pale glow that fades out quickly (one gradient per column).
     const out = Math.min(size * 1.6, +opts.maxLen || 0);
     if (out > size * 0.15) {
-      const STRIPS = 6, sw = size / STRIPS, n = SPECTRUM.length;
       ctx.globalAlpha = 1;
       cols.forEach(function (e) {
-        for (let k = 0; k < STRIPS; k++) {
-          const sx = e.x + k * sw;
-          const f = Math.max(0, Math.min(0.9999, (sx + sw / 2 - xa) / width)) * (n - 1);
-          const i = Math.floor(f), m = f - i, p = SPECTRUM[i], q = SPECTRUM[i + 1];
-          const rgb = Math.round(p[0] + (q[0] - p[0]) * m) + ',' + Math.round(p[1] + (q[1] - p[1]) * m) + ',' + Math.round(p[2] + (q[2] - p[2]) * m);
-          const glow = ctx.createLinearGradient(0, e.y1, 0, e.y1 + out);
-          glow.addColorStop(0, 'rgba(' + rgb + ',' + (0.15 * alpha).toFixed(3) + ')');
-          glow.addColorStop(0.45, 'rgba(' + rgb + ',' + (0.045 * alpha).toFixed(3) + ')');
-          glow.addColorStop(1, 'rgba(' + rgb + ',0)');
-          ctx.fillStyle = glow;
-          ctx.fillRect(sx, e.y1 - size * 0.04, sw, out + size * 0.04);
-        }
+        const f = Math.max(0, Math.min(1, (e.x + size / 2 - xa) / width));
+        const rgb = Math.round(LIGHT_WARM[0] + (LIGHT_COOL[0] - LIGHT_WARM[0]) * f) + ',' + Math.round(LIGHT_WARM[1] + (LIGHT_COOL[1] - LIGHT_WARM[1]) * f) + ',' + Math.round(LIGHT_WARM[2] + (LIGHT_COOL[2] - LIGHT_WARM[2]) * f);
+        const glow = ctx.createLinearGradient(0, e.y1, 0, e.y1 + out);
+        glow.addColorStop(0, 'rgba(' + rgb + ',' + (0.06 * alpha).toFixed(3) + ')');
+        glow.addColorStop(0.45, 'rgba(' + rgb + ',' + (0.02 * alpha).toFixed(3) + ')');
+        glow.addColorStop(1, 'rgba(' + rgb + ',0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(e.x, e.y1 - size * 0.04, size, out + size * 0.04);
       });
     }
     ctx.restore();
@@ -1033,9 +1358,9 @@
     const ghost = !!opts.ghost, t = +opts.t || 0;
     const alpha = opts.alpha == null ? 1 : Math.max(0, Math.min(1, +opts.alpha));
     const px = Math.max(4, Math.min(512, Math.round(size * dpr)));
-    const P = padOf(px);
     let cracked = null, glints = null;
     lastDpr = dpr;
+    useClock++;
 
     if (ghost) {                                   // landing preview: resting light, see drawGlow
       const ga = alpha * ctx.globalAlpha;
@@ -1049,16 +1374,16 @@
     ctx.globalAlpha *= alpha;
     const ga = ctx.globalAlpha;
     const big = cells.length >= LAYER_MIN_CELLS, sheer = alpha < 1 && cells.length > 1;
+    if (big && fieldSize !== size) { fieldSize = size; fieldBottom = -Infinity; }
+    if (size === fieldSize) {                      // remember where the field ends (shards fall out of it)
+      for (let i = 0; i < cells.length; i++) if (cells[i].y + size > fieldBottom) fieldBottom = cells[i].y + size;
+    }
     const layer = big || sheer ? groupLayer(cells, size, px, dpr, big, sheer) : null;
     if (layer) ctx.drawImage(layer.cv, 0, 0, layer.w, layer.h, layer.x * inv, layer.y * inv, layer.w * inv, layer.h * inv);
     else {
-      for (let pass = 0; pass < 2; pass++) {       // contact shadows first: they never darken a neighbour's edge light
-        for (let i = 0; i < cells.length; i++) {
-          const c = cells[i];
-          const sp = getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, ((c.seed >>> 0) >>> 7) % VARIANTS, px, false);
-          blit(ctx, pass ? sp : sp.shadow, c, size, dpr, P, inv, 0, 0);   // snapped to device pixels
-        }
-      }
+      if (big) { boardEpoch++; onBoard = true; }
+      paintCells(ctx, cells, size, px, dpr, inv, 0, 0);          // snapped to device pixels
+      onBoard = false;
     }
     for (let i = 0; i < cells.length; i++) {
       const c = cells[i], conn = c.conn & 15, seed = c.seed >>> 0;
@@ -1113,7 +1438,7 @@
       mg.clearRect(0, 0, crackMask.width, crackMask.height);
       for (let i = 0; i < n; i++) {
         const c = list[i];
-        blit(mg, getSprite(TYPE_INDEX[c.type] | 0, c.conn & 15, ((c.seed >>> 0) >>> 7) % VARIANTS, px, false), c, size, dpr, P, 1, x0, y0);
+        blit(mg, spriteOf(c, px), c, size, dpr, P, 1, x0, y0);
       }
       mg.drawImage(crackMask, 0, 0); mg.drawImage(crackMask, 0, 0);     // thin smoke still carries a crack
     }
@@ -1144,12 +1469,14 @@
    * The stone breaks like glass: every shard is cut out of the block's own sprite (one atlas canvas per
    * burst: sprite pieces, masked by the fracture polygons) and drawn per frame with setTransform +
    * drawImage - it starts exactly where it sat in the stone, then spins and tumbles (x scale flips
-   * around a seeded axis, y scale tilts). The break edges are hairlines, bright where the cut faces
-   * the light; a shard whose face passes the mirror angle flashes white for a moment. Around them:
-   * fine splinters (glittering needles) and dust, and a short soft flash of light along the break.
-   * Shards that fall out of the canvas are dropped.
+   * around a seeded axis, y scale tilts) and FALLS: a small push away from the break, then gravity,
+   * until it has dropped out of the bottom of the field. Nothing shrinks or fades in mid-air. The
+   * bigger shards carry a hairline of light on the cut that faces the light; a shard whose face passes
+   * the mirror angle flashes white for a moment. Around them: fine splinters (glittering needles) and
+   * grit, and one short soft flash of light at the heart of the break.
    * ------------------------------------------------------------------------------------------------ */
-  const GRAVITY = 0.000036;      // cell sizes per ms^2
+  const GRAVITY = 0.00006;       // cell sizes per ms^2
+  const SHARD_LIFE = 1100;       // ms: by then a shard has left the field (or fades out)
   const SPIN_BUDGET = 32;        // cell areas of shards that may spin in the picture plane per burst (the rest only tumbles)
 
   let touchCv = null;
@@ -1178,10 +1505,10 @@
       }
       if (!(maxX > minX)) return;
       const midX = (minX + maxX) / 2, half = Math.max(1, (maxX - minX) / 2), midY = (minY + maxY) / 2, halfY = Math.max(1, (maxY - minY) / 2);
-      rowY.forEach(function (r) {
-        const life = 90 + 12 * rows;
-        flashes.push({ x: r.x0, y: r.y, w: r.x1 - r.x0, h: r.h, life: life, max: life });
-      });
+      const cs = (maxY - minY) / Math.max(1, rowY.size);          // cell size
+      flashes.push({ x: midX, y: midY, R: cs * (2.2 + 0.3 * rows), life: 90, max: 90 });
+      // where the field ends: shards fall out of it there
+      const bottom = Math.max(maxY, fieldBottom > maxY && fieldBottom < maxY + cs * 30 ? fieldBottom : maxY);
 
       const fresh = [];
       let total = 0, cellPx = 1;
@@ -1190,7 +1517,7 @@
         if (!(s > 0)) continue;
         const seed = c.seed >>> 0, f = fracture(seed), rnd = mulberry32(seed ^ 0x51F15E), ti = TYPE_INDEX[c.type] | 0;
         const px = Math.max(4, Math.min(512, Math.round(s * dpr))), P = padOf(px);
-        const sp = getSprite(ti, c.conn & 15, (seed >>> 7) % VARIANTS, px, false);
+        const src = cellSource(c, px);
         const cx0 = Math.round(c.x * dpr), cy0 = Math.round(c.y * dpr);
         const side = (c.x + s / 2 - midX) / half;                 // -1..1 across the cleared rows
         // A single row can afford finer debris: every shard with 4+ corners breaks once more, along
@@ -1232,7 +1559,7 @@
           dx /= dl; dy /= dl;
           const up = (c.y + cy * s - midY) / halfY;               // -1..1 across the cleared block
           const v0 = s * (0.003 + rnd() * 0.006) * power / (0.6 + 1.1 * big);
-          const axis = rnd() * TAU, life = (440 + rnd() * 360 + big * 260) * (rows > 2 ? 0.9 : 1);
+          const axis = rnd() * TAU, life = SHARD_LIFE;
           const loc = new Float32Array(n * 2);                     // polygon around the pivot (atlas pixels)
           let skip = 0;                                            // edges on the stone's own outline are no break faces
           for (let v = 0; v < n; v++) {
@@ -1242,11 +1569,11 @@
                 (qy > 0.999 && ry > 0.999 && !(c.conn & 4)) || (qx < 0.001 && rx < 0.001 && !(c.conn & 8))) skip |= 1 << v;
           }
           fresh.push({
-            sp: sp, P: P, sx: sx, sy: sy, poly: poly, px: px,
+            sp: src[0], ox: src[1], oy: src[2], sx: sx, sy: sy, poly: poly, px: px, bottom: bottom, sm: false,
             ax: 0, ay: 0, aw: aw, ah: ah, pvx: cx * px - sx, pvy: cy * px - sy, sc: 1 / dpr, s: s, big: big,
             x: (cx0 + cx * px) / dpr, y: (cy0 + cy * px) / dpr,
             vx: dx * v0 + side * s * 0.0026 * power * rnd(),
-            vy: dy * v0 * 0.7 + up * s * 0.002 * power * rnd() - s * (0.004 + rnd() * 0.0095) * (0.85 + 0.07 * rows) / (0.75 + 0.5 * big),
+            vy: dy * v0 * 0.7 + up * s * 0.002 * power * rnd() - s * (0.001 + rnd() * 0.005) * (0.85 + 0.07 * rows) / (0.75 + 0.5 * big),
             a: axis, c0: Math.cos(axis), s0: Math.sin(axis), va: (rnd() - 0.5) * 0.014 / (0.5 + big),
             ph: 0, vph: (0.0035 + rnd() * 0.009) / (0.55 + big), ph2: 0, vph2: (0.0015 + rnd() * 0.006) / (0.55 + big), fo: 0.45 + rnd() * 2.2,
             kd: 0.0011 + 0.002 * (1 - big), life: life, max: life, cv: null, loc: loc, w: new Float32Array(n * 2), n: n, skip: skip,
@@ -1261,7 +1588,7 @@
           bits.push({
             needle: needle, x: c.x + rnd() * s, y: c.y + rnd() * s, s: s,
             vx: Math.cos(ang) * v0 + side * s * 0.003 * rnd(), vy: Math.sin(ang) * v0 - s * (needle ? 0.004 : 0.0015) * rnd(),
-            r: s * (needle ? 0.035 + rnd() * 0.075 : 0.016 + rnd() * 0.02), rot: rnd() * TAU, vr: (rnd() - 0.5) * 0.03,
+            r: s * (needle ? 0.035 + rnd() * 0.075 : 0.022 + rnd() * 0.03), rot: rnd() * TAU, vr: (rnd() - 0.5) * 0.03,
             ph: rnd() * TAU, vph: 0.012 + rnd() * 0.02, life: life, max: life,
           });
         }
@@ -1275,6 +1602,9 @@
         const p = fresh[i];
         if (rs() >= pSpin && p.aw * p.ah > cellPx * cellPx * 0.12) { p.va = 0; p.a = 0; p.c0 = 1; p.s0 = 0; }
       }
+      // the largest shards keep their smooth edges even in a big burst (see draw)
+      const bySize = fresh.slice().sort(function (p, q) { return q.aw * q.ah - p.aw * p.ah; });
+      for (let i = 0; i < bySize.length && i < 40; i++) bySize[i].sm = true;
       // shelf packing, tallest first
       const order = fresh.slice().sort(function (p, q) { return q.ah - p.ah; });
       const W = Math.min(2048, Math.max(cellPx + 4, Math.ceil(Math.sqrt(total * 1.2) / 64) * 64));
@@ -1296,7 +1626,7 @@
       const g = cv.getContext('2d');
       for (let i = 0; i < list.length; i++) {
         const p = list[i];
-        g.drawImage(p.sp, p.P + p.sx, p.P + p.sy, p.aw, p.ah, p.ax, p.ay, p.aw, p.ah);
+        g.drawImage(p.sp, p.ox + p.sx, p.oy + p.sy, p.aw, p.ah, p.ax, p.ay, p.aw, p.ah);
       }
       g.beginPath();
       for (let i = 0; i < list.length; i++) {
@@ -1328,7 +1658,7 @@
           const life = 240 + rnd() * 220;
           bits.push({
             needle: false, x: c.x + rnd() * s, y: c.y + s * 0.08, s: s, vx: (rnd() - 0.5) * s * 0.003, vy: -s * (0.002 + rnd() * 0.003),
-            r: s * (0.016 + rnd() * 0.014), rot: 0, vr: 0, ph: rnd() * TAU, vph: 0.02, life: life, max: life,
+            r: s * (0.02 + rnd() * 0.016), rot: rnd() * TAU, vr: 0, ph: rnd() * TAU, vph: 0.02, life: life, max: life,
           });
         }
       }
@@ -1365,19 +1695,17 @@
       if (!ctx || !(flashes.length || count() > 0)) return;
       const dpr = opts && opts.dpr > 0 ? opts.dpr : 1;
       ctx.save();
-      // short soft flash of light along the break, narrowing to the row's centre line
+      // one short soft flash of light at the heart of the break
       if (flashes.length) {
         ctx.globalCompositeOperation = 'lighter';
         for (let i = 0; i < flashes.length; i++) {
-          const fl = flashes[i], f = fl.life / fl.max, h = fl.h * (0.2 + 1.0 * f), y = fl.y + (fl.h - h) / 2;
-          const a = f * f * 0.9, bar = ctx.createLinearGradient(0, y, 0, y + h);
-          bar.addColorStop(0, 'rgba(255,255,255,0)');
-          bar.addColorStop(0.36, 'rgba(255,255,255,' + (a * 0.22).toFixed(3) + ')');
-          bar.addColorStop(0.5, 'rgba(255,255,255,' + a.toFixed(3) + ')');
-          bar.addColorStop(0.64, 'rgba(255,255,255,' + (a * 0.22).toFixed(3) + ')');
-          bar.addColorStop(1, 'rgba(255,255,255,0)');
-          ctx.fillStyle = bar;
-          ctx.fillRect(fl.x, y, fl.w, h);
+          const fl = flashes[i], a = 0.35 * fl.life / fl.max, R = fl.R;
+          const spot = ctx.createRadialGradient(fl.x, fl.y, 0, fl.x, fl.y, R);
+          spot.addColorStop(0, 'rgba(255,255,255,' + a.toFixed(3) + ')');
+          spot.addColorStop(0.35, 'rgba(255,255,255,' + (a * 0.4).toFixed(3) + ')');
+          spot.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = spot;
+          ctx.fillRect(fl.x - R, fl.y - R, R * 2, R * 2);
         }
         ctx.globalCompositeOperation = 'source-over';
       }
@@ -1387,50 +1715,60 @@
       const baseA = ctx.globalAlpha, cw = ctx.canvas ? ctx.canvas.width : 1e9, chh = ctx.canvas ? ctx.canvas.height : 1e9;
       let nFl = 0, area = 0;
       for (let i = 0; i < shards.length; i++) area += shards[i].aw * shards[i].ah;
-      // a big burst is drawn unfiltered (the shards are in fast motion; software canvases need the help)
-      if (area > 110000) ctx.imageSmoothingEnabled = false;
-      for (let i = 0; i < shards.length; i++) {
-        const p = shards[i], f = p.life / p.max;
-        const ex = B.a * p.x + B.c * p.y + B.e, ey = B.b * p.x + B.d * p.y + B.f, R = p.aw > p.ah ? p.aw : p.ah;
-        p.on = false; p.gl = 0;
-        if (ey - R > chh || (ex + R < 0 && p.vx < 0) || (ex - R > cw && p.vx > 0)) { p.life = 0; continue; }   // fell out of view
-        const flip = Math.cos(p.ph), tilt = Math.cos(p.ph2), fade = f < 0.28 ? f / 0.28 : 1;
-        const k = p.sc * (0.6 + 0.4 * fade), fx = (flip < 0 ? -k : k) * Math.max(0.1, Math.abs(flip)), fy = k * (0.45 + 0.55 * Math.abs(tilt));
-        const ca = Math.cos(p.a), sa = Math.sin(p.a), c0 = p.c0, s0 = p.s0;
-        // M = R(a) * scale(fx, fy) * R(-axis): identity (times 1/dpr) at the moment of the burst
-        const m00 = ca * fx * c0 + sa * fy * s0, m01 = ca * fx * s0 - sa * fy * c0;
-        const m10 = sa * fx * c0 - ca * fy * s0, m11 = sa * fx * s0 + ca * fy * c0;
-        const ta = B.a * m00 + B.c * m10, tb = B.b * m00 + B.d * m10, tc = B.a * m01 + B.c * m11, td = B.b * m01 + B.d * m11;
-        ctx.setTransform(ta, tb, tc, td, ex, ey);
-        ctx.globalAlpha = baseA * fade;
-        ctx.drawImage(p.cv, p.ax, p.ay, p.aw, p.ah, -p.pvx, -p.pvy, p.aw, p.ah);
-        if (fade < 0.6) continue;
-        const q = p.loc, w = p.w;                                  // outline in device pixels, for edges and flashes
-        for (let v = 0, n2 = p.n * 2; v < n2; v += 2) { w[v] = ta * q[v] + tc * q[v + 1] + ex; w[v + 1] = tb * q[v] + td * q[v + 1] + ey; }
-        p.on = true;
-        // specular flash: twice per turn the face passes the mirror angle
-        let g = (p.ph % Math.PI) - p.fo;
-        g = g < 0 ? -g : g;
-        if (g < 0.24) { p.gl = 1 - g / 0.24; nFl++; }
+      // a big burst is drawn unfiltered (the shards are in fast motion; software canvases need the help) -
+      // all but its largest shards, whose edges would show the stair-steps
+      const rough = area > 110000;
+      for (let pass = rough ? 0 : 1; pass < 2; pass++) {
+        ctx.imageSmoothingEnabled = pass === 1;
+        for (let i = 0; i < shards.length; i++) {
+          const p = shards[i];
+          if (rough && p.sm !== (pass === 1)) continue;
+          const ex = B.a * p.x + B.c * p.y + B.e, ey = B.b * p.x + B.d * p.y + B.f, R = p.aw > p.ah ? p.aw : p.ah;
+          p.on = false; p.gl = 0;
+          // it falls out of the field: gone within half a cell below the frame (or at the end of its time)
+          let fade = 1 - (p.y - p.bottom) / (p.s * 0.5);
+          if (p.life < 160 && p.life / 160 < fade) fade = p.life / 160;
+          if (fade <= 0 || ey - R > chh || (ex + R < 0 && p.vx < 0) || (ex - R > cw && p.vx > 0)) { p.life = 0; continue; }
+          if (fade > 1) fade = 1;
+          const flip = Math.cos(p.ph), tilt = Math.cos(p.ph2);
+          const k = p.sc, fx = (flip < 0 ? -k : k) * Math.max(0.1, Math.abs(flip)), fy = k * (0.45 + 0.55 * Math.abs(tilt));
+          const ca = Math.cos(p.a), sa = Math.sin(p.a), c0 = p.c0, s0 = p.s0;
+          // M = R(a) * scale(fx, fy) * R(-axis): identity (times 1/dpr) at the moment of the burst
+          const m00 = ca * fx * c0 + sa * fy * s0, m01 = ca * fx * s0 - sa * fy * c0;
+          const m10 = sa * fx * c0 - ca * fy * s0, m11 = sa * fx * s0 + ca * fy * c0;
+          const ta = B.a * m00 + B.c * m10, tb = B.b * m00 + B.d * m10, tc = B.a * m01 + B.c * m11, td = B.b * m01 + B.d * m11;
+          ctx.setTransform(ta, tb, tc, td, ex, ey);
+          ctx.globalAlpha = baseA * fade;
+          ctx.drawImage(p.cv, p.ax, p.ay, p.aw, p.ah, -p.pvx, -p.pvy, p.aw, p.ah);
+          if (fade < 0.6) continue;
+          const q = p.loc, w = p.w;                                // outline in device pixels, for edges and flashes
+          for (let v = 0, n2 = p.n * 2; v < n2; v += 2) { w[v] = ta * q[v] + tc * q[v + 1] + ex; w[v + 1] = tb * q[v] + td * q[v + 1] + ey; }
+          p.on = true;
+          // specular flash: twice per turn the face passes the mirror angle
+          let g = (p.ph % Math.PI) - p.fo;
+          g = g < 0 ? -g : g;
+          if (g < 0.24) { p.gl = 1 - g / 0.24; nFl++; }
+        }
       }
+      ctx.imageSmoothingEnabled = true;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = baseA;
-      // break edges: glass is brightest where it is cut - hairlines, strong where the cut faces the light
+      // break edges: only the bigger shards show one, and only where the cut faces the light - a hairline
       ctx.lineCap = 'butt';
-      for (let pass = 0; pass < 2; pass++) {
+      {
         ctx.beginPath();
         for (let i = 0; i < shards.length; i++) {
           const p = shards[i];
-          if (!p.on) continue;
+          if (!p.on || p.big <= 0.3) continue;
           const w = p.w, n = p.n, sgn = Math.cos(p.ph) < 0 ? -p.cw : p.cw;
           for (let v = 0; v < n; v++) {
             if (p.skip >> v & 1) continue;
             const u = (v + 1) % n, x = w[v * 2], y = w[v * 2 + 1], dx = w[u * 2] - x, dy = w[u * 2 + 1] - y;
-            if ((-(dy * LX - dx * LY) * sgn > 0.3 * (Math.abs(dx) + Math.abs(dy))) !== (pass === 1)) continue;
+            if (-(dy * LX - dx * LY) * sgn <= 0.3 * (Math.abs(dx) + Math.abs(dy))) continue;
             ctx.moveTo(x, y); ctx.lineTo(x + dx, y + dy);
           }
         }
-        ctx.strokeStyle = pass ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.3)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
         ctx.lineWidth = 1;                                         // hairline: the cheapest stroke there is
         ctx.stroke();
       }
@@ -1486,14 +1824,22 @@
           ctx.lineWidth = (pass ? 1.5 : 1) / dpr;
           ctx.stroke();
         }
-        ctx.fillStyle = '#ffffff';
-        ctx.globalAlpha = baseA * 0.85;
-        for (let i = 0; i < bits.length; i++) {
-          const p = bits[i];
-          if (p.needle) continue;
-          const r = p.r * Math.min(1, p.life / p.max * 1.8) * (0.55 + 0.45 * Math.sin(p.ph));
-          if (r * dpr < 0.3) continue;
-          ctx.fillRect(p.x - r, p.y - r, r * 2, r * 2);
+        // grit: tiny three-cornered slivers that turn (bright while they face the light)
+        for (let pass = 0; pass < 2; pass++) {
+          ctx.beginPath();
+          for (let i = 0; i < bits.length; i++) {
+            const p = bits[i];
+            if (p.needle) continue;
+            const tw = Math.sin(p.ph);
+            if ((tw > 0.3) !== (pass === 1)) continue;
+            const r = p.r * Math.min(1, p.life / p.max * 1.8) * (0.6 + 0.4 * Math.abs(tw));
+            if (r * dpr < 0.35) continue;
+            const c = Math.cos(p.rot + p.ph * 0.3) * r, sn = Math.sin(p.rot + p.ph * 0.3) * r;
+            ctx.moveTo(p.x + c, p.y + sn); ctx.lineTo(p.x - c * 0.6 - sn * 0.55, p.y - sn * 0.6 + c * 0.55); ctx.lineTo(p.x - c * 0.3 + sn * 0.45, p.y - sn * 0.3 - c * 0.45);
+            ctx.closePath();
+          }
+          ctx.fillStyle = pass ? 'rgba(255,255,255,0.9)' : 'rgba(220,232,255,0.4)';
+          ctx.fill();
         }
       }
       ctx.restore();
@@ -1517,7 +1863,9 @@
     createFx: createFx,
     // Drop every cached canvas (call on resize / DPR change).
     invalidate: function () {
-      sprites.clear(); spritePixels = 0; crackSprites.clear();
+      sprites.clear(); spritePixels = 0; spriteLimit = SPRITE_BUDGET; crackSprites.clear();
+      pieces.clear(); pieceOfSeed.clear(); piecePixels = 0; pieceLimit = PIECE_BUDGET; ovCv = null; ovMask = null;
+      fieldBottom = -Infinity; fieldSize = 0;
       layers.length = 0; seenSigs.fill(0); scratch = null;
       glowCv = null; glowSig = 0; crackCv = null; crackMask = null; crackSig = 0;
     },

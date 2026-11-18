@@ -1,4 +1,4 @@
-// Crystal Drop – realistic skin: raw mineral stones for buttons and dialogs, the carved-stone playfield frame
+// Crystal Drop – realistic skin: raw mineral stones for buttons, dialogs, displays and switches, the carved-stone playfield frame
 // and the metal title lettering. Loaded before game.js; game.js picks these overrides up through KF.Skin.
 (function (KF) {
   'use strict';
@@ -86,19 +86,20 @@
     rootStyle.setProperty('--tex-fine', url(fine));
   } catch (e) { stone = fine = null; }
 
-  // ------------------------------------------------------------------ raw mineral stones (buttons, dialogs)
-  // Every button is its own broken chunk of chrysocolla-like rock, drawn once per size onto a canvas and
-  // handed to the stylesheet as a data URL (--st-face; the stylesheet shows it twice: as the top of the stone
-  // and, darkened and shifted down, as its side).
+  // ------------------------------------------------------------------ raw mineral stones (buttons, dialogs, displays)
+  // Every button, display and switch is its own broken chunk of chrysocolla-like rock, drawn once per size
+  // onto a canvas and handed to the stylesheet as a data URL (--st-face). The picture holds the top of the
+  // stone, its dark side below and a soft shadow, so the stylesheet needs no filters.
   // All per-pixel work happens here, when a stone is first needed or its size changes - never per frame.
 
   const TS = 256, TM = TS - 1;
   let FLD = null;
-  // Shared tileable fields: two fractal noises, a crackle (cell borders + cell values) and white grain.
+  // Shared tileable fields: two fractal noises, a crackle (cell borders + cell values), white noise and a
+  // clumpy grain (soft grains of about 1.5 and 4 CSS px, values spread evenly over 0..255).
   function stoneFields() {
     if (FLD) return FLD;
     const NA = fbmField(TS, 4, 5, 9001), NB = fbmField(TS, 3, 4, 9002);
-    const CE = new Float32Array(TS * TS), CI = new Uint8Array(TS * TS), GR = new Uint8Array(TS * TS);
+    const CE = new Float32Array(TS * TS), CI = new Uint8Array(TS * TS), GR = new Uint8Array(TS * TS), GC = new Uint8Array(TS * TS);
     const G = 16, cs = TS / G, rnd = mulberry32(7717);
     const px = new Float32Array(G * G), py = new Float32Array(G * G), pv = new Uint8Array(G * G);
     for (let i = 0; i < G * G; i++) {
@@ -128,31 +129,37 @@
       }
     }
     for (let i = 0; i < GR.length; i++) GR[i] = rnd() * 256;
-    return (FLD = { NA, NB, CE, CI, GR });
+    const g1 = fbmField(TS, 85, 1, 9003), g2 = fbmField(TS, 32, 1, 9004), hist = new Uint32Array(1026);
+    for (let i = 0; i < g1.length; i++) { const v = (g1[i] * 0.6 + g2[i] * 0.4) * 1023 | 0; g1[i] = v; hist[v + 1]++; }
+    for (let k = 1; k < 1026; k++) hist[k] += hist[k - 1];
+    for (let i = 0; i < g1.length; i++) GC[i] = hist[g1[i]] * 255 / g1.length;
+    return (FLD = { NA, NB, CE, CI, GR, GC });
   }
 
-  // Mineral families after the reference stones. c: dark, main, second, accent, pale rock, vein (RGB each);
-  // t: thresholds dark|main|second, accent above, pale rock below; va: how pale the veins get;
-  // bx: how strongly the accent gathers at one end of the stone.
-  const pal = (c, t, va, bx) => ({ c: new Float32Array(c), t, va, bx });
+  // Mineral families after the reference stones: chalky, matte colours. c: dark, main, second, accent, pale
+  // rock, vein (RGB each); t: thresholds dark|main|second, accent above, pale rock below; va: how pale the
+  // veins get; bx: how strongly the accent gathers at one end of the stone; cr: pale dust on ridges.
+  const pal = (c, t, va, bx, cr) => ({ c: new Float32Array(c), t, va, bx, cr });
   const PAL = {
-    turq: pal([17, 70, 130, 24, 150, 182, 84, 206, 214, 16, 30, 58, 184, 176, 146, 186, 238, 232], [0.28, 0.72, 0.79, 0.07], 0.85, 0),
-    deep: pal([14, 26, 54, 20, 82, 142, 32, 150, 182, 96, 50, 68, 188, 172, 148, 156, 204, 216], [0.38, 0.8, 0.66, 0.18], 0.8, 0),
-    dark: pal([10, 18, 32, 18, 64, 84, 28, 132, 150, 58, 42, 66, 152, 152, 138, 150, 198, 192], [0.42, 0.8, 0.72, 0.15], 0.7, 0),
-    mauve: pal([88, 52, 86, 172, 122, 148, 200, 152, 170, 52, 160, 150, 214, 194, 180, 240, 224, 228], [0.3, 0.74, 0.68, 0.2], 0.7, 0.34),
-    beige: pal([106, 94, 100, 180, 162, 132, 204, 190, 160, 58, 150, 142, 142, 134, 130, 234, 226, 206], [0.3, 0.76, 0.66, 0.2], 0.6, 0.3),
-    slab: pal([12, 32, 46, 17, 56, 74, 23, 92, 108, 52, 36, 56, 92, 98, 92, 120, 172, 170], [0.42, 0.8, 9, -9], 0.6, 0),
+    turq: pal([24, 66, 108, 46, 138, 160, 96, 200, 206, 26, 36, 56, 186, 178, 150, 196, 234, 226], [0.3, 0.8, 0.79, 0.09], 0.8, 0, 0.3),
+    deep: pal([22, 32, 54, 24, 88, 120, 44, 150, 168, 74, 46, 56, 182, 170, 150, 166, 206, 212], [0.38, 0.8, 0.74, 0.16], 0.75, 0, 0.26),
+    dark: pal([14, 22, 36, 22, 62, 80, 34, 124, 140, 58, 44, 60, 150, 150, 136, 150, 194, 190], [0.42, 0.8, 0.74, 0.14], 0.65, 0, 0.22),
+    mauve: pal([74, 58, 68, 132, 111, 112, 156, 138, 132, 76, 120, 112, 170, 156, 144, 208, 198, 194], [0.3, 0.74, 0.76, 0.18], 0.65, 0.34, 0.3),
+    beige: pal([106, 94, 100, 180, 162, 132, 204, 190, 160, 76, 148, 140, 142, 134, 130, 234, 226, 206], [0.3, 0.76, 0.68, 0.2], 0.6, 0.3, 0.3),
+    slab: pal([22, 29, 40, 34, 49, 63, 34, 74, 84, 64, 54, 64, 96, 100, 94, 132, 170, 170], [0.42, 0.74, 0.76, -9], 0.5, 0, 0.3),
+    stat: pal([34, 42, 54, 60, 76, 90, 86, 132, 140, 122, 102, 102, 172, 168, 150, 204, 222, 216], [0.3, 0.7, 0.76, 0.14], 0.7, 0, 0.36),
   };
 
   // The broken outline of a stone as a set of cuts (half-planes) through its box, each cut with its own
-  // steepness: corners knocked off, edges slightly slanted. Plus shell-shaped chips bitten out of the rim.
-  function stoneShape(w, h, rnd, panel, m, T) {
-    const wide = w > h * 1.7;
-    const a = [], b = [], c = [];
-    const sl = () => (panel ? 0.62 + 0.64 * rnd() : 0.5 + 0.95 * rnd());
+  // steepness: corners knocked off, edges slanted, long stones tapering at one end. Plus shell-shaped chips
+  // bitten out of the rim. kind: 0 button, 1 dialog slab, 2 frame of a display or switch.
+  function stoneShape(w, h, rnd, kind, m, T) {
+    const panel = kind === 1, frame = kind === 2, wide = !panel && w > h * 1.7;
+    const a = [], b = [], c = [], iv = [], reach = [0, 0], se = frame ? 0.5 : 1;
+    const sl = () => (panel ? 0.45 + 0.55 * rnd() : frame ? 0.8 + 0.7 * rnd() : 0.5 + 0.95 * rnd());
     const cut = (x1, y1, x2, y2) => {
       const dx = x2 - x1, dy = y2 - y1, l = Math.sqrt(dx * dx + dy * dy) || 1, s = sl(), nx = -dy / l, ny = dx / l;
-      a.push(nx * s); b.push(ny * s); c.push(-(nx * x1 + ny * y1) * s);
+      a.push(nx * s); b.push(ny * s); c.push(-(nx * x1 + ny * y1) * s); iv.push(1 / s);
     };
     const corner = (k, cx, cy) => {
       if (k === 0) cut(0, cy, cx, 0); else if (k === 1) cut(w - cx, 0, w, cy);
@@ -167,7 +174,12 @@
     cut(0, 0, w, 0); cut(w, 0, w, h); cut(w, h, 0, h); cut(0, h, 0, 0);
     for (let k = 0; k < 4; k++) {
       let cx, cy;
-      if (panel) { cx = 8 + 15 * rnd(); cy = 8 + 15 * rnd(); }
+      if (panel) {
+        cx = PANEL_CUT[0] + PANEL_CUT[1] * rnd(); cy = PANEL_CUT[0] + PANEL_CUT[1] * rnd();
+        // how far the rim (16px deep along the cut) reaches into the box beside the 24px side strips
+        const r = cy * (1 + 16 * Math.sqrt(cx * cx + cy * cy) / (cx * cy) - 24 / cx), e = k === 0 || k === 1 ? 0 : 1;
+        if (r > reach[e]) reach[e] = r;
+      } else if (frame) { cx = m * (0.1 + 0.16 * rnd()); cy = m * (0.1 + 0.16 * rnd()); }
       else if (rnd() < (wide ? 0.6 : 0.4)) { cx = m * (0.24 + (wide ? 0.3 : 0.12) * rnd()); cy = m * (0.2 + (wide ? 0.26 : 0.14) * rnd()); }
       else { cx = m * (0.09 + 0.1 * rnd()); cy = m * (0.09 + 0.1 * rnd()); }
       corner(k, cx, cy);
@@ -180,46 +192,81 @@
       const len = edge % 2 ? h : w;
       if (panel) {
         const n = Math.max(1, Math.round(len / 130));
-        for (let i = 0; i < n; i++) slant(edge, (i + 0.3 + 0.4 * rnd()) / n, i % 2 ? 1 : -1, 1.5 + 3 * rnd());
+        for (let i = 0; i < n; i++) slant(edge, (i + 0.3 + 0.4 * rnd()) / n, i % 2 ? 1 : -1, 2 + 3.5 * rnd());
       } else if (edge % 2 === 0) {
-        if (wide) { slant(edge, 0.22 + 0.25 * rnd(), -1, m * (0.04 + 0.09 * rnd())); slant(edge, 0.53 + 0.25 * rnd(), 1, m * (0.04 + 0.09 * rnd())); }
-        else slant(edge, 0.3 + 0.4 * rnd(), rnd() < 0.5 ? 1 : -1, m * (0.04 + 0.08 * rnd()));
-      } else if (rnd() < 0.6) slant(edge, 0.3 + 0.4 * rnd(), rnd() < 0.5 ? 1 : -1, m * (0.04 + 0.08 * rnd()));
+        if (wide) { slant(edge, 0.22 + 0.25 * rnd(), -1, m * se * (0.04 + 0.09 * rnd())); slant(edge, 0.53 + 0.25 * rnd(), 1, m * se * (0.04 + 0.09 * rnd())); }
+        else slant(edge, 0.3 + 0.4 * rnd(), rnd() < 0.5 ? 1 : -1, m * se * (0.04 + 0.08 * rnd()));
+      } else if (rnd() < 0.6) slant(edge, 0.3 + 0.4 * rnd(), rnd() < 0.5 ? 1 : -1, m * se * (0.04 + 0.08 * rnd()));
     }
     const chips = [];
     const n = panel ? Math.round((w + h) / 70) : (wide ? 3 : 2) + (rnd() < 0.5 ? 1 : 0);
     for (let i = 0; i < n; i++) {
       const side = !panel && wide && rnd() < 0.7 ? (rnd() < 0.5 ? 0 : 2) : rnd() * 4 | 0;
-      const r = panel ? 7 + 9 * rnd() : m * (0.16 + 0.2 * rnd()), out = r * ((panel ? 0.4 : 0.25) + 0.45 * rnd());
-      let cx, cy;
+      const r = panel ? 7 + 9 * rnd() : m * (frame ? 0.12 + 0.12 * rnd() : 0.16 + 0.2 * rnd());
+      let out = r * ((panel ? 0.4 : frame ? 0.55 : 0.25) + (frame ? 0.3 : 0.45) * rnd()), cx, cy;
+      if (panel && out < r - 8) out = r - 8;
       if (side === 0) { cx = w * rnd(); cy = -out; } else if (side === 2) { cx = w * rnd(); cy = h + out; }
       else if (side === 1) { cx = w + out; cy = h * rnd(); } else { cx = -out; cy = h * rnd(); }
       chips.push(cx, cy, 1 / (r * r), T * (0.7 + 0.9 * rnd()), r);
     }
-    return { a: new Float64Array(a), b: new Float64Array(b), c: new Float64Array(c), chips: new Float64Array(chips) };
+    if (panel) {
+      // deeper bites that really break the silhouette (never deeper than the rim is wide)
+      for (let edge = 0; edge < 4; edge++) {
+        const len = edge % 2 ? h : w, cnt = len > 260 ? 3 : len > 150 ? 2 : 1;
+        for (let i = 0; i < cnt; i++) {
+          const r = 13 + 9 * rnd(), out = r - (4.5 + 3.5 * rnd()), p = (i + 0.2 + 0.6 * rnd()) / cnt * len;
+          const cx = edge === 0 || edge === 2 ? p : edge === 1 ? w + out : -out, cy = edge === 0 ? -out : edge === 2 ? h + out : p;
+          chips.push(cx, cy, 1 / (r * r), T * (1.5 + rnd()), r);
+        }
+      }
+    } else if (wide && !frame) {
+      // long stones: one end tapers, and each long edge gets one deep notch away from the lettering
+      const end = rnd() < 0.5 ? 1 : -1, e1 = m * (0.12 + 0.1 * rnd()), e2 = m * (0.07 + 0.1 * rnd());
+      const t1 = 0.6 + 0.14 * rnd(), t2 = 0.62 + 0.16 * rnd(), end2 = rnd() < 0.6 ? end : -end;
+      if (end > 0) slant(0, t1, 1, e1); else slant(0, 1 - t1, -1, e1);
+      if (end2 > 0) slant(2, t2, -1, e2); else slant(2, 1 - t2, 1, e2);
+      for (let edge = 0; edge < 4; edge += 2) {
+        const r = m * (0.3 + 0.15 * rnd()), bite = m * (0.1 + 0.08 * rnd());
+        const cx = w * (rnd() < 0.5 ? 0.07 + 0.2 * rnd() : 0.73 + 0.2 * rnd());
+        chips.push(cx, edge ? h + r - bite : bite - r, 1 / (r * r), T * 3, r);
+      }
+    }
+    return { a: new Float64Array(a), b: new Float64Array(b), c: new Float64Array(c), iv: new Float64Array(iv), chips: new Float64Array(chips), reach };
   }
 
   const NO_CUTS = new Float64Array(0);
   const LX = 0.46, LY = 0.62, LZ = 0.64;                   // light from the top-left, like the frame
+  const stoneRnd = (seed) => mulberry32(Math.imul(seed | 0, 40503) + 977);
+  // deep corner breaks on dialogs need clip-path for the middle of the slab; without it the corners stay small
+  let PANEL_CUT = [8, 15];
+  try {
+    if (typeof CSS !== 'undefined' && CSS.supports && (CSS.supports('clip-path', 'polygon(0 0, 1px 0, 0 1px)') || CSS.supports('-webkit-clip-path', 'polygon(0 0, 1px 0, 0 1px)'))) PANEL_CUT = [14, 26];
+  } catch (e) { /* small corners */ }
 
   // Draws one stone for a box of w x h CSS px at `s` device px per CSS px.
-  //   o.pal: mineral family, o.seed, o.win: the part to draw [x0, y0, x1, y1] (default: the box plus 3px)
-  //   o.panel: a dialog slab - its rim fades out towards the middle (which is a CSS tile); o.d: its thickness,
-  //            shown as a dark side along the bottom, inside the box
-  //   o.tile: the flat, calm surface of the slab as a repeatable tile
+  //   o.pal: mineral family, o.seed, o.win: the part to draw [x0, y0, x1, y1]
+  //          (default: the box plus 3px, plus the side and the shadow below)
+  //   o.d: thickness, shown as a dark side below the top (buttons: below the box; dialogs: inside the box)
+  //   o.frame: a restrained outline (displays, switch tracks); o.well: [inset x, inset y, corner radius] a dark
+  //          window carved into the top, o.wellCol its floor colour
+  //   o.panel: a dialog slab - only its rim is drawn, the flat top fades out towards the middle
+  //   o.mid: the middle of that slab as a coarse colour map (the stylesheet lays the grain tile over it)
+  //   o.tile: that grain tile - the fine structure of the flat slab top in neutral grey
+  //   o.plain: no calmer zone for lettering (knobs); o.noShadow; o.shape: the outline, if the caller has it already
   // Returns the canvas.
   function renderStone(w, h, s, o) {
-    const FL = stoneFields(), NA = FL.NA, NB = FL.NB, CE = FL.CE, CI = FL.CI, GR = FL.GR;
+    const FL = stoneFields(), NA = FL.NA, NB = FL.NB, CE = FL.CE, CI = FL.CI, GR = FL.GR, GC = FL.GC;
     const P = PAL[o.pal] || PAL.deep, col = P.c;
-    const rnd = mulberry32(Math.imul(o.seed | 0, 40503) + 977);
-    const panel = !!o.panel, tile = !!o.tile, flat = panel || tile, d = o.d || 0;
-    const win = o.win || [-3, -3, w + 3, h + 3], x0 = win[0], y0 = win[1];
+    const rnd = stoneRnd(o.seed);
+    const panel = !!o.panel, tile = !!o.tile, mid = !!o.mid, slab = panel || mid, flat = slab || tile, frame = !!o.frame;
+    const d = o.d || 0, mode = mid ? 1 : tile ? 2 : 0, shadow = !flat && !o.noShadow;
+    const win = o.win || [-3, -3, w + 3, h + 3 + (flat ? 0 : d + (shadow ? 5 : 0))], x0 = win[0], y0 = win[1];
     const W = Math.max(3, Math.round((win[2] - x0) * s)), H = Math.max(3, Math.round((win[3] - y0) * s));
-    const fh = panel ? h - d : h;
+    const fh = slab ? h - d : h;
     const m = flat ? 52 : Math.min(w, h);
     const T = flat ? 4.2 : Math.max(3.4, Math.min(7, m * 0.1));
-    const shp = tile ? null : stoneShape(w, fh, rnd, panel, m, T);
-    const pa = shp ? shp.a : NO_CUTS, pb = shp ? shp.b : NO_CUTS, pc = shp ? shp.c : NO_CUTS, np = pa.length;
+    const shp = tile ? null : o.shape || stoneShape(w, fh, rnd, slab ? 1 : frame ? 2 : 0, m, T);
+    const pa = shp ? shp.a : NO_CUTS, pb = shp ? shp.b : NO_CUTS, pc = shp ? shp.c : NO_CUTS, pi = shp ? shp.iv : NO_CUTS, np = pa.length;
     const chips = shp ? shp.chips : NO_CUTS, nc = chips.length, rowB = new Float64Array(np + 1), act = new Int32Array(nc / 5 + 1);
 
     // the top: a lattice of tilted triangular fracture faces (flat for slabs)
@@ -228,53 +275,77 @@
     const NH = new Float32Array(1024), ND = new Uint8Array(1024);
     if (!flat) for (let i = 0; i < 1024; i++) { NH[i] = T * (0.45 + 2.1 * rnd()); ND[i] = rnd() < 0.5 ? 1 : 0; }
 
-    // mineral pattern: where the fields are read (slabs read them 1:1 so that rim and tile match exactly)
+    // mineral pattern: where the fields are read (slabs read them 1:1 so that rim, middle and grain tile match)
     const ck = flat ? 2 : Math.max(1.3, Math.min(2, 2.1 - m / 110)), ka = flat ? 2 : 1.6;
     const rot = flat ? 0 : (rnd() - 0.5) * 1.6, rc = Math.cos(rot) * ck, rs = Math.sin(rot) * ck;
     const o1 = 2048 + (flat ? 0 : rnd() * 256 | 0), o2 = 2048 + (flat ? 0 : rnd() * 256 | 0);
     const kb = flat ? 1 : 0.37, o3 = flat ? 131 : rnd() * 256, o4 = flat ? 67 : rnd() * 256;
     const kn = flat ? 2 : 1.1, o5 = 1024 + (flat ? 40 : rnd() * 256 | 0), o6 = 1024 + (flat ? 90 : rnd() * 256 | 0);
     const o7 = 1024 + (flat ? 170 : rnd() * 256 | 0), o8 = 1024 + (flat ? 20 : rnd() * 256 | 0);
-    const t0 = P.t[0], t1 = P.t[1], ta = P.t[2], tb = P.t[3], pva = P.va;
+    const t0 = P.t[0], t1 = P.t[1], ta = P.t[2], tb = P.t[3], pva = P.va, crustK = P.cr * 4.2, veinK = 1 / (kb * ck);
     const bx = P.bx * 2 / w * (rnd() < 0.5 ? -1 : 1), hw = w * 0.5;
     const mr = col[3] * 0.8, mg = col[4] * 0.8, mb = col[5] * 0.8;
-    let cr = 0, cg = 0, cb = 0;
-    // z: 0..1 inside the lettering zone (calmer, darker), v: 0..1 vividness (rim of a slab)
+    // the outline wobbles a little (long stones more), so no edge is ruler-straight
+    const wr2 = stoneRnd((o.seed | 0) + 7919), wo1 = 1024 + wr2() * 256, wo2 = 1024 + wr2() * 256;
+    const wobA = tile ? 0 : slab ? 2 : m * (!frame && w > h * 1.7 ? 0.15 : 0.05), wobR = 0.3 * m;
+    // bilinear lookup for the fields that are read magnified
+    const bl = (F, u, v) => {
+      const iu = u | 0, ivv = v | 0, fu = u - iu, fv = v - ivv, r0 = (ivv & TM) << 8, r1 = ((ivv + 1) & TM) << 8, c0 = iu & TM, c1 = (iu + 1) & TM;
+      const p = F[r0 | c0], q = F[r1 | c0];
+      return (p + (F[r0 | c1] - p) * fu) * (1 - fv) + (q + (F[r1 | c1] - q) * fu) * fv;
+    };
+    let cr = 0, cg = 0, cb = 0, fk = 0, gn = 0.5;
+    // z: 0..1 inside the lettering zone (calmer, darker), v: 0..1 vividness (rim of a slab).
+    // Sets cr/cg/cb and fk (how likely pale flecks are here); reads gn, the grain at this pixel.
     const alb = (x, y, z, v) => {
       const ax = x * ka + o1, ay = y * ka + o2;
       const n1 = NA[((ay & TM) << 8) | (ax & TM)], n2 = NA[(((ay + 77) & TM) << 8) | ((ax + 131) & TM)];
-      const wq = (n2 - 0.5) * 36;                                            // warps the big patches into ragged shapes
-      const b1 = NB[(((y * kn + o6 + wq) & TM) << 8) | ((x * kn + o5 - wq) & TM)];
-      const b2 = NB[(((x * kn + o8 - wq) & TM) << 8) | ((y * kn + o7 + wq) & TM)];
-      const tu = x * rc - y * rs + o1, tv = x * rs + y * rc + o2;
-      const ia = ((tv & TM) << 8) | (tu & TM), id = CI[ia] * 0.003921569;
-      const q = b1 + (n1 - 0.5) * 0.55 + (id - 0.5) * 0.14, q2 = b2 + (n2 - 0.5) * 0.45 + (0.5 - id) * 0.1 + (x - hw) * bx;
-      // dark rock -> main mineral -> its lighter form, with ragged but soft borders
-      let f = (q - t0) * 14 + 0.5; f = f < 0 ? 0 : f > 1 ? 1 : f;
+      const n3 = mode === 1 ? 0.5 : NA[(((ay * 3 + 11) & TM) << 8) | ((ax * 3 + 53) & TM)];        // fine mottling and pits
+      const tu = x * rc - y * rs + o1, tv = x * rs + y * rc + o2, ia = ((tv & TM) << 8) | (tu & TM);
+      let micro = 0.85 + 0.3 * n3;
+      if (n3 < 0.3) micro *= 0.88;
+      if (mode !== 1) { const e = CE[ia]; if (e < 0.9 && n2 > 0.56) micro *= 0.7 + 0.33 * e; }    // hairline cracks, here and there
+      if (mode === 2) { cr = cg = cb = 128 * micro; fk = 0; return; }
+      const id = CI[ia] * 0.003921569;
+      const wq = (n2 - 0.5) * 36, dq = (n3 - 0.5) * 0.3 + (gn - 0.5) * 0.12;       // warps the patches into ragged shapes; dq dissolves their borders into speckles
+      const b1 = bl(NB, x * kn + o5 - wq, y * kn + o6 + wq), b2 = bl(NB, y * kn + o7 + wq, x * kn + o8 - wq);
+      const q = b1 + (n1 - 0.5) * 0.55 + (id - 0.5) * 0.08 + dq, q2 = b2 + (n2 - 0.5) * 0.45 + (0.5 - id) * 0.06 + (x - hw) * bx - dq;
+      // dark rock -> main mineral -> its lighter form, finely intergrown
+      let f = (q - t0) * 7 + 0.5; f = f < 0 ? 0 : f > 1 ? 1 : f;
       let r = col[0] + (col[3] - col[0]) * f, g = col[1] + (col[4] - col[1]) * f, b = col[2] + (col[5] - col[2]) * f;
-      f = (q - t1) * 5 + 0.5;
+      f = (q - t1) * 6 + 0.5;
       if (f > 0) { if (f > 1) f = 1; r += (col[6] - r) * f; g += (col[7] - g) * f; b += (col[8] - b) * f; }
-      f = (q2 - ta) * 16 + 0.5;                                              // accent mineral
+      f = (q2 - ta) * 7 + 0.5;                                               // accent mineral
       if (f > 0) { if (f > 1) f = 1; r += (col[9] - r) * f; g += (col[10] - g) * f; b += (col[11] - b) * f; }
-      f = (tb - q2) * 16 + 0.5;                                              // pale host rock
-      if (f > 0) { if (f > 1) f = 1; r += (col[12] - r) * f; g += (col[13] - g) * f; b += (col[14] - b) * f; }
-      const n3 = NA[(((ay * 3 + 11) & TM) << 8) | ((ax * 3 + 53) & TM)];              // fine mottling and pits
-      let tone = (0.62 + 0.36 * n1 + 0.3 * n3 + 0.12 * id) * (1 + 0.4 * v), vn = 0;
-      if (n3 < 0.3) tone *= 0.88;
-      const e = CE[ia];
-      if (e < 0.9 && n2 > 0.56) tone *= 0.7 + 0.33 * e;                      // hairline cracks, here and there
-      const ev = CE[(((tv * kb + o4) & TM) << 8) | ((tu * kb + o3) & TM)] / kb;
-      if (ev < 1.3 && n1 > 0.47) { f = (n1 - 0.47) * 7; vn = (1 - ev / 1.3) * pva * (f > 1 ? 1 : f); }   // pale veins along the big fractures
-      if (z > 0) { f = 0.42 * z; r += (mr - r) * f; g += (mg - g) * f; b += (mb - b) * f; vn *= 1 - 0.6 * z; tone *= 1 - 0.22 * z; }
-      if (flat) vn *= 0.4 + 0.6 * v;
+      let pf = (tb - q2) * 7 + 0.5;                                          // pale host rock
+      if (pf > 0) { if (pf > 1) pf = 1; r += (col[12] - r) * pf; g += (col[13] - g) * pf; b += (col[14] - b) * pf; } else pf = 0;
+      let tone = (0.75 + 0.36 * n1 + 0.06 * id) * micro * (1 + 0.3 * v), vn = 0;
+      if (mode === 0 && n1 > 0.44) {
+        // pale veins along bent fractures: soft-edged, of changing width, fading in and out
+        const ev = bl(CE, (tu + (b2 - 0.5) * 30 + (n2 - 0.5) * 6) * kb + o3, (tv + (b1 - 0.5) * 30) * kb + o4) * veinK;
+        const vw = 0.35 + 0.9 * n2 + 0.5 * (n3 - 0.5);
+        if (ev < vw + 0.5) {
+          f = (vw + 0.5 - ev) / (vw * 0.7 + 0.5); if (f > 1) f = 1;
+          vn = (n1 - 0.44) * 6; vn = (vn > 1 ? 1 : vn) * f * f * (3 - 2 * f) * pva;
+        }
+      }
+      if (z > 0) { f = 0.42 * z; r += (mr - r) * f; g += (mg - g) * f; b += (mb - b) * f; vn *= 1 - 0.6 * z; tone *= 1 - 0.22 * z; pf *= 1 - 0.6 * z; }
+      if (flat) vn *= v > 0.4 ? (v - 0.4) * 1.667 : 0;
       cr = r * tone; cg = g * tone; cb = b * tone;
       if (vn > 0) { cr += (col[15] - cr) * vn; cg += (col[16] - cg) * vn; cb += (col[17] - cb) * vn; }
+      fk = pf * 0.8 > vn ? pf * 0.8 : vn;
     };
 
     const n = W * H, hf = new Float32Array(n), al = new Float32Array(n), ft = new Uint8Array(n);
+    const ds = slab ? new Float32Array(n) : null, wz = o.well ? new Uint8Array(n) : null;
     const RA = 2.6, RB = 1.3, tLow = T * 0.45;
-    // cuts that cannot reach below the top anywhere in a 16px block are skipped there
-    const BS = 16, nbx = Math.ceil(W / BS), cap = flat ? T + 0.4 : T * 2.6, actP = new Uint8Array(nbx * (np + 1));
+    // a window carved into the top (displays, switch tracks)
+    const well = o.well || null, wcx = w * 0.5, wcy = h * 0.5, wFloor = T * 0.2, wB = 2.2;
+    const whx = well ? wcx - well[0] : 0, why = well ? wcy - well[1] : 0, wrd = well ? Math.min(well[2], whx, why) : 0;
+    // cuts that cannot matter anywhere in a 16px block are skipped there
+    const BS = 16, nbx = Math.ceil(W / BS), actP = new Uint8Array(nbx * (np + 1)), capK = new Float64Array(np + 1);
+    for (let k = 0; k < np; k++) capK[k] = slab ? Math.max(T + 0.4, 24 / pi[k]) : T * 2.6 + wobA;
+    const chipR = slab ? 16 : 0;
     for (let j = 0; j < H; j++) {
       const y = (j + 0.5) / s + y0;
       if (j % BS === 0) {
@@ -284,20 +355,22 @@
           let cnt = 0;
           for (let k = 0; k < np; k++) {
             const pax = pa[k] < 0 ? pa[k] * xb : pa[k] * xa, pby = pb[k] < 0 ? pb[k] * yb : pb[k] * ya;
-            if (pax + pby + pc[k] < cap) actP[base + 1 + cnt++] = k;
+            if (pax + pby + pc[k] < capK[k]) actP[base + 1 + cnt++] = k;
           }
           actP[base] = cnt;
         }
       }
       for (let k = 0; k < np; k++) rowB[k] = pb[k] * y + pc[k];
       let na = 0;
-      for (let k = 0; k < nc; k += 5) { const dy = y - chips[k + 1]; if (dy < chips[k + 4] && -dy < chips[k + 4]) act[na++] = k; }
+      for (let k = 0; k < nc; k += 5) { const dy = y - chips[k + 1], rr = chips[k + 4] + chipR; if (dy < rr && -dy < rr) act[na++] = k; }
       for (let i = 0; i < W; i++) {
-        const x = (i + 0.5) / s + x0, base = (i >> 4) * (np + 1), cnt = actP[base];
-        let hh = 1e9;
-        for (let c = 1; c <= cnt; c++) { const k = actP[base + c], v = pa[k] * x + rowB[k]; if (v < hh) hh = v; }
-        if (hh < -6) { hf[j * W + i] = hh; continue; }
-        if (flat) { if (hh > T) { hh = T; ft[j * W + i] = 1; } }
+        const x = (i + 0.5) / s + x0, base = (i >> 4) * (np + 1), cnt = actP[base], idx = j * W + i;
+        let hh = 1e9, dist = 1e9;
+        if (slab) for (let c = 1; c <= cnt; c++) { const k = actP[base + c]; let v = pa[k] * x + rowB[k]; if (v < hh) hh = v; v *= pi[k]; if (v < dist) dist = v; }
+        else for (let c = 1; c <= cnt; c++) { const k = actP[base + c], v = pa[k] * x + rowB[k]; if (v < hh) hh = v; }
+        if (hh < -6) { hf[idx] = hh; continue; }
+        if (hh < wobR && wobA > 0) hh -= wobA * (bl(NA, x * 0.5 + wo1, y * 0.5 + wo2) - 0.15) * (1 - hh / wobR);
+        if (flat) { if (hh > T) { hh = T; ft[idx] = 1; } }
         else if (hh > tLow) {
           const u = x * ua + y * ub + 16.37, v = x * va + y * vb + 16.71;
           const iu = Math.floor(u), iv = Math.floor(v), fu = u - iu, fv = v - iv;
@@ -306,22 +379,50 @@
           let tt;
           if (ND[r0 | c0]) tt = fu > fv ? h00 + (h10 - h00) * fu + (h11 - h10) * fv : h00 + (h11 - h01) * fu + (h01 - h00) * fv;
           else tt = fu + fv < 1 ? h00 + (h10 - h00) * fu + (h01 - h00) * fv : h11 + (h01 - h11) * (1 - fu) + (h10 - h11) * (1 - fv);
-          if (tt < hh) { hh = tt; ft[j * W + i] = 1 + ((iu * 7 + iv * 13 + (fu > fv ? 3 : 0) + (fu + fv < 1 ? 5 : 0)) & 7); }
+          if (tt < hh) { hh = tt; ft[idx] = 1 + ((iu * 7 + iv * 13 + (fu > fv ? 3 : 0) + (fu + fv < 1 ? 5 : 0)) & 7); }
         }
         for (let c = 0; c < na; c++) {
           const k = act[c], dx = x - chips[k], dy = y - chips[k + 1], q = (dx * dx + dy * dy) * chips[k + 2];
           if (q < 1) hh -= chips[k + 3] * (1 - q);
+          if (slab) { const dc = (Math.sqrt(q) - 1) * chips[k + 4]; if (dc < dist) dist = dc; }
+        }
+        if (slab) ds[idx] = dist;
+        let calm = 1;
+        if (well) {
+          const ax = Math.abs(x - wcx) - whx + wrd, ay = Math.abs(y - wcy) - why + wrd;
+          const od = wrd - (ax > 0 ? (ay > 0 ? Math.sqrt(ax * ax + ay * ay) : ax) : ay > 0 ? ay : ax > ay ? ax : ay)
+            + (NA[(((y * 3 + 900) & TM) << 8) | ((x * 3 + 700) & TM)] - 0.5) * 1.5;   // > 0 inside the window, its edge a little ragged
+          if (od > 0 && hh > 0) {
+            let e = od >= wB ? 1 : od / wB; e = e * e * (3 - 2 * e);
+            if (hh > wFloor) hh += (wFloor - hh) * e; calm = 1 - 0.7 * e; wz[idx] = e * 255;
+          }
         }
         const tx = x * 2 + 2048, ty = y * 2 + 2048;
-        hh += RA * (NA[((ty & TM) << 8) | (tx & TM)] - 0.5) + RB * (NA[(((ty * 2 + 41) & TM) << 8) | ((tx * 2 + 97) & TM)] - 0.5);
-        hf[j * W + i] = hh;
+        hh += calm * (RA * (NA[((ty & TM) << 8) | (tx & TM)] - 0.5) + RB * (NA[(((ty * 2 + 41) & TM) << 8) | ((tx * 2 + 97) & TM)] - 0.5));
+        hf[idx] = hh;
       }
     }
 
     const face = document.createElement('canvas');
     face.width = W; face.height = H;
     const fg = face.getContext('2d'), img = fg.createImageData(W, H), D = img.data, D32 = new Uint32Array(D.buffer);
-    const zx = 1 / (w * 0.37), zy = 1 / (h * 0.36), hh2 = h * 0.5;
+    if (mid) {
+      // coarse colour map of the slab top; hidden under the rim near the outline
+      for (let j = 0; j < H; j++) {
+        const y = (j + 0.5) / s + y0;
+        for (let i = 0; i < W; i++) {
+          const k = j * W + i, dist = ds[k];
+          if (dist < 7) continue;
+          alb((i + 0.5) / s + x0, y, 0, dist < 22 ? 1 - dist / 22 : 0);
+          const r = cr * 0.91, g = cg * 0.91, b = cb * 0.91;
+          D32[k] = 0xff000000 | ((b > 255 ? 255 : b) << 16) | ((g > 255 ? 255 : g) << 8) | (r > 255 ? 255 : r);
+        }
+      }
+      fg.putImageData(img, 0, 0);
+      return face;
+    }
+    const zx = 1 / (w * 0.37), zy = 1 / (h * 0.36), hh2 = h * 0.5, wc = o.wellCol || [8, 14, 21];
+    const wx0 = wcx - whx, wy0 = wcy - why, lumK = tile ? 1 / 0.91 : 1;
     for (let j = 1; j < H - 1; j++) {
       const y = (j + 0.5) / s + y0;
       for (let i = 1; i < W - 1; i++) {
@@ -337,39 +438,60 @@
         }
         al[k] = a;
         const lam = (gx * LX + gy * LY + LZ) / Math.sqrt(g2 + 1);
-        let lum = 0.27 + 1.0 * (lam > 0 ? lam : 0);
+        let lum = (0.27 + 1.0 * (lam > 0 ? lam : 0)) * lumK;
         let cv = (hl + hr + hu + hd - 4 * hh) * s * 0.55;                              // ridges catch light, cavities stay dark
         cv = cv < -0.3 ? -0.3 : cv > 0.3 ? 0.3 : cv;
         lum *= 1 - cv;
-        const sheen = lam > 0.8 ? (lam - 0.8) * 110 : 0;
+        let sheen = lam > 0.8 ? (lam - 0.8) * (flat ? 60 : 110) : 0;
         if (!tile && hh < 1.2) lum *= 0.72 + 0.2333 * (hh > 0 ? hh : 0);            // the very edge falls into shade
-        let z = 0, v = 0, fade = 1;
+        let z = 0, v = 0, fade = 1, we = 0;
         if (panel) {
-          let bd = x < y ? x : y; if (w - x < bd) bd = w - x; if (fh - y < bd) bd = fh - y;
-          v = bd < 0 ? 1 : bd < 13 ? 1 - bd / 13 : 0;
-          if (ft[k] && bd > 11.5) {                       // the flat top fades into the tile; rim faces stay solid
-            if (bd >= 15) continue;
-            fade = (15 - bd) / 3.5; fade = fade * fade * (3 - 2 * fade);
+          const dist = ds[k];
+          v = dist < 0 ? 1 : dist < 22 ? 1 - dist / 22 : 0;
+          if (ft[k] && dist > 11.5) {                     // the flat top fades into the middle; rim faces stay solid
+            if (dist >= 15) continue;
+            fade = (15 - dist) / 3.5; fade = fade * fade * (3 - 2 * fade);
           }
         } else if (!tile) {
-          const ex = (x - hw) * zx, ey = (y - hh2) * zy, e2 = ex * ex + ey * ey;
-          if (e2 < 1.5) { z = e2 < 0.3 ? 1 : (1.5 - e2) / 1.2; z = z * z * (3 - 2 * z); }
+          if (wz) we = wz[k] * 0.003921569;
+          else if (!frame && !o.plain) {
+            const ex = (x - hw) * zx, ey = (y - hh2) * zy, e2 = ex * ex + ey * ey;
+            if (e2 < 1.5) { z = e2 < 0.3 ? 1 : (1.5 - e2) / 1.2; z = z * z * (3 - 2 * z); }
+          }
           if (ft[k]) lum *= 0.9 + 0.03 * ft[k];        // every fracture face a shade of its own
         }
+        const gq = GC[(((y * 2 + 517) & TM) << 8) | ((x * 2 + 771) & TM)];
+        gn = gq * 0.003921569;
         alb(x, y, z, v);
-        const gq = GR[(((y * 2 + 517) & TM) << 8) | ((x * 2 + 771) & TM)];
-        lum *= 0.88 + 0.24 * gq * 0.003921569;
-        if (gq < 12) lum *= 0.74;                                                    // dark specks
-        const spk = gq > 253 && lam > 0.5 ? 46 + (gq - 253) * 26 : 0;                // a few glints
+        if (cv < -0.06 && mode === 0) {                                               // chalky dust on ridges and crests
+          let f = (-cv - 0.06) * crustK * (0.4 + gn) * (1 - 0.7 * z) * (1 - we);
+          if (f > 0.6) f = 0.6;
+          cr += (col[15] - cr) * f; cg += (col[16] - cg) * f; cb += (col[17] - cb) * f;
+        }
+        lum *= 0.88 + 0.24 * gn;
+        if (gq < 30) lum *= 0.84;                                                    // dark grains, in clumps
+        let spk = 0;
+        if (fk > 0.15 && lam > 0.75 && gq > 96 && !flat) {                            // white flecks: only on pale crust and veins, on lit faces
+          const g1 = GR[(((y * 2 + 91) & TM) << 8) | ((x * 2 + 37) & TM)], cutv = 252 - 10 * fk;
+          if (g1 > cutv) spk = (36 + (g1 - cutv) * 7) * (1 - 0.7 * z);
+        }
+        if (we > 0) {                                                                // the floor of the window: dark, in the shade of its upper and left wall
+          const tone = 0.8 + 0.4 * gn, dx = x - wx0, dy = y - wy0, sd = dx < dy ? dx : dy;
+          cr += (wc[0] * tone - cr) * we; cg += (wc[1] * tone - cg) * we; cb += (wc[2] * tone - cb) * we;
+          if (sd < 6) lum *= 1 - we * 0.45 * (1 - (sd > 0 ? sd : 0) / 6);
+          spk *= 1 - we; sheen *= 1 - we;
+        }
         const add = spk + sheen, r = cr * lum + add, g = cg * lum + add, b = cb * lum + add;
         D32[k] = ((a * fade * 255) << 24) | (((b > 255 ? 255 : b) & 252) << 16) | (((g > 255 ? 255 : g) & 252) << 8) | ((r > 255 ? 255 : r) & 252);   // 6-bit colour: the grain hides it, the picture gets smaller
       }
     }
 
-    // slabs: the side shows below the top, swept down by the thickness
-    if (panel && d > 0 && win[3] > fh) {
-      const dp = Math.max(1, Math.round(d * s));
-      for (let j = Math.max(2, Math.floor((fh - 9 - y0) * s)); j < H - 1; j++) {
+    // the side: below every lower edge of the top, swept down by the thickness - dark rock with upright
+    // streaks, no veins, no highlights
+    if (d > 0 && !tile && win[3] > fh) {
+      const dp = Math.max(1, Math.round(d * s)), j0 = panel ? Math.max(2, Math.floor((fh - 9 - y0) * s)) : 2;
+      const sr = col[0] * 0.7 + col[3] * 0.3, sg = col[1] * 0.7 + col[4] * 0.3, sb = col[2] * 0.7 + col[5] * 0.3;
+      for (let j = j0; j < H - 1; j++) {
         const y = (j + 0.5) / s + y0;
         for (let i = 1; i < W - 1; i++) {
           const k = j * W + i, a = al[k];
@@ -378,15 +500,65 @@
           for (; q <= dp && q <= j; q++) { const v = al[k - q * W]; if (v > mx) { mx = v; if (v >= 1) break; } }
           if (mx <= 0) continue;
           const x = (i + 0.5) / s + x0;
-          alb(x, y, 0, 1);
-          const lum = 0.34 * (1 - 0.4 * q / dp) * (0.7 + 0.6 * NA[(((y * 0.7 + 300) & TM) << 8) | ((x * 5 + 300) & TM)]);
+          const lum = 0.5 * (1 - 0.5 * q / dp) * (0.55 + 0.6 * NA[(((y * 0.7 + 300) & TM) << 8) | ((x * 4 + 300) & TM)] + 0.3 * NA[(((y * 2 + 80) & TM) << 8) | ((x * 0.6 + 500) & TM)]);
           const p = k * 4, fa = D[p + 3] / 255, oa = fa + mx * (1 - fa), f = oa > 0 ? fa / oa : 0;
-          D[p] = D[p] * f + cr * lum * (1 - f); D[p + 1] = D[p + 1] * f + cg * lum * (1 - f); D[p + 2] = D[p + 2] * f + cb * lum * (1 - f); D[p + 3] = oa * 255;
+          D[p] = D[p] * f + sr * lum * (1 - f); D[p + 1] = D[p + 1] * f + sg * lum * (1 - f); D[p + 2] = D[p + 2] * f + sb * lum * (1 - f); D[p + 3] = oa * 255;
+        }
+      }
+    }
+    // a soft shadow on the ground, a little below the stone (two box blurs of its silhouette)
+    if (shadow) {
+      const r = Math.max(1, Math.round(2.2 * s)), off = Math.round(2.5 * s), k1 = 1 / (2 * r + 1), A = new Float32Array(n), B = new Float32Array(n);
+      for (let j = 0; j < H; j++) {
+        const row = j * W;
+        let sum = 0;
+        for (let i = 0; i < W + r; i++) {
+          if (i < W) sum += D[(row + i) * 4 + 3];
+          if (i - 2 * r - 1 >= 0) sum -= D[(row + i - 2 * r - 1) * 4 + 3];
+          if (i >= r) A[row + i - r] = sum * k1;
+        }
+      }
+      for (let i = 0; i < W; i++) {
+        let sum = 0;
+        for (let j = 0; j < H + r; j++) {
+          if (j < H) sum += A[j * W + i];
+          if (j - 2 * r - 1 >= 0) sum -= A[(j - 2 * r - 1) * W + i];
+          if (j >= r) B[(j - r) * W + i] = sum * k1;
+        }
+      }
+      for (let j = off; j < H; j++) {
+        for (let i = 0; i < W; i++) {
+          const k = j * W + i, p = k * 4, fa = D[p + 3] / 255;
+          if (fa >= 1) continue;
+          const sh = B[k - off * W] * 0.0031;                                         // up to 0.8
+          if (sh < 0.01) continue;
+          const oa = fa + sh * (1 - fa), f = fa / oa;
+          D[p] *= f; D[p + 1] *= f; D[p + 2] *= f; D[p + 3] = oa * 255;
         }
       }
     }
     fg.putImageData(img, 0, 0);
     return face;
+  }
+
+  // The outline of a dialog slab, drawn in by `ins` px, as a CSS polygon (the chips are left out: none of them
+  // bites deeper than the rim that covers this edge).
+  function insetPolygon(shp, ins, w, h) {
+    let pts = [-9, -9, w + 9, -9, w + 9, h + 9, -9, h + 9];
+    for (let k = 0; k < shp.a.length; k++) {
+      const A = shp.a[k] * shp.iv[k], B = shp.b[k] * shp.iv[k], C = shp.c[k] * shp.iv[k] - ins, out = [];
+      for (let i = 0; i < pts.length; i += 2) {
+        const x1 = pts[i], y1 = pts[i + 1], j = (i + 2) % pts.length, x2 = pts[j], y2 = pts[j + 1];
+        const v1 = A * x1 + B * y1 + C, v2 = A * x2 + B * y2 + C;
+        if (v1 >= 0) out.push(x1, y1);
+        if ((v1 >= 0) !== (v2 >= 0)) { const t = v1 / (v1 - v2); out.push(x1 + (x2 - x1) * t, y1 + (y2 - y1) * t); }
+      }
+      pts = out;
+      if (pts.length < 6) return '';
+    }
+    let css = '';
+    for (let i = 0; i < pts.length; i += 2) css += (i ? ', ' : '') + pts[i].toFixed(1) + 'px ' + pts[i + 1].toFixed(1) + 'px';
+    return 'polygon(' + css + ')';
   }
 
   // ---- which element gets which stone
@@ -397,58 +569,86 @@
     'kf-menu-close': ['mauve', 131], 'kf-help-back': ['mauve', 131],
   };
   const dataUrl = (cv) => 'url(' + cv.toDataURL('image/png') + ')';
-  let stoneScale = 0, slabScale = 0, stoneEls = null, stoneTimer = 0, warmTimer = 0, stoneCuts = {}, stoneView = '';
+  let stoneScale = 0, smallScale = 0, stoneEls = null, stoneTimer = 0, warmTimer = 0, stoneCuts = {}, stoneView = '';
 
   function stoneSize(el) {
-    let w = 0, h = 0, veiled = false;
-    try { const cs = getComputedStyle(el); w = parseFloat(cs.width); h = parseFloat(cs.height); veiled = cs.visibility === 'hidden'; } catch (e) { /* measured below */ }
+    let w = 0, h = 0, d = 0, veiled = false;
+    try {
+      const cs = getComputedStyle(el);
+      w = parseFloat(cs.width); h = parseFloat(cs.height); veiled = cs.visibility === 'hidden'; d = parseFloat(cs.getPropertyValue('--d')) || 0;
+    } catch (e) { /* measured below */ }
     if (!(w > 0) || !(h > 0)) { w = el.offsetWidth; h = el.offsetHeight; }
     if (!(w >= 12) || !(h >= 12)) return null;
-    return { w, h, veiled, key: w.toFixed(1) + 'x' + h.toFixed(1) + '@' + stoneScale };
+    return { w, h, d, veiled, key: w.toFixed(1) + 'x' + h.toFixed(1) + '/' + d + '@' + stoneScale };
   }
 
-  // The background value for an element of this size (cut once per kind and size, then shared).
-  // only: 0..3 cuts just that strip of a dialog rim ahead of time (and returns nothing).
+  // The pictures for an element of this size (cut once per kind and size, then shared): a background value,
+  // for dialogs an object { face, mid, clip }.
+  // only: 0..4 cuts just that piece of a dialog ahead of time (and returns nothing).
   function cutStone(el, sz, only) {
-    const isPanel = el.classList.contains('kf-panel'), c = el.classList;
+    const c = el.classList, isPanel = c.contains('kf-panel'), isStat = c.contains('kf-stat');
     const w = sz.w, h = sz.h, s = isPanel ? Math.min(stoneScale, 1.5) : stoneScale, px = (v) => (Math.round(v * 100) / 100) + 'px';
-    const sp = isPanel ? ['slab', 200 + stoneEls.indexOf(el)]
+    const sp = isPanel ? ['slab', 200 + stoneEls.indexOf(el)] : isStat ? ['stat', 400 + stoneEls.indexOf(el)]
       : STONE_OF[el.id] || [c.contains('kf-btn--gold') ? 'turq' : c.contains('kf-btn--rose') ? 'mauve' : c.contains('kf-btn--ghost') ? 'dark' : 'deep', 300 + stoneEls.indexOf(el)];
     const id = sp[0] + sp[1] + ':' + sz.key;
     if (stoneCuts[id]) return stoneCuts[id];
     let css;
     if (!isPanel && only >= 0) return '';
     if (isPanel) {
-      // only the rim: four strips around the calm middle (they overlap a little, so no seam shows)
-      const o = { pal: sp[0], seed: sp[1], panel: true, d: 6 }, B = 16, P = 2;
-      const yb = Math.floor((h - 6 - B) * s) / s, xr = Math.floor((w - B) * s) / s, yt = B - 2, ye = Math.ceil((yb + 2) * s) / s;
-      const wins = [[-P, -P, w + P, B], [-P, yb, w + P, h + P], [-P, yt, B, ye], [xr, yt, w + P, ye]];
-      const part = (n) => stoneCuts[id + '#' + n] || (o.win = wins[n], stoneCuts[id + '#' + n] = dataUrl(renderStone(w, h, s, o)));
+      // the rim: four strips around the calm middle (they overlap a little, so no seam shows); the middle:
+      // a coarse colour map of the same rock, clipped to the outline by the stylesheet
+      const TH = 6, B = 24, P = 2, fh = h - TH, shp = stoneShape(w, fh, stoneRnd(sp[1]), 1, 52, 4.2);
+      const o = { pal: sp[0], seed: sp[1], panel: true, d: TH, shape: shp };
+      const bt = Math.max(B, 2 * Math.ceil(shp.reach[0] / 2 + 0.5)), bb = Math.max(B, 2 * Math.ceil(shp.reach[1] / 2 + 0.5));
+      const yb = Math.floor((fh - bb) * s) / s, xr = Math.floor((w - B) * s) / s, yt = bt - 2, ye = Math.ceil((yb + 2) * s) / s;
+      const wins = [[-P, -P, w + P, bt], [-P, yb, w + P, h + P], [-P, yt, B, ye], [xr, yt, w + P, ye], [0, 0, w, h]];
+      const part = (n) => stoneCuts[id + '#' + n] || (stoneCuts[id + '#' + n] = dataUrl(n < 4
+        ? (o.win = wins[n], renderStone(w, h, s, o))
+        : renderStone(w, h, 0.5, { pal: sp[0], seed: sp[1], mid: true, d: TH, shape: shp, win: wins[4] })));
       if (only >= 0) { part(only); return ''; }
       const side = ' calc(100% - ' + px(yt + P + h + P - ye) + ') no-repeat';
-      css = part(0) + ' 0 0 / 100% ' + px(B + P) + ' no-repeat, ' + part(1) + ' 0 100% / 100% ' + px(h + P - yb) + ' no-repeat, '
-        + part(2) + ' 0 ' + px(yt + P) + ' / ' + px(B + P) + side + ', ' + part(3) + ' 100% ' + px(yt + P) + ' / ' + px(w + P - xr) + side;
-      for (let n = 0; n < 4; n++) delete stoneCuts[id + '#' + n];
-    } else css = dataUrl(renderStone(w, h, s, { pal: sp[0], seed: sp[1] })) + ' 0 0 / 100% 100% no-repeat';
+      css = {
+        face: part(0) + ' 0 0 / 100% ' + px(bt + P) + ' no-repeat, ' + part(1) + ' 0 100% / 100% ' + px(h + P - yb) + ' no-repeat, '
+          + part(2) + ' 0 ' + px(yt + P) + ' / ' + px(B + P) + side + ', ' + part(3) + ' 100% ' + px(yt + P) + ' / ' + px(w + P - xr) + side,
+        mid: part(4), clip: insetPolygon(shp, 9.5, w, h),
+      };
+      for (let n = 0; n < 5; n++) delete stoneCuts[id + '#' + n];
+    } else if (isStat) {
+      // a display: a small frame of rock around a dark window, 5px larger than its box all round
+      css = dataUrl(renderStone(w + 10, h + 10, s, { pal: sp[0], seed: sp[1], frame: true, d: 3, well: [6.5, 6.5, 5] })) + ' 0 0 / 100% 100% no-repeat';
+    } else css = dataUrl(renderStone(w, h, s, { pal: sp[0], seed: sp[1], d: sz.d })) + ' 0 0 / 100% 100% no-repeat';
     return (stoneCuts[id] = css);
   }
 
-  // The calm surface of the dialog slabs (and the backing of the displays), as a repeating tile.
-  function cutSlab() {
-    const ps = Math.min(stoneScale, 1.5);                                  // dialogs are calm: 1.5x is plenty
-    if (ps === slabScale) return;
-    slabScale = ps;
+  // Small things every dialog shares: the grain tile of the slabs, and the switches (a groove carved into a
+  // piece of rock, off and on; a pebble as knob, pale when off and turquoise when on).
+  function cutSmall() {
+    if (stoneScale === smallScale) return;
+    smallScale = stoneScale;
+    const ps = Math.min(stoneScale, 1.5), rs = document.documentElement.style;         // dialogs are calm: 1.5x is plenty
     const t = renderStone(128, 128, ps, { pal: 'slab', seed: 1, tile: true, win: [-2, -2, 130, 130] });
     const cv = document.createElement('canvas');
     cv.width = cv.height = Math.round(128 * ps);
     cv.getContext('2d').drawImage(t, -2 * ps, -2 * ps);
-    document.documentElement.style.setProperty('--rock-slab', dataUrl(cv));
+    rs.setProperty('--rock-grain', dataUrl(cv));
+    const track = (seed, colr) => dataUrl(renderStone(62, 34, stoneScale, { pal: 'stat', seed, frame: true, well: [3.5, 3.5, 14], wellCol: colr, noShadow: true, win: [0, 0, 62, 34] }));
+    rs.setProperty('--track-off', track(5, [7, 11, 16]));
+    rs.setProperty('--track-on', track(5, [13, 74, 88]));
+    rs.setProperty('--knob-off', dataUrl(renderStone(26, 26, stoneScale, { pal: 'beige', seed: 9, d: 3, plain: true })));
+    rs.setProperty('--knob-on', dataUrl(renderStone(26, 26, stoneScale, { pal: 'turq', seed: 14, d: 3, plain: true })));
+    document.documentElement.classList.add('kf-stones');
   }
 
   function makeStone(el, sz) {
     if (el._kfStone === sz.key) return;
-    if (el.classList.contains('kf-panel')) cutSlab();
-    el.style.setProperty('--st-face', cutStone(el, sz));
+    const isPanel = el.classList.contains('kf-panel');
+    if (isPanel) cutSmall();
+    const cut = cutStone(el, sz);
+    if (isPanel) {
+      el.style.setProperty('--st-face', cut.face);
+      el.style.setProperty('--st-mid', cut.mid);
+      if (cut.clip) el.style.setProperty('--st-clip', cut.clip); else el.style.removeProperty('--st-clip');
+    } else el.style.setProperty('--st-face', cut);
     el._kfStone = sz.key;
     el.classList.add('kf-stone');
   }
@@ -488,18 +688,30 @@
         for (const el of stoneEls) {
           const sz = stoneSize(el);
           if (!sz || (!deep && el._kfStone === sz.key)) continue;
-          if (el.classList.contains('kf-panel')) for (let n = 0; n < 4; n++) jobs.push([el, sz, true, n]);
+          if (el.classList.contains('kf-panel')) for (let n = 0; n < 5; n++) jobs.push([el, sz, true, n]);
           jobs.push([el, sz, deep, -1]);
         }
       } catch (e) { /* nothing to warm */ }
       for (const el of hid) { el.style.visibility = ''; el.hidden = true; }
     };
     measure(false); measure(true);
-    jobs.unshift(null);                                                    // first of all the slab tile
+    jobs.unshift(null);                                                    // first of all the grain tile and the switches
     const step = () => {
       if (!jobs.length) return;
+      // never cut stones while a game is in play: every cut costs a frame or two
+      const app = KF.App, g = app && app.game;
+      if (g && g.gameRunning && !g.paused) { warmTimer = setTimeout(step, 500); return; }
       const job = jobs.shift();
-      try { if (!job) cutSlab(); else if (job[2]) cutStone(job[0], job[1], job[3]); else makeStone(job[0], job[1]); } catch (e) { /* this one stays a plain slab */ }
+      try {
+        if (!job) cutSmall();
+        else if (job[2]) cutStone(job[0], job[1], job[3]);
+        else {
+          // the size was measured when the warm-up began: do not put a stone of that size on an element
+          // that is on screen with another size by now (an open menu that grew a button)
+          const now = stoneSize(job[0]);
+          if (!now || now.key === job[1].key) makeStone(job[0], job[1]);
+        }
+      } catch (e) { /* this one stays a plain slab */ }
       warmTimer = setTimeout(step, 30);
     };
     step();
@@ -512,7 +724,7 @@
     if (vk !== stoneView) { stoneView = vk; stoneCuts = {}; }             // other sizes from here on: drop the old cuts
     if (sc !== stoneScale) { stoneScale = sc; stoneCuts = {}; }
     if (!stoneEls) {
-      stoneEls = Array.prototype.slice.call(document.querySelectorAll('.kf-btn, .kf-panel'));
+      stoneEls = Array.prototype.slice.call(document.querySelectorAll('.kf-btn, .kf-panel, .kf-stat'));
       const again = () => { try { sweepStones(false); } catch (e) { /* a skin must not break the game */ } };
       if (typeof ResizeObserver === 'function') {
         const ro = new ResizeObserver(again);
@@ -725,10 +937,11 @@
     font: FONT,
     fontLoad: "700 20px 'Cinzel'",
     fieldAlpha: 0.4,
+    dprCap: 2,              // crystals are shaded per pixel: beyond 2x that costs far more than it shows
     popup: { ink: 'rgba(6,4,2,0.92)', gold: '#ffd98a', ice: '#f3ecdc', weight: '700' },
     drawFrame,
     drawLogo,
     onLayout,
-    stones: { render: renderStone, recut: () => { stoneCuts = {}; for (const el of stoneEls) el._kfStone = ''; sweepStones(true); }, list: () => stoneEls },   // for tests
+    stones: { render: renderStone, recut: () => { stoneCuts = {}; smallScale = 0; cutSmall(); for (const el of stoneEls) el._kfStone = ''; sweepStones(true); }, list: () => stoneEls },   // for tests
   };
 })(globalThis.KF = globalThis.KF || {});

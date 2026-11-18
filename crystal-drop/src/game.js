@@ -18,7 +18,6 @@
   const POPUP = Object.assign({ ink: '#050d1c', gold: '#ffd257', ice: '#e0f4ff', weight: '600' }, SK.popup || {});
   const SOFT_REPEAT_FIRST_MS = 150;
   const SOFT_REPEAT_MS = 45;
-  const CLEAR_WORDS = { 2: 'DOPPELT!', 3: 'DREIFACH!', 4: 'KRISTALLBRUCH!' };
 
   const $ = (id) => document.getElementById(id);
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -61,7 +60,7 @@
   let lastTs = 0;
 
   // W/H: window size (all canvases cover it); colX/colW: the game column; board*: the playfield, in window coordinates
-  const view = { W: 0, H: 0, dpr: 1, dprCap: 3, caveRatio: 1, colX: 0, colW: 0, cell: 20, boardX: 0, boardY: 0, boardW: 0, boardH: 0 };
+  const view = { W: 0, H: 0, dpr: 1, dprCap: typeof SK.dprCap === 'number' ? SK.dprCap : 3, caveRatio: 1, colX: 0, colW: 0, cell: 20, boardX: 0, boardY: 0, boardW: 0, boardH: 0 };
   let els = null;
   let bgCtx = null;
   let fgCtx = null;
@@ -472,33 +471,73 @@
     return out;
   }
 
-  // Sprites are baked the first time a block shape is drawn, which can stutter on a phone right when a
-  // game starts. So while nothing else is going on, draw every piece once to a throwaway canvas (one
-  // piece per frame): that fills the caches and gets the baking code warmed up.
-  let warmQueue = [];
+  // Block sprites are baked the first time a shape is drawn, which can stutter on a phone. So they are
+  // drawn ahead of time into a throwaway canvas, a few milliseconds per frame: all pieces while the title
+  // is showing, the NEXT piece (all four rotations) while the current one falls, and the blocks that
+  // change shape after a clear while the rows are still cracking.
+  let warmQueue = [];           // each entry: a list of cells for C.drawCells
   let warmCtx = null;
+
+  function pieceWarmItems(piece) {
+    const items = [];
+    let shape = piece.shape;
+    for (let rot = 0; rot < 4; rot++) {
+      const cells = shapeCells({ type: piece.type, shape, pid: piece.pid }, 0, 0, 0, 0, view.cell, -99);
+      for (const c of cells) items.push([c]);        // one sprite at a time ...
+      items.push(cells);                             // ... then the fused piece
+      shape = L.rotateCW(shape);
+    }
+    return items;
+  }
 
   function startWarmup() {
     warmQueue = [];
     let pid = 9000;
     for (const type of L.TYPES) {
       let k = 0;
-      let shape = L.SHAPES[type].map((row) => row.map((v) => (v ? ++k : 0)));
-      for (let rot = 0; rot < 4; rot++) {
-        warmQueue.push({ type, shape, pid: ++pid, x: 0, y: 0 });
-        shape = L.rotateCW(shape);
-      }
+      const shape = L.SHAPES[type].map((row) => row.map((v) => (v ? ++k : 0)));
+      warmQueue = warmQueue.concat(pieceWarmItems({ type, shape, pid: ++pid }));
+    }
+    if (game.gameRunning) {
+      if (game.nextPiece) warmQueue = pieceWarmItems(game.nextPiece).concat(warmQueue);
+      if (game.currentPiece) warmQueue = pieceWarmItems(game.currentPiece).concat(warmQueue);
     }
   }
 
-  function warmStep() {
+  function warmNextPiece() {
+    if (game.nextPiece && view.cell >= 6) warmQueue = pieceWarmItems(game.nextPiece).concat(warmQueue);
+  }
+
+  // The blocks next to rows that are about to vanish lose neighbours and get new shapes.
+  function warmAfterClear(displayRows) {
+    if (view.cell < 6) return;
+    const grid = game.board.grid, cleared = new Set(displayRows.map((r) => r + SPAWN_ROWS));
+    const after = [], from = [];
+    for (let i = 0; i < cleared.size; i++) { after.push(new Array(COLS).fill(null)); from.push(-1); }
+    for (let r = 0; r < grid.length; r++) if (!cleared.has(r)) { after.push(grid[r]); from.push(r); }
+    const items = [];
+    for (let r = 0; r < after.length; r++) {
+      if (from[r] < 0) continue;
+      for (let c = 0; c < COLS; c++) {
+        const k = after[r][c];
+        if (!k) continue;
+        const conn = connOfGrid(after, r, c);
+        if (conn !== connOfGrid(grid, from[r], c)) items.push([{ x: 0, y: 0, size: view.cell, type: k.type, seed: k.seed, conn, crack: 0 }]);
+      }
+    }
+    warmQueue = items.concat(warmQueue);
+  }
+
+  function warmStep(budgetMs) {
     if (!warmQueue.length || view.cell < 6) return;
-    const piece = warmQueue.shift();
+    const t0 = performance.now();
     try {
       if (!warmCtx) { const cv = document.createElement('canvas'); cv.width = cv.height = 8; warmCtx = cv.getContext('2d'); }
-      const cells = shapeCells(piece, 0, 0, 0, 0, view.cell, -99);
-      C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr });
-      C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr, ghost: true });
+      do {
+        const cells = warmQueue.shift();
+        C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr });
+        if (cells.length > 1) C.drawCells(warmCtx, cells, { t: 0, dpr: view.dpr, ghost: true });
+      } while (warmQueue.length && performance.now() - t0 < budgetMs);
     } catch (e) { warmQueue = []; }
   }
 
@@ -537,6 +576,7 @@
   function onClearStart(p) {
     const grid = game.board.grid;
     pendingShatter = p.cells.map((c) => cellPx(c, connOfGrid(grid, c.row + SPAWN_ROWS, c.col)));
+    warmAfterClear(p.rows);
     play('crack', { rows: p.count });
     boardDirty = true;
   }
@@ -563,10 +603,6 @@
 
     const { cell, boardX, boardY, boardW } = view;
     const y = boardY + (Math.min.apply(null, p.rows) + 0.5) * cell;
-    const big = p.count >= 4;
-    if (CLEAR_WORDS[p.count]) {
-      popups.push({ text: CLEAR_WORDS[p.count], x: boardX + boardW / 2, y: y - cell * 1.1, t0: animTime, dur: big ? 1500 : 1100, size: cell * (big ? 0.95 : 0.82), color: big ? POPUP.gold : POPUP.ice });
-    }
     popups.push({ text: '+' + p.gained, x: boardX + boardW / 2, y, t0: animTime, dur: 1000, size: cell * 0.9, color: POPUP.gold });
   }
 
@@ -593,6 +629,7 @@
         setCaveLevel(1, false);
         play('start');
         break;
+      case 'spawn': warmNextPiece(); break;
       case 'move': play('move'); break;
       case 'rotate': play('rotate'); break;
       case 'softDrop': play('softDrop'); break;
@@ -999,7 +1036,7 @@
     const rawDt = dt;
     if (dt > 100) dt = 100;      // tab was in the background: do not fast-forward the game
     tickCave(dt);
-    warmStep();
+    warmStep(game.gameRunning && !game.paused ? 3 : 8);
 
     const running = game.gameRunning && !game.paused;
     if (running) {
@@ -1147,6 +1184,8 @@
     get gameTime() { return gameTime; },
     get cave() { return cave; },
     setCaveLevel,
+    // after changing game.board.grid by hand (tests): have the board redrawn
+    refreshBoard() { boardDirty = true; requestRender(); },
     start: startNewGame, pause: pauseGame, resume: resumeGame, openMenu, layout,
   };
 

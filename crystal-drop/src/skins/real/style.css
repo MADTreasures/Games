@@ -60,18 +60,26 @@ body { font-weight: 700; }
 #kf-btn-main { font-size: calc(var(--u) * 3.1); letter-spacing: 0.06em; }
 .kf-bottom .kf-btn { --d: 7px; font-size: calc(var(--u) * 5.2); }
 
-/* ------------------------------------------------------------------ displays: a dark window cut into rock */
+/* ------------------------------------------------------------------ displays: a dark window in a frame of rock.
+   skin.js draws the frame per display (--st-face, 5px larger than the box all round); until then, and if
+   that fails, the plain version below shows. */
 .kf-stat {
+  position: relative; isolation: isolate;
   border: 0; border-radius: 7px 9px 7px 8px;
-  background: linear-gradient(180deg, rgba(2, 5, 9, 0.82) 0%, rgba(4, 12, 18, 0.66) 100%), var(--rock-slab) 0 0 / 128px 128px, #0a1c26;
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(160, 230, 230, 0.12),
-    0 0 0 1px #04080c, 0 0 0 2px #4d8791, 0 0 0 4px #1c3b47, 0 0 0 5px #04080c, 0 6px 10px rgba(0, 0, 0, 0.65);
+  background: linear-gradient(180deg, rgba(2, 5, 9, 0.82) 0%, rgba(4, 12, 18, 0.66) 100%), #0a1c26;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), 0 0 0 1px #04080c, 0 0 0 3px #1c3b47, 0 0 0 4px #04080c, 0 6px 10px rgba(0, 0, 0, 0.65);
   margin: 0 5px 6px;
 }
+.kf-stat.kf-stone { background: none; box-shadow: none; }
+.kf-stat.kf-stone::before {
+  content: ''; position: absolute; z-index: -1; top: -5px; left: -5px; right: -5px; bottom: -5px; pointer-events: none;
+  background: var(--st-face, none);
+}
 .kf-stats { gap: calc(var(--u) * 0.4); }
-.kf-stat__label { color: #a9bdb9; letter-spacing: 0.14em; font-size: calc(var(--u) * 2.1); }
+.kf-stat__label { color: #b9c7c2; letter-spacing: 0.14em; font-size: calc(var(--u) * 2.1); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.9); }
 .kf-stat__value { color: #f4ead0; text-shadow: 0 0 9px rgba(90, 210, 220, 0.45), 0 1px 1px rgba(0, 0, 0, 0.9); font-size: calc(var(--u) * 3.9); }
 .kf-stat--score .kf-stat__value { color: #f6e3b4; }
+.kf-stat--next { padding: 5px calc(var(--u) * 2) 4px; }      /* keep label and preview inside the window */
 
 /* ------------------------------------------------------------------ dialogs: a large slab of the same rock.
    ::before is its broken rim (drawn per dialog), ::after the calm, darker middle (a repeating tile). */
@@ -81,17 +89,18 @@ body { font-weight: 700; }
   border: 0; border-radius: 0; box-shadow: none;
   background: var(--st-face, none);
 }
-.kf-panel::after {
-  top: 10px; left: 10px; right: 10px; bottom: 16px;
-  border: 0; border-radius: 12px;
+.kf-panel::after {                                 /* the middle: a coarse picture of the rock, fine grain over it, darker where the text sits */
+  top: 0; left: 0; right: 0; bottom: 0;
+  border: 0; border-radius: 0; box-shadow: none;
+  -webkit-clip-path: var(--st-clip, none); clip-path: var(--st-clip, none);
   background:
-    linear-gradient(90deg, rgba(2, 7, 11, 0) 0, rgba(2, 7, 11, 0.4) 50px, rgba(2, 7, 11, 0.4) calc(100% - 50px), rgba(2, 7, 11, 0) 100%),
-    linear-gradient(180deg, rgba(2, 7, 11, 0) 0, rgba(2, 7, 11, 0.38) 58px, rgba(2, 7, 11, 0.38) calc(100% - 58px), rgba(2, 7, 11, 0) 100%),
-    var(--rock-slab) -10px -10px / 128px 128px,
+    radial-gradient(120% 100% at 50% 50%, rgba(2, 6, 10, 0.5) 0%, rgba(2, 6, 10, 0.34) 60%, rgba(2, 6, 10, 0.1) 100%),
+    var(--rock-grain, none) 0 0 / 128px 128px,
+    var(--st-mid, none) 0 0 / 100% 100% no-repeat,
     #0c2029;
-  box-shadow: 0 22px 46px 10px rgba(0, 0, 0, 0.85);
+  background-blend-mode: normal, soft-light, normal, normal;
 }
-.kf-panel:not(.kf-stone)::after { top: 0; left: 0; right: 0; bottom: 0; border-radius: 10px 14px 9px 13px; }
+.kf-panel:not(.kf-stone)::after { border-radius: 10px 14px 9px 13px; box-shadow: 0 0 0 1px #04080c, 0 22px 46px rgba(0, 0, 0, 0.85); }
 .kf-panel h2 { color: #f1e2bd; letter-spacing: 0.12em; text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 5px rgba(0, 0, 0, 0.8), 0 0 16px rgba(80, 210, 220, 0.25); }
 .kf-panel h3 { color: #e6dcc6; text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.12), 0 0 4px rgba(0, 0, 0, 0.8); }
 .kf-panel p, .kf-panel li { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: #d2cab6; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
@@ -107,22 +116,21 @@ body { font-weight: 700; }
 /* ------------------------------------------------------------------ title */
 .kf-title .kf-best { color: #f3ecdc; text-shadow: var(--outline); }
 
-/* ------------------------------------------------------------------ toggle: a groove in the rock, a pebble as knob */
+/* ------------------------------------------------------------------ toggle: a groove carved into rock, a pebble as
+   knob. skin.js draws track and knob (--track-*, --knob-*) and then sets .kf-stones on the root element. */
 .kf-switch {
-  border: 0; border-radius: 17px;
+  border: 0; border-radius: 15px 18px 14px 17px;
   background: linear-gradient(180deg, #020406, #14222a);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(160, 230, 230, 0.14), 0 0 0 1px #04080c, 0 0 0 3px #1c3b47, 0 0 0 4px #04080c;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), 0 0 0 1px #04080c, 0 0 0 3px #1c3b47, 0 0 0 4px #04080c;
 }
 .kf-switch::after {
   top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 12px 14px 11px 13px; border: 0;
-  background: var(--tex-fine), linear-gradient(150deg, #cfc6b4 0%, #9a9186 45%, #57504f 100%);
-  background-blend-mode: overlay, normal;
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.35), inset -2px -3px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px #04080c, 0 3px 5px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(150deg, #cfc6b4 0%, #9a9186 45%, #57504f 100%);
+  box-shadow: 0 0 0 1px #04080c, 0 3px 5px rgba(0, 0, 0, 0.8);
 }
 .kf-switch[aria-checked="true"] { background: linear-gradient(180deg, #03222c, #0f6478); }
-.kf-switch[aria-checked="true"]::after {
-  transform: translateX(28px);
-  background: var(--tex-fine), linear-gradient(150deg, #7fdcdc 0%, #2aa3b8 42%, #0e5372 100%);
-  background-blend-mode: overlay, normal;
-  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.4), inset -2px -3px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px #04080c, 0 3px 5px rgba(0, 0, 0, 0.8), 0 0 10px rgba(70, 210, 225, 0.45);
-}
+.kf-switch[aria-checked="true"]::after { transform: translateX(28px); background: linear-gradient(150deg, #7fdcdc 0%, #2aa3b8 42%, #0e5372 100%); }
+.kf-stones .kf-switch, .kf-stones .kf-switch[aria-checked="true"] { box-shadow: none; border-radius: 0; background: var(--track-off) 0 0 / 100% 100% no-repeat; }
+.kf-stones .kf-switch[aria-checked="true"] { background-image: var(--track-on); }
+.kf-stones .kf-switch::after, .kf-stones .kf-switch[aria-checked="true"]::after { box-shadow: none; border-radius: 0; background: var(--knob-off) 0 0 / 100% 100% no-repeat; }
+.kf-stones .kf-switch[aria-checked="true"]::after { background-image: var(--knob-on); }
