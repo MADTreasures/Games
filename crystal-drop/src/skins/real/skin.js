@@ -48,13 +48,110 @@
     return cv;
   }
 
+  // Tileable fractal noise as a float field (0..1), for building rock surfaces.
+  function fbmField(size, cells, octaves, seed) {
+    const out = new Float32Array(size * size), rnd = mulberry32(seed), grids = [];
+    for (let o = 0, n = cells; o < octaves; o++, n *= 2) {
+      const a = new Float32Array(n * n);
+      for (let i = 0; i < a.length; i++) a[i] = rnd();
+      grids.push({ n, a });
+    }
+    let lo = 1, hi = 0;
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        let v = 0, amp = 1, sum = 0;
+        for (const gr of grids) {
+          const fx = x / size * gr.n, fy = y / size * gr.n;
+          const ix = Math.floor(fx), iy = Math.floor(fy);
+          let tx = fx - ix, ty = fy - iy;
+          tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+          const x1 = (ix + 1) % gr.n, y1 = (iy + 1) % gr.n;
+          const a = gr.a[iy * gr.n + ix], b = gr.a[iy * gr.n + x1], c = gr.a[y1 * gr.n + ix], e = gr.a[y1 * gr.n + x1];
+          v += (a + (b - a) * tx + (c - a) * ty + (a - b - c + e) * tx * ty) * amp;
+          sum += amp; amp *= 0.5;
+        }
+        v /= sum;
+        out[y * size + x] = v;
+        if (v < lo) lo = v; if (v > hi) hi = v;
+      }
+    }
+    const span = Math.max(1e-6, hi - lo);
+    for (let i = 0; i < out.length; i++) out[i] = (out[i] - lo) / span;
+    return out;
+  }
+
+  const smooth = (a, b, v) => { const t = Math.max(0, Math.min(1, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+  // A tile of natural rock: rough, lit from the top-left, speckled with mineral grains and fine cracks,
+  // with coloured crystal inclusions (veins and pockets) grown into it.
+  //   rock: base colour [r,g,b]; inc: inclusion colour [r,g,b]; amount: 0..1 how much vein shows;
+  //   pockets: 0..1 size of the crystal nests (0 = veins only)
+  function rockTexture(size, seed, rock, inc, amount, pockets) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const g = cv.getContext('2d');
+    const img = g.createImageData(size, size), d = img.data;
+    const H = fbmField(size, 5, 6, seed);            // relief
+    const B = fbmField(size, 3, 3, seed + 11);       // broad colour blotches
+    const V = fbmField(size, 4, 4, seed + 23);       // veins
+    const P = fbmField(size, 6, 3, seed + 37);       // pockets
+    const K = fbmField(size, 7, 4, seed + 51);       // cracks
+    const grain = mulberry32(seed + 77);
+    const at = (F, x, y) => F[((y + size) % size) * size + ((x + size) % size)];
+    const L = [-0.52, -0.62, 0.59];
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const h = at(H, x, y);
+        // surface normal from the relief, then diffuse light with a little gloss on the high spots
+        const nx = (at(H, x - 1, y) - at(H, x + 1, y)) * 7, ny = (at(H, x, y - 1) - at(H, x, y + 1)) * 7;
+        const nl = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+        const diff = Math.max(0, (nx * L[0] + ny * L[1] + L[2]) * nl);
+        let lum = (0.5 + 0.55 * h) * (0.42 + 0.95 * diff) * (0.84 + 0.32 * at(B, x, y));
+        const gr = grain();
+        if (gr > 0.93) lum *= 1.32; else if (gr < 0.1) lum *= 0.66;      // feldspar and mica grains
+        const crack = Math.abs(at(K, x, y) - 0.5);
+        if (crack < 0.012) lum *= 0.45 + crack * 30;                        // hairline cracks
+        let r = rock[0] * lum, gg = rock[1] * lum, b = rock[2] * lum;
+
+        // inclusions: thin winding veins plus a few crystal nests. Inside they are crystalline: small
+        // facets catch the light differently, the middle is deep and saturated, the seam to the rock dark.
+        const vein = smooth(0.955 - 0.03 * amount, 0.992, 1 - Math.abs(at(V, x, y) * 2 - 1));
+        const pocket = pockets > 0 ? smooth(0.9 - 0.14 * pockets, 0.95 - 0.1 * pockets, at(P, x, y)) : 0;
+        const m = Math.max(vein, pocket);
+        if (m > 0.01) {
+          const f1 = at(H, (x * 4) % size, (y * 4) % size), f2 = at(B, (x * 7 + 31) % size, (y * 7 + 17) % size);
+          const facet = 0.45 + 1.1 * Math.abs(f1 - f2);                       // angular light/dark patches
+          const depth = 0.55 + 0.6 * m;                                       // deeper colour towards the middle
+          const spec = Math.pow(diff, 6) * 150 * m + (grain() > 0.975 ? 120 : 0);   // gloss and tiny glints
+          const cr = Math.min(255, inc[0] * facet * depth + spec);
+          const cg = Math.min(255, inc[1] * facet * depth + spec);
+          const cb = Math.min(255, inc[2] * facet * depth + spec);
+          const seam = m < 0.35 ? 0.5 + m : 1;                                // dark seam where crystal meets rock
+          const k = Math.min(1, m * 1.3);
+          r = (r * (1 - k) + cr * k) * seam; gg = (gg * (1 - k) + cg * k) * seam; b = (b * (1 - k) + cb * k) * seam;
+        }
+        const i = (y * size + x) * 4;
+        d[i] = Math.min(255, r); d[i + 1] = Math.min(255, gg); d[i + 2] = Math.min(255, b); d[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return cv;
+  }
+
   let stone = null, fine = null;
   try {
-    stone = noiseCanvas(160, 6, 5, 4107, 1.9);     // mottled rock
-    fine = noiseCanvas(96, 12, 3, 991, 1.5);       // fine grain for metal and gems
+    stone = noiseCanvas(160, 6, 5, 4107, 1.9);     // mottled rock (frame)
+    fine = noiseCanvas(96, 12, 3, 991, 1.5);       // fine grain for metal
     const rootStyle = document.documentElement.style;
-    rootStyle.setProperty('--tex-stone', 'url(' + stone.toDataURL('image/png') + ')');
-    rootStyle.setProperty('--tex-fine', 'url(' + fine.toDataURL('image/png') + ')');
+    const url = (cv) => 'url(' + cv.toDataURL('image/png') + ')';
+    rootStyle.setProperty('--tex-stone', url(stone));
+    rootStyle.setProperty('--tex-fine', url(fine));
+    // rock with coloured inclusions, one tile per button kind (and a plain slab for the dialogs)
+    rootStyle.setProperty('--rock-blue', url(rockTexture(192, 301, [128, 132, 140], [60, 150, 250], 0.8, 0.55)));
+    rootStyle.setProperty('--rock-gold', url(rockTexture(192, 512, [136, 124, 108], [255, 170, 40], 0.9, 0.5)));
+    rootStyle.setProperty('--rock-rose', url(rockTexture(192, 733, [132, 118, 118], [250, 95, 140], 0.8, 0.5)));
+    rootStyle.setProperty('--rock-ghost', url(rockTexture(192, 944, [100, 100, 104], [205, 214, 230], 0.4, 0.3)));
+    rootStyle.setProperty('--rock-slab', url(rockTexture(224, 1175, [104, 100, 95], [190, 195, 205], 0.1, 0)));
   } catch (e) { stone = fine = null; }
 
   // ------------------------------------------------------------------ playfield frame: weathered stone pillars
