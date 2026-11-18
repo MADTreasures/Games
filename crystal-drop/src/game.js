@@ -613,8 +613,9 @@
         const px = piece.x + vis.ox;
         const pieceCells = shapeCells(piece, px, piece.y + vis.oy, boardX, boardY, cell, -ENTRY_ROWS - 1);
         if (settings.ghost && game.phase === Phase.FALLING) {
-          // landing preview: the crystal's shape as shimmering rainbow light
+          // Landing aid: light falls from above onto the crystal, the landing spot shimmers in its colours.
           const gy = game.getGhostY();
+          if (C.drawLight) C.drawLight(g, pieceCells, { t, top: boardY - ENTRY_ROWS * cell, maxLen: (gy - piece.y - vis.oy) * cell });
           if (gy !== piece.y) C.drawCells(g, shapeCells(piece, px, gy, boardX, boardY, cell, -ENTRY_ROWS), { t, dpr, ghost: true });
         }
         C.drawCells(g, pieceCells, { t, dpr });
