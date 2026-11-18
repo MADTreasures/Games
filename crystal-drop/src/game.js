@@ -164,6 +164,7 @@
     boardDirty = true;
     nextKey = '';
     requestRender();
+    if (SK.onLayout) { try { SK.onLayout(view); } catch (e) { /* a skin must not break the game */ } }
   }
 
   // ------------------------------------------------------------------ cave backdrop (KF.Cave), level themes
@@ -218,7 +219,7 @@
       if (animate) c.update(step);
       const r = view.caveRatio;
       caveCtx.setTransform(r, 0, 0, r, 0, 0);
-      c.draw(caveCtx);
+      c.draw(caveCtx, isTitle());
     });
   }
 
@@ -754,6 +755,7 @@
     els.main.textContent = st === 'run' ? 'PAUSE' : st === 'paused' ? 'WEITER' : 'START';
 
     els.app.classList.toggle('is-title', st === 'idle');
+    document.body.classList.toggle('at-entrance', st === 'idle');
     els.title.hidden = !(st === 'idle' && !modal);
     els.bg.hidden = st === 'idle';
     els.cardPause.hidden = !(st === 'paused' && !modal);

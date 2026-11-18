@@ -1,909 +1,1374 @@
-/*
- * Crystal Drop - realistic cave backdrop (KF.Cave)
- *
- * Every level theme is a small procedural cave chamber: four overlapping rock walls (near .. far)
- * around a misty back wall, quartz clusters growing out of the rock, plus theme features
- * (icicles, geode, moss and fungi, gold veins, mist, lava, lake, fog).
- *
- * The rock is not drawn, it is LIT: per wall a height field (bevelled silhouette + layered noise +
- * strata + cracks) is shaded per pixel at reduced resolution - bump lighting from the crystal
- * clusters (the light sources), a dim key light, wet speculars - then scaled up, cut out with the
- * crisp vector silhouette and given a fine grain. Crystals are vector prisms with gradients on top.
- * Haze veils between the walls give atmospheric depth.
- *
- * The static picture of a theme is baked once (as a list of small steps: all at once for the
- * first picture, a few per update() on a level change, so no frame stalls). draw() only blits it
- * and adds cheap sprite overlays (breathing glows, dust, fog, a light shaft, drips, glints).
- * Everything is seeded per theme and driven by update(dt): no random numbers from the browser,
- * no clocks.   Adding a theme = adding one entry to THEMES (see NOTES.md).
- */
+// Crystal Drop – realistic skin: photographic cave rooms with motion registered to each photograph
+// (water, light, glints) and a slow drift of dust. One room per level, crossfaded on a level change.
+// The room photographs live in assets/caves/ (see caves.json); build.mjs embeds them as #cave-art.
+// Modules: KF.Water (WebGL), KF.WaterFallback, KF.MineralMotion, KF.CavernMotion, KF.Atmosphere, KF.Cave.
+// ---- src/water.js — three-dimensional water registered to the grotto photograph.
+(function (KF) {
+  'use strict';
+  const geometry = {"imageSize":[1122,1402],"lip":[[0.867,0.323],[0.897,0.315],[0.927,0.305]],"inlet":[[0.947,0.286],[0.934,0.295],[0.917,0.303],[0.897,0.315]],"fallCenterline":[[0.897,0.315],[0.877,0.351],[0.854,0.406],[0.836,0.485],[0.822,0.586],[0.811,0.677],[0.806,0.764]],"impact":[0.806,0.764],"basin":[[0.413,0.704],[0.438,0.698],[0.509,0.698],[0.544,0.705],[0.552,0.72],[0.552,0.733],[0.578,0.744],[0.618,0.747],[0.69,0.75],[0.741,0.754],[0.804,0.758],[0.853,0.764],[0.905,0.771],[0.909,0.793],[0.91,0.823],[0.899,0.837],[0.859,0.851],[0.829,0.867],[0.817,0.881],[0.809,0.9],[0.81,0.922],[0.824,0.937],[0.845,0.941],[0.826,0.961],[0.808,0.978],[0.789,1],[0.5,1],[0.491,0.983],[0.481,0.971],[0.448,0.967],[0.407,0.969],[0.371,0.976],[0.327,0.985],[0.306,0.992],[0.286,0.996],[0.245,0.98],[0.225,0.97],[0.245,0.959],[0.251,0.945],[0.239,0.931],[0.212,0.919],[0.193,0.904],[0.163,0.887],[0.147,0.878],[0.164,0.872],[0.159,0.858],[0.142,0.845],[0.126,0.839],[0.136,0.833],[0.188,0.83],[0.211,0.819],[0.203,0.804],[0.255,0.797],[0.27,0.786],[0.282,0.777],[0.275,0.765],[0.266,0.759],[0.294,0.758],[0.301,0.753],[0.322,0.751],[0.337,0.75],[0.358,0.746],[0.379,0.74],[0.403,0.739],[0.398,0.731],[0.376,0.724],[0.371,0.719],[0.399,0.714]]};
+  const aspect = geometry.imageSize[0] / geometry.imageSize[1];
+  const horizon = .549, eye = .58, focal = .88;
+  const poolDepth = v => eye * focal / (v - horizon);
+  const unproject = (u, v, z) => [(u - .5)*aspect*z/focal, eye - (v - horizon)*z/focal, z];
+  const impact = unproject(geometry.impact[0], geometry.impact[1], poolDepth(geometry.impact[1]));
+  const projection = `
+    const float focal = ${focal.toFixed(5)}, aspect = ${aspect.toFixed(7)}, horizon = ${horizon.toFixed(5)}, eye = ${eye.toFixed(5)};
+    const vec2 impact = vec2(${impact[0].toFixed(7)}, ${impact[2].toFixed(7)});
+    vec2 photoUV(vec3 p) { return vec2(.5 + focal * p.x / (aspect*p.z), horizon - focal*(p.y-eye)/p.z); }
+    vec4 project(vec3 p) {
+      vec2 uv = photoUV(p);
+      return vec4((uv.x*2.-1.)*p.z,(1.-2.*uv.y)*p.z,p.z*.95-.19,p.z);
+    }
+  `;
+  const waveCode = `
+    float heightAt(vec2 p,float t) {
+      float r=length(p-impact);
+      return .0017*sin(dot(p,vec2(6.4,18.8))-1.8*t) + .0010*sin(dot(p,vec2(-9.2,29.))+2.5*t)
+             + .0023*exp(-1.7*r)*sin(45.*r-t*5.1);
+    }
+  `;
+  const vertex = `
+    precision highp float;
+    attribute vec3 aPosition; attribute vec3 aSurface;
+    uniform float uTime,uKind,uPixelRatio;
+    varying vec3 pos, surf; varying float opacity;
+    ${projection}
+    ${waveCode}
+    void main(){
+      vec3 p=aPosition; surf=aSurface; opacity=1.;
+      if(uKind<.5){
+        p.y+=heightAt(p.xz,uTime);
+      }else if(uKind<1.5){
+        float f=surf.y, s=surf.x, flow=sqrt(max(.0001,f+.015))-.64*uTime;
+        float flutter=sin(flow*16.5+surf.z*2.9+s*6.)+.47*sin(flow*39.+s*11.+surf.z*3.);
+        p.x+=.0075*flutter*smoothstep(.0,.14,f)*(.35+.65*f);
+        p.z+=.013*(sin(14.*s+flow*6.2)+.5*cos(33.*s-flow*10.))*smoothstep(.0,.12,f);
+      }else if(uKind>2.5){
+        // Gravity stretches droplets into thinner, faster rivulets below the crest.
+        float age=fract(aPosition.x+uTime/(.84+.27*surf.z));
+        float f=age*age;
+        float v=mix(.315,.764,f), spread=.045+.081*f;
+        float u=.806+.091*pow(1.-f,3.7)+spread*(aPosition.y-.48)+
+                .0045*sin(f*9.+aPosition.z*6.)*f;
+        float z=impact.y+.48*(1.-pow(f,.67))-.06*(surf.x+.3)*f;
+        p=vec3((u-.5)*aspect*z/focal, eye-(v-horizon)*z/focal,z);
+        opacity=(.09+.31*surf.x)*smoothstep(.03,.27,f)*smoothstep(.0,.09,1.-f);
+        gl_PointSize=clamp(uPixelRatio*(1.35+1.5*surf.y),1.,5.);
+      }else{
+        float lifetime=.19+.42*surf.z, cycle=uTime/lifetime+aPosition.x;
+        float age=fract(cycle), seed=floor(cycle);
+        float a=6.28318*fract(aPosition.y+seed*.381966);
+        float salt=fract(aPosition.z+seed*.2361);
+        float speed=.12+.43*salt;
+        float t=age*lifetime;
+        p=vec3(impact.x+.15*(surf.x-.5)+cos(a)*speed*t, .004+(.42+.77*salt)*t-2.35*t*t,
+               impact.y+.035*(surf.y-.5)+sin(a)*speed*t);
+        opacity=(1.-smoothstep(.25,1.,age))*(.32+.67*salt)*smoothstep(-.003,.012,p.y);
+        gl_PointSize=clamp(uPixelRatio*(1.2+1.43*fract(surf.x*14.3))*(1.-.38*age),1.,6.);
+      }
+      pos=p;
+      gl_Position=project(p);
+    }
+  `;
+  const fragment = `
+    #ifdef GL_FRAGMENT_PRECISION_HIGH
+    precision highp float;
+    #else
+    precision mediump float;
+    #endif
+    uniform sampler2D uPhoto,uNoise,uBank;
+    uniform float uTime,uKind;
+    varying vec3 pos,surf; varying float opacity;
+    ${projection}
+    vec3 photograph(vec2 uv){return texture2D(uPhoto,clamp(uv,.001,.999)).rgb;}
+    float luma(vec3 c){return dot(c,vec3(.22,.69,.09));}
+    void main(){
+      vec2 uv=photoUV(pos); float t=uTime;
+      if(uKind<.5){
+        float mask=texture2D(uBank,surf.xy).r;
+        if(mask<.015)discard;
+        vec2 p=pos.xz,d=p-impact;
+        float r=max(length(d),.004), pulse=47.*r-t*5.1;
+        float shear=texture2D(uNoise,p*.034+vec2(.0008*t,.002*t)).r;
+        float crosswind=texture2D(uNoise,p*.019-vec2(.0006*t,.0002*t)).b;
+        vec2 slope=vec2(6.4,18.8)*.00065*cos(dot(p,vec2(6.4,18.8))-1.8*t+4.1*shear+2.3*crosswind)
+                  +vec2(-9.2,29.)*.00047*cos(dot(p,vec2(-9.2,29.))+2.5*t+1.6*shear)
+                  +d/r*.079*exp(-4.1*r)*cos(pulse+.86*shear);
+        // Short capillary waves break the reflected rock into moving slivers.
+        vec2 grain=texture2D(uNoise,p*vec2(.08,.16)+vec2(t*.008,-t*.013)).rg-.5;
+        slope += grain*vec2(.058,.12);
+        slope += (.4+.6*crosswind)*vec2(.008,.026)*sin(dot(p,vec2(19.,83.))+t*3.3+8.*shear);
+        slope += (.3+.7*shear)*vec2(-.020,.014)*cos(dot(p,vec2(-37.,32.))-.8*t+8.*crosswind);
+        vec3 N=normalize(vec3(-slope.x,1.,-slope.y));
+        vec3 V=normalize(vec3(0.,eye,0.)-pos);
+        vec3 R=reflect(-V,N);
+        vec2 refl=vec2(.5+focal*R.x/(aspect*R.z),horizon-focal*R.y/R.z);
+        vec3 reflected=photograph(refl);
+        float fres=.135+.61*pow(1.-max(dot(V,N),0.),3.6);
+        vec3 bed=photograph(uv+vec2(slope.x,-slope.y)*.018);
+        float shallows=smoothstep(.76,1.015,uv.y);
+        vec3 transmission=vec3(.010,.105,.095) + bed*mix(vec3(.13,.31,.24),vec3(.44,.64,.45),shallows);
+        float caustic=pow(max(.0,1.-abs(sin(p.x*47.+sin(p.y*31.+t))*.64+sin(p.y*42.-t)*.73)),13.);
+        transmission+=vec3(.014,.030,.018)*caustic*shallows;
+        vec3 colour=mix(transmission,reflected*vec3(.78,.96,.88),fres);
+        float glint=pow(max(0.,dot(R,normalize(vec3(-.09,.55,1.)))),265.);
+        colour+=vec3(.57,.75,.61)*glint*(.005+.065*shear*crosswind);
+        // Aerated contact patch with irregular outer foam and propagating rings.
+        vec2 buoy=d/vec2(.153,.115);
+        float bubble=texture2D(uNoise,p*.38+vec2(t*.018,-t*.012)).b;
+        float foam=exp(-dot(buoy,buoy)*.61)*(.40+.65*bubble);
+        float halo=exp(-abs(length(buoy)-1.4)*3.2)*max(0.,.47+.52*sin(pulse))*bubble;
+        colour=mix(colour,vec3(.81,.90,.89),clamp(1.12*foam+halo*.46,0.,.99));
+        gl_FragColor=vec4(colour,mask*.984);
+      }else if(uKind<1.5){
+        float x=surf.x,y=surf.y,layer=surf.z;
+        float flow=sqrt(.019+y)-t*.66;
+        float bend=.027*sin(flow*21.+layer*2.7)+.018*cos(flow*47.+x*6.);
+        float across=x+bend*(.44+smoothstep(.02,.5,y));
+        vec4 band=texture2D(uNoise,vec2(across*.064+layer*.273,flow*.087+layer*.31));
+        vec4 twine=texture2D(uNoise,vec2(across*.228+band.b*.024,flow*.19+layer*.54));
+        vec4 silk=texture2D(uNoise,vec2(across*.68+twine.g*.023,flow*.43+layer*.81));
+        float head=.37+.09*sin(flow*8.4)+.08*band.b-.11*y;
+        float branch=.72+.055*sin(flow*11.)+.035*band.r;
+        float core=exp(-pow((across-head)/(.134+.10*(1.-y)),2.));
+        float narrow=exp(-pow((across-branch)/(.028+.023*band.b),2.));
+        float broken=smoothstep(.20,.84,twine.g*.72+silk.r*.28);
+        float folded=pow(max(.0,1.-abs(twine.r*2.-1.)),3.0)*(.25+.75*silk.g);
+        float filaments=smoothstep(.50,.95,twine.b*.65+silk.g*.35)*smoothstep(.03,.2,y);
+        float airy=core*(.38+.91*broken)+narrow*(.37+.66*twine.b)+filaments*.30;
+        float fizz=smoothstep(.65,.87,silk.b*.68+twine.r*.32)*(.28+.72*y);
+        float rim=smoothstep(.0,.105+.08*band.b,min(x,1.-x));
+        float alpha=rim*clamp(.027+airy*(.29+.85*broken)+folded*(.16+.43*core)+fizz*.35,.0,.98);
+        if(layer>.5){
+          alpha*=.10+.38*broken*band.g;
+        }
+        alpha*=smoothstep(.0,.012,y);
+        vec3 stone=photograph(uv+vec2(twine.g-.5,band.g-.5)*vec2(.009,.003));
+        vec3 water=mix(stone*.81+vec3(.013,.067,.072),vec3(.84,.91,.96),
+                       clamp(.10+core*.48+narrow*.46+broken*.22+folded*.65+fizz*.70,0.,1.));
+        if(alpha<.013)discard;
+        gl_FragColor=vec4(water,alpha);
+      }else{
+        vec2 s=(gl_PointCoord-.5)*2.;
+        if(uKind>2.5)s.x*=1.8;
+        float amount=opacity*(1.-smoothstep(.1,1.,dot(s,s)));
+        if(amount<.013)discard;
+        gl_FragColor=vec4(.77,.85,.83,amount);
+      }
+    }
+  `;
+
+  function makeGeometry() {
+    const vertices=[], indices=[];
+    function grid(nx,ny,point) {
+      const start=vertices.length/6;
+      for(let j=0;j<=ny;j++) for(let i=0;i<=nx;i++) vertices.push(...point(i/nx,j/ny));
+      for(let j=0;j<ny;j++) for(let i=0;i<nx;i++) {
+        const a=start+j*(nx+1)+i,b=a+nx+1;
+        indices.push(a,b,a+1,a+1,b,b+1);
+      }
+    }
+    grid(46,52,(s,t)=>{
+      const u=.11+.81*s,v=.694+.316*t;
+      return [...unproject(u,v,poolDepth(v)),u,v,0];
+    });
+    const poolCount=indices.length;
+    const path=geometry.fallCenterline, first=path[0], last=path[path.length-1];
+    function centerX(v) {
+      let i=1;
+      while(i<path.length-1 && path[i][1]<v)i++;
+      const a=path[i-1], b=path[i], f=(v-a[1])/(b[1]-a[1]);
+      return a[0]+f*(b[0]-a[0]);
+    }
+    for (let layer=0;layer<7;layer++) {
+      grid(layer===0?38:5,76,(s,t)=>{
+        const v=first[1]+(last[1]-first[1])*t;
+        const lanes=[0,-.51,-.29,.02,.19,.37,.52];
+        const cross=layer===0?s-.5:lanes[layer]+(s-.5)*(.12+.065*Math.sin(layer*3.1))+
+          (.055+.036*Math.sin(layer*2.9))*Math.sin(t*5.+layer)*Math.sin(t*Math.PI);
+        const width=.061+.028*Math.pow(t,.55);
+        const u=centerX(v)+cross*width+.0028*Math.sin(t*7.2+layer)*Math.sin(Math.PI*t);
+        const vv=v-.018*cross*(1.-t);
+        const z=impact[2]+.46*(1.-Math.pow(t,.67))-.024*layer*Math.sin(t*Math.PI);
+        return [...unproject(u,vv,z),s,t,layer];
+      });
+    }
+    // Water on the inclined rock sill joins the vertical sheet at its upstream edge.
+    grid(14,18,(s,t)=>{
+      const p=geometry.inlet, along=t*(p.length-1);
+      const i=Math.min(p.length-2,Math.floor(along)), q=along-i;
+      const u=p[i][0]*(1-q)+p[i+1][0]*q;
+      const v=p[i][1]*(1-q)+p[i+1][1]*q;
+      const w=.007+.054*t;
+      return [...unproject(u+(s-.5)*w,v-(s-.5)*.018*t,impact[2]+.52-.06*t),s,.018+.062*t,0];
+    });
+    const fallCount=indices.length-poolCount;
+    const sprayStart=vertices.length/6,sprayCount=390,dropCount=530;
+    let seed=41012;
+    function random(){seed=(Math.imul(1664525,seed)+1013904223)>>>0;return seed/4294967296;}
+    for(let i=0;i<sprayCount+dropCount;i++)for(let j=0;j<6;j++)vertices.push(random());
+    return {v:new Float32Array(vertices),i:new Uint16Array(indices),poolCount,fallCount,sprayStart,sprayCount,dropCount};
+  }
+
+  function create(canvas) {
+    let gl;
+    try { gl=canvas.getContext('webgl',{alpha:true,antialias:true,premultipliedAlpha:true,
+      preserveDrawingBuffer:false,depth:true,stencil:false,powerPreference:'low-power'}); }
+    catch(e){return null;}
+    if (!gl) return null;
+    let lost=false, resources=null, lastPhoto=null;
+    const mesh=makeGeometry();
+    function build() {
+      const objects={buffers:[],textures:[],shaders:[],program:null};
+      resources=objects;
+      function compile(type,source) {
+        const sh=gl.createShader(type); objects.shaders.push(sh);
+        gl.shaderSource(sh,source);gl.compileShader(sh);
+        if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(sh));
+        return sh;
+      }
+      const v=compile(gl.VERTEX_SHADER,vertex), f=compile(gl.FRAGMENT_SHADER,fragment);
+      const prog=gl.createProgram(); objects.program=prog;
+      gl.attachShader(prog,v);gl.attachShader(prog,f);gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog);
+      for(const name of ['uTime','uKind','uPhoto','uNoise','uBank','uPixelRatio'])
+        objects[name]=gl.getUniformLocation(prog,name);
+      const data=gl.createBuffer(), idx=gl.createBuffer(); objects.buffers.push(data,idx);
+      gl.bindBuffer(gl.ARRAY_BUFFER,data);gl.bufferData(gl.ARRAY_BUFFER,mesh.v,gl.STATIC_DRAW);
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,idx);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,mesh.i,gl.STATIC_DRAW);
+      const a=gl.getAttribLocation(prog,'aPosition'), b=gl.getAttribLocation(prog,'aSurface');
+      gl.enableVertexAttribArray(a);gl.enableVertexAttribArray(b);
+      gl.vertexAttribPointer(a,3,gl.FLOAT,false,24,0);gl.vertexAttribPointer(b,3,gl.FLOAT,false,24,12);
+      function texture(unit,wrap) {
+        const tex=gl.createTexture();objects.textures.push(tex);
+        gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,tex);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,wrap);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,wrap);
+        return tex;
+      }
+      objects.photo=texture(0,gl.CLAMP_TO_EDGE);
+      texture(1,gl.REPEAT);
+      const noise=new Uint8Array(128*128*4);
+      let seed=59473;
+      for(let i=0;i<noise.length;i++){seed=(Math.imul(1664525,seed)+1013904223)>>>0;noise[i]=seed>>>24;}
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,128,128,0,gl.RGBA,gl.UNSIGNED_BYTE,noise);
+      gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+      texture(2,gl.CLAMP_TO_EDGE);
+      const mask=document.createElement('canvas');mask.width=768;mask.height=960;
+      const g=mask.getContext('2d');
+      g.fillStyle='#000';g.fillRect(0,0,768,960);g.fillStyle='#fff';g.filter='blur(1.45px)';
+      g.beginPath();
+      geometry.basin.forEach(([x,y],i)=>{if(i)g.lineTo(x*768,y*960);else g.moveTo(x*768,y*960);});
+      g.closePath();g.fill();
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mask);
+      gl.uniform1i(objects.uPhoto,0);gl.uniform1i(objects.uNoise,1);gl.uniform1i(objects.uBank,2);
+      gl.clearColor(0,0,0,0);gl.enable(gl.BLEND);
+      gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+      lastPhoto=null;
+    }
+    function clean() {
+      if(resources){
+        for(const b of resources.buffers)gl.deleteBuffer(b);
+        for(const tex of resources.textures)gl.deleteTexture(tex);
+        for(const sh of resources.shaders)gl.deleteShader(sh);
+        if(resources.program)gl.deleteProgram(resources.program);
+        resources=null;
+      }
+      lastPhoto=null;
+    }
+    try{build();}catch(e){console.warn('Höhlenwasser',e.message);clean();return null;}
+    function onLost(e){e.preventDefault();lost=true;resources=null;lastPhoto=null;}
+    function onRestored(){try{build();lost=false;}catch(e){clean();lost=true;}}
+    canvas.addEventListener('webglcontextlost',onLost);
+    canvas.addEventListener('webglcontextrestored',onRestored);
+    return {
+      draw(photo,timeSec) {
+        if(lost||!resources||!photo||!photo.complete||!photo.naturalWidth||gl.isContextLost())return false;
+        const w=canvas.clientWidth,h=canvas.clientHeight;
+        if(!w||!h)return false;
+        const scale=Math.min(window.devicePixelRatio||1,1.5,880/w,1100/h);
+        const width=Math.max(2,Math.round(w*scale)),height=Math.max(2,Math.round(h*scale));
+        if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+        if(lastPhoto!==photo){
+          gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,resources.photo);
+          try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,photo);}catch(e){return false;}
+          if(gl.getError()!==gl.NO_ERROR)return false;
+          lastPhoto=photo;
+        }
+        gl.viewport(0,0,width,height);
+        gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+        gl.uniform1f(resources.uTime,timeSec%4096);gl.uniform1f(resources.uPixelRatio,width/660);
+        gl.uniform1f(resources.uKind,0.);gl.drawElements(gl.TRIANGLES,mesh.poolCount,gl.UNSIGNED_SHORT,0);
+        gl.depthMask(false);
+        gl.uniform1f(resources.uKind,1.);gl.drawElements(gl.TRIANGLES,mesh.fallCount,gl.UNSIGNED_SHORT,mesh.poolCount*2);
+        gl.uniform1f(resources.uKind,3.);gl.drawArrays(gl.POINTS,mesh.sprayStart+mesh.sprayCount,mesh.dropCount);
+        gl.uniform1f(resources.uKind,2.);gl.drawArrays(gl.POINTS,mesh.sprayStart,mesh.sprayCount);
+        return true;
+      },
+      dispose(){
+        canvas.removeEventListener('webglcontextlost',onLost);
+        canvas.removeEventListener('webglcontextrestored',onRestored);
+        clean();
+      }
+    };
+  }
+  KF.Water={create};
+})(globalThis.KF=globalThis.KF||{});
+
+/* Animated water for the dry prasiolite plate. Coordinates are fractions of the photograph. */
+(function (KF) {
+  'use strict';
+  const shore = [[0.413,0.704],[0.438,0.698],[0.509,0.698],[0.544,0.705],[0.552,0.72],[0.552,0.733],[0.578,0.744],[0.618,0.747],[0.69,0.75],[0.741,0.754],[0.804,0.758],[0.853,0.764],[0.905,0.771],[0.909,0.793],[0.91,0.823],[0.899,0.837],[0.859,0.851],[0.829,0.867],[0.817,0.881],[0.809,0.9],[0.81,0.922],[0.824,0.937],[0.845,0.941],[0.826,0.961],[0.808,0.978],[0.789,1],[0.5,1],[0.491,0.983],[0.481,0.971],[0.448,0.967],[0.407,0.969],[0.371,0.976],[0.327,0.985],[0.306,0.992],[0.286,0.996],[0.245,0.98],[0.225,0.97],[0.245,0.959],[0.251,0.945],[0.239,0.931],[0.212,0.919],[0.193,0.904],[0.163,0.887],[0.147,0.878],[0.164,0.872],[0.159,0.858],[0.142,0.845],[0.126,0.839],[0.136,0.833],[0.188,0.83],[0.211,0.819],[0.203,0.804],[0.255,0.797],[0.27,0.786],[0.282,0.777],[0.275,0.765],[0.266,0.759],[0.294,0.758],[0.301,0.753],[0.322,0.751],[0.337,0.75],[0.358,0.746],[0.379,0.74],[0.403,0.739],[0.398,0.731],[0.376,0.724],[0.371,0.719],[0.399,0.714]];
+  const poolPath = new Path2D();
+  shore.forEach(([x, y], i) => i ? poolPath.lineTo(x, y) : poolPath.moveTo(x, y));
+  poolPath.closePath();
+
+  const poolTop = .694;
+  const lipX = .897, lipY = .315, footX = .806, footY = .764;
+  const tau = Math.PI * 2;
+  const limit = n => Math.max(0, Math.min(n, 1));
+  function random(seed) {
+    let n = seed >>> 0;
+    return () => {
+      n = (Math.imul(n, 1664525) + 1013904223) >>> 0;
+      return n / 4294967296;
+    };
+  }
+  const rand = random(392327);
+  const glints = Array.from({length: 220}, () => ({
+    x: .06 + .94 * rand(), depth: rand(), length: .35 + rand(), phase: tau * rand(), speed: .5 + rand()
+  }));
+  const spray = Array.from({length: 95}, () => ({
+    angle: rand() * tau, range: .008 + .069 * rand(), life: .24 + .42 * rand(),
+    phase: rand(), height: .0018 + .021 * rand(), white: .25 + .75 * rand()
+  }));
+  const ripples = Array.from({length: 10}, (_, i) => ({
+    offset: (i + .3 * rand()) / 10, angle: rand() * .9, phase: rand() * tau
+  }));
+  let basePool = null, basePhoto = null, fallNoise = null, sprayPuff = null;
+
+  function canvas(w, h) {
+    const surface = document.createElement('canvas');
+    surface.width = w;
+    surface.height = h;
+    return surface;
+  }
+
+  function makePool(photo) {
+    const w = 600, h = 230;
+    const surface = canvas(w, h);
+    const g = surface.getContext('2d');
+    const naturalW = photo && (photo.naturalWidth || photo.width);
+    const naturalH = photo && (photo.naturalHeight || photo.height);
+    const bed = g.createLinearGradient(0, 0, 0, h);
+    bed.addColorStop(0, '#102e2b');
+    bed.addColorStop(.34, '#0a3935');
+    bed.addColorStop(1, '#245343');
+    g.fillStyle = bed;
+    g.fillRect(0, 0, w, h);
+    if (naturalW > 0 && naturalH > 0) {
+      // Reflection is built once from the actual surrounding rocks and crystals.
+      // Far water reflects the rock foot, near water picks up the high crystal walls.
+      for (let row = 0; row < h; row += 2) {
+        const depth = row / h;
+        const mirrorY = .70 - .50 * Math.pow(depth, .88);
+        const skew = Math.sin(row * .31) * Math.sin(row * .064) * (1 + 3 * depth);
+        g.globalAlpha = .68 - depth * .13;
+        g.drawImage(photo, 0, mirrorY * naturalH, naturalW, Math.max(2, naturalH * .0055),
+                    skew - 6, row, w + 12, 2);
+      }
+      g.globalCompositeOperation = 'screen';
+      g.globalAlpha = .26;
+      g.drawImage(photo, 0, poolTop * naturalH, naturalW, (1 - poolTop) * naturalH, 0, 0, w, h);
+      g.globalCompositeOperation = 'source-over';
+      g.globalAlpha = 1;
+    }
+    const tint = g.createLinearGradient(0, 0, 0, h);
+    tint.addColorStop(0, 'rgba(4,31,29,.30)');
+    tint.addColorStop(.57, 'rgba(5,54,45,.32)');
+    tint.addColorStop(1, 'rgba(16,59,50,.28)');
+    g.fillStyle = tint;
+    g.fillRect(0, 0, w, h);
+    g.save();
+    g.globalCompositeOperation = 'destination-in';
+    g.filter = 'blur(2.8px)';
+    g.fillStyle = '#fff';
+    g.beginPath();
+    shore.forEach(([x, y], i) => {
+      const px=x*w, py=(y-poolTop)*h/(1-poolTop);
+      if (i) g.lineTo(px,py); else g.moveTo(px,py);
+    });
+    g.closePath(); g.fill();
+    g.restore();
+    return surface;
+  }
+
+  function makeFallTexture() {
+    // Vertically coherent noise creates streams whose short irregular highlights travel downward.
+    const width = 144, height = 256;
+    const stream = canvas(width, height);
+    const g = stream.getContext('2d');
+    const pixels = g.createImageData(width, height);
+    const grain = random(17382);
+    const channel = new Float32Array(width);
+    const phases = new Float32Array(width);
+    const cycles = new Float32Array(width);
+    for (let x = 0; x < width; x++) {
+      channel[x] = Math.pow(grain(), 2.7);
+      phases[x] = tau * grain();
+      cycles[x] = 2 + Math.floor(7 * grain());
+    }
+    for (let y = 0; y < height; y++) {
+      const angle = tau * y / height;
+      for (let x = 0; x < width; x++) {
+        const shift = .8 * Math.sin(angle * 2 + x * .19) + .6 * Math.sin(angle + x * .13);
+        const source = Math.max(0, Math.min(width - 1.01, x + shift));
+        const i = Math.floor(source), f = source - i;
+        const specular = (channel[i] * (1-f) + channel[i+1] * f);
+        const streak = .5 + .5 * Math.sin(angle * cycles[i] + phases[i]);
+        const lane = x / (width - 1);
+        const edge = Math.pow(Math.max(0, Math.sin(Math.PI * lane)), .55);
+        const gaps = 1 - .87 * Math.exp(-((lane - .69) ** 2) / .0035);
+        const strength = limit((.05 + specular * (.3 + .94 * streak) + .11 * grain()) * edge * gaps);
+        const color = .27 + .68 * specular + .12 * streak;
+        const k = (y * width + x) * 4;
+        pixels.data[k] = Math.min(248, 124 + 118 * color);
+        pixels.data[k+1] = Math.min(255, 161 + 89 * color);
+        pixels.data[k+2] = Math.min(255, 164 + 86 * color);
+        pixels.data[k+3] = Math.round(240 * strength);
+      }
+    }
+    return pixels.data;
+  }
+
+  function pool(ctx, t, photo) {
+    if (basePhoto !== photo || !basePool) {
+      basePool = makePool(photo);
+      basePhoto = photo;
+    }
+    ctx.save();
+    ctx.clip(poolPath);
+    // Refraction and reflection move across horizontal wavefronts, smaller near the far shore.
+    const strips = 66;
+    for (let j = 0; j < strips; j++) {
+      const d = (j + .5) / strips, wave = Math.sin(31 * d - 1.45 * t);
+      const x = (.001 + .0038 * d) * (wave + .55 * Math.sin(123 * d + 1.12 * t)) - .012;
+      const source = limit(d + .003 * (1 + d) * Math.sin(67*d - t*1.6)) * (basePool.height - 6);
+      ctx.globalAlpha = .91 - .08 * d;
+      ctx.drawImage(basePool, 0, source, basePool.width, 5, x, poolTop + (1-poolTop)*j/strips,
+                    1.024, (1 - poolTop) / strips + .0004);
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineCap = 'round';
+    // Reflections break into tiny horizontal slivers. The bottom of the pool is closer to the camera.
+    for (let group = 0; group < 4; group++) {
+      ctx.beginPath();
+      for (let i = group; i < glints.length; i += 4) {
+        const r = glints[i], d = r.depth;
+        const a = Math.sin(r.phase + r.speed * t);
+        if (a < .05) continue;
+        const x = r.x + .005 * a * d, y = poolTop + (1-poolTop) * d + .0009 * Math.sin(r.phase + t);
+        const width = (.0009 + .009 * d) * r.length * a;
+        ctx.moveTo(x-width,y);
+        ctx.quadraticCurveTo(x, y-.0008*d, x+width, y);
+      }
+      ctx.lineWidth = .00048 + .00013 * group;
+      ctx.strokeStyle = ['rgba(182,226,206,.38)','rgba(133,200,174,.32)','rgba(229,231,192,.39)','rgba(138,188,167,.22)'][group];
+      ctx.stroke();
+    }
+    // Circular wavefronts are viewed in perspective and broken by the uneven surface.
+    for (const ring of ripples) {
+      const d = (t * .37 + ring.offset) % 1;
+      const x = footX + .002 * Math.sin(ring.phase), width = .023 + .190 * d;
+      const y = footY + .009 + .004 * d;
+      ctx.beginPath();
+      ctx.ellipse(x,y,width,.0025 + d*.025,.012,ring.angle,2.65 + ring.angle);
+      ctx.strokeStyle = 'rgba(189,223,207,' + (.39*(1-d)*(1-d)) + ')';
+      ctx.lineWidth = .00081 + .0003 * (1-d);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.ellipse(x,y,width*.98,.0024+d*.024,0,3.3+ring.angle,5.5 + ring.angle);
+      ctx.strokeStyle = 'rgba(124,183,157,' + (.25*(1-d)) + ')';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  const gravityCurve = q => (1 - Math.exp(-2.7*q)) / (1 - Math.exp(-2.7));
+  function center(q) { return lipX + (footX-lipX) * gravityCurve(q); }
+  const fallBox = { x:.750, y:.298, w:.194, h:.472 };
+  let fallFrame = null, fallCtx = null, fallPixels = null;
+  function fall(ctx,t) {
+    if (!fallNoise) {
+      fallNoise = makeFallTexture();
+      fallFrame = canvas(160,465);
+      fallCtx = fallFrame.getContext('2d');
+      fallPixels = fallCtx.createImageData(fallFrame.width, fallFrame.height);
+    }
+    const fw = fallFrame.width, fh = fallFrame.height, pixels = fallPixels.data;
+    const phase = t*175;
+    for (let row=0;row<fh;row++) {
+      const y=fallBox.y+(row+.5)/fh*fallBox.h;
+      const d=limit((y-lipY)/(footY-lipY));
+      const axis=center(d)+d*.0028*Math.sin(13*d - t*3.7);
+      const width=.053+.012*Math.sin(d*2.7)+.015*d + .0018*d*Math.sin(24*d - t*4.7);
+      const sourceY=(Math.floor(Math.sqrt(d+.04)*590-phase)%256+256)%256;
+      const sway=(.6+1.0*d)*Math.sin(31*d - 3.8*t) + .7*d*Math.sin(77*d-6*t);
+      const tilt=-.28*Math.exp(-10*d);
+      for(let col=0;col<fw;col++) {
+        const k=4*(row*fw+col),x=fallBox.x+(col+.5)/fw*fallBox.w;
+        const u=(x-axis)/width+.5, nearLip=lipY + tilt*(x-axis);
+        if(u<=0 || u>=1 || y<nearLip || y>footY+.0008) {pixels[k+3]=0;continue;}
+        const warped=Math.max(0, Math.min(142.999,u*143 + sway));
+        const ix=Math.floor(warped), f=warped-ix;
+        const i=4*(sourceY*144+ix);
+        const soft=limit((y-nearLip)/.006)*limit((footY+.001-y)/.004);
+        const a=fallNoise[i+3]+(fallNoise[i+7]-fallNoise[i+3])*f;
+        const light=fallNoise[i]+(fallNoise[i+4]-fallNoise[i])*f;
+        pixels[k]=light;
+        pixels[k+1]=Math.min(255,light*.88+44);
+        pixels[k+2]=Math.min(255,light*.86+49);
+        pixels[k+3]=Math.min(255, (a*1.27 + 4*Math.sin(u*Math.PI)) * soft);
+      }
+    }
+    fallCtx.putImageData(fallPixels,0,0);
+    ctx.save();
+    ctx.drawImage(fallFrame,fallBox.x,fallBox.y,fallBox.w,fallBox.h);
+    // Fine secondary rivulets catch the light either side of the central sheet.
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 36; i++) {
+      const k = i * 251.33, s = ((t * (.41 + (i%5)*.012) + i * .239) % 1);
+      const depth = s*s, end = Math.min(1, depth + .015 + .08 * ((i%7)/7));
+      const lane = .026*Math.sin(k) + (i%5===0 ? .018 : 0);
+      ctx.beginPath();
+      for(let j=0; j<4; j++) {
+        const d = depth + (end-depth)*j/3;
+        const x = center(d) + lane * (1 + .38*d) + .0026 * Math.sin(k + d * 26 - t*3) * d;
+        const y = lipY+(footY-lipY)*d - .28 * lane * Math.exp(-10*d);
+        if(j===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.lineWidth = .00055 + (i%4)*.00025;
+      ctx.strokeStyle = 'rgba(217,237,231,' + (.19 + .17*Math.sin(s*Math.PI)) + ')';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function puff() {
+    const cv = canvas(112,112), g = cv.getContext('2d');
+    const fog = g.createRadialGradient(56,56,0,56,56,56);
+    fog.addColorStop(0,'rgba(217,237,232,.32)');
+    fog.addColorStop(.35,'rgba(199,225,220,.17)');
+    fog.addColorStop(1,'rgba(195,218,216,0)');
+    g.fillStyle=fog; g.fillRect(0,0,112,112);
+    return cv;
+  }
+
+  function impact(ctx,t) {
+    if (!sprayPuff) sprayPuff=puff();
+    ctx.drawImage(sprayPuff, footX-.070, footY-.025, .140, .045);
+    ctx.drawImage(sprayPuff, footX-.041, footY-.006, .082, .015);
+    ctx.drawImage(sprayPuff, footX-.028, footY-.015, .056, .022);
+    ctx.save();
+    ctx.lineCap='round';
+    for (let i=0; i<spray.length; i++) {
+      const r = spray[i], s=(r.phase+t/r.life)%1, rad = r.range*s;
+      const x = footX + Math.cos(r.angle)*rad;
+      const y = footY + .002 + Math.sin(r.angle)*rad*.16 - r.height * 4*s*(1-s);
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(x+Math.cos(r.angle)*.0008,y - .0009*(1-2*s));
+      ctx.lineWidth = (.0006 + .0016*(1-s))*r.white;
+      ctx.strokeStyle = 'rgba(221,242,234,' + ((.25 + .61*r.white)*(1-.6*s)) + ')';
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  KF.WaterFallback = {
+    draw(ctx, timeSeconds, photo) {
+      ctx.save();
+      pool(ctx, timeSeconds, photo);
+      fall(ctx, timeSeconds);
+      impact(ctx, timeSeconds);
+      ctx.restore();
+    }
+  };
+})(window.KF = window.KF || {});
+
+(function(KF) {
+  'use strict';
+  const roomCaches = new WeakMap();
+  const WIDTH = 600, HEIGHT = 750, STEPS = 12;
+
+  // Geometry in the reference portraits. These polygons isolate exposed faces
+  // of individual specimens, so light cannot travel onto the surrounding stone.
+  const crystalFaces = {
+    citrine: [
+      [[8,6],[23,18],[31,62],[17,66],[8,44]],
+      [[81,67],[92,51],[99,68],[106,113],[86,99]],
+      [[123,81],[139,57],[151,77],[154,145],[133,140]],
+      [[154,135],[174,111],[181,132],[183,169],[166,157]],
+      [[0,178],[15,155],[26,169],[30,216],[4,219]],
+      [[75,197],[81,201],[93,241],[85,253],[71,231]],
+      [[118,238],[137,220],[148,233],[151,271],[135,274]],
+      [[53,412],[64,396],[76,407],[85,469],[59,463]],
+      [[97,421],[119,385],[130,396],[132,467],[105,471]],
+      [[132,445],[143,428],[153,443],[161,476],[140,476]],
+      [[190,475],[218,454],[232,467],[223,518],[202,521]],
+      [[64,618],[91,594],[100,601],[93,654],[67,674]],
+      [[386,311],[398,283],[411,294],[421,344],[400,356]],
+      [[443,230],[464,208],[480,223],[479,291],[452,321]],
+      [[509,184],[533,143],[541,160],[539,246],[516,264]],
+      [[562,148],[580,127],[594,139],[590,207],[571,221]],
+      [[567,109],[586,90],[598,103],[599,150],[581,153]]
+    ],
+    smoky: [
+      [[133,38],[176,6],[196,55],[182,111],[173,151],[127,119]],
+      [[52,155],[70,117],[104,135],[122,170],[100,254],[73,239]],
+      [[38,371],[60,270],[81,256],[109,289],[99,359],[74,388]],
+      [[62,423],[125,350],[150,329],[139,379],[91,449]],
+      [[406,101],[418,55],[463,77],[478,113],[464,153],[428,157]],
+      [[439,184],[454,159],[485,149],[521,245],[505,300],[477,282]],
+      [[529,172],[548,147],[566,169],[592,243],[578,260],[548,224]],
+      [[428,345],[447,321],[463,329],[480,393],[454,409]]
+    ]
+  };
+
+  function canvas(w,h) {
+    const cv=document.createElement('canvas');
+    cv.width=Math.max(1,Math.ceil(w)); cv.height=Math.max(1,Math.ceil(h));
+    return cv;
+  }
+  function polygon(g,points) {
+    g.beginPath(); g.moveTo(points[0][0],points[0][1]);
+    for (let i=1;i<points.length;i++) g.lineTo(points[i][0],points[i][1]);
+    g.closePath();
+  }
+
+  // A compact strip of light masks per facet is sampled and blended in time.
+  // Transmission follows the local photograph's luminance and mineral colour.
+  function prepareFaces(photo,key) {
+    return crystalFaces[key].map((points,index)=>{
+      const left=Math.floor(Math.min(...points.map(p=>p[0])))-1;
+      const top=Math.floor(Math.min(...points.map(p=>p[1])))-1;
+      const w=Math.ceil(Math.max(...points.map(p=>p[0])))-left+1;
+      const h=Math.ceil(Math.max(...points.map(p=>p[1])))-top+1;
+      const texture=canvas(w,h), g=texture.getContext('2d',{willReadFrequently:true});
+      g.translate(-left,-top); polygon(g,points); g.clip(); g.drawImage(photo,0,0,WIDTH,HEIGHT);
+      const pixels=g.getImageData(0,0,w,h).data;
+      const atlas=canvas(w*STEPS,h), a=atlas.getContext('2d');
+      const strip=a.createImageData(w,h);
+      const amber=key==='citrine', slope=index%3===0 ? -0.32 : 0.24;
+      for (let frame=0;frame<STEPS;frame++) {
+        const center=frame/(STEPS-1)*1.45-0.22;
+        for(let py=0;py<h;py++) for(let px=0;px<w;px++) {
+          const i=(py*w+px)*4, luma=(pixels[i]*.30+pixels[i+1]*.59+pixels[i+2]*.11)/255;
+          const transmission=amber ? Math.min(1, Math.max(0,(pixels[i]-pixels[i+2]-3)/52)) : 1;
+          const distance=(px/w+slope*(py/h-.5)-center);
+          const band=Math.exp(-distance*distance/0.028);
+          const high=Math.min(1,Math.max(0,(luma-.08)/.66));
+          strip.data[i]=amber?255:232; strip.data[i+1]=amber?213:230; strip.data[i+2]=amber?131:224;
+          strip.data[i+3]=pixels[i+3]*band*(.18+high*.82)*transmission*(amber?.73:.48);
+        }
+        a.putImageData(strip,frame*w,0);
+      }
+      return {atlas,left,top,w,h,phase:(index*.61803)%1,speed:4.0+(index%5)*.67};
+    });
+  }
+
+  function movingFaces(ctx,faces,t) {
+    ctx.save(); ctx.globalCompositeOperation='screen';
+    const alpha=ctx.globalAlpha;
+    for(const f of faces) {
+      const cycle=(t/f.speed+f.phase)%1;
+      const u=cycle*1.30-.12;
+      if(u<=0 || u>=1) continue;
+      const progress=u*(STEPS-1), frame=Math.floor(progress), mix=progress-frame;
+      const envelope=Math.min(1, u*6, (1-u)*6);
+      ctx.globalAlpha=alpha*(1-mix)*envelope;
+      ctx.drawImage(f.atlas,frame*f.w,0,f.w,f.h,f.left,f.top,f.w,f.h);
+      ctx.globalAlpha=alpha*mix*envelope;
+      ctx.drawImage(f.atlas,(frame+1)*f.w,0,f.w,f.h,f.left,f.top,f.w,f.h);
+    }
+    ctx.restore();
+  }
+
+  const waterLeft=66, waterTop=471, waterW=404, waterH=279;
+  const wetSurface=[[244,477],[319,474],[317,482],[350,488],[355,513],[378,535],
+    [453,542],[459,572],[419,578],[418,599],[398,608],[396,643],
+    [358,657],[344,681],[331,748],[70,748],[109,712],[169,665],[172,626],
+    [194,596],[230,583],[237,550],[273,545],[279,532],[261,525],[243,512]];
+  function makeReflections(photo) {
+    const tex=canvas(waterW,waterH), g=tex.getContext('2d');
+    g.translate(-waterLeft,-waterTop); g.drawImage(photo,0,0,WIDTH,HEIGHT);
+    // Softly trim the sampling texture to the open water; nearby rocks and
+    // crystal ledges stay fixed even as the reflected highlights undulate.
+    const mask=canvas(waterW,waterH), m=mask.getContext('2d');
+    m.translate(-waterLeft,-waterTop); m.filter='blur(2px)';
+    polygon(m,wetSurface); m.fillStyle='white'; m.fill();
+    g.globalCompositeOperation='destination-in'; g.setTransform(1,0,0,1,0,0);
+    g.drawImage(mask,0,0);
+    return tex;
+  }
+
+  function animateReflection(ctx,water,t) {
+    ctx.save(); ctx.globalAlpha*=.84;
+    for(let y=0;y<waterH;y+=3) {
+      const depth=y/waterH;
+      const displacement=(.35+2.6*depth)*(Math.sin(y*.115-t*2.05)
+                    +.44*Math.sin(y*.30+t*2.51));
+      const stripHeight=Math.min(3,waterH-y);
+      ctx.drawImage(water,0,y,waterW,stripHeight,waterLeft+displacement,waterTop+y,waterW,stripHeight);
+    }
+    ctx.restore();
+  }
+
+  function latticeNoise(x,y) {
+    const hash=(a,b)=>{
+      let k=Math.imul(a+2311,0x45d9f3b)^Math.imul(b+8221,0x119de1f3);
+      k=Math.imul(k^k>>>16,0x45d9f3b);
+      return ((k^k>>>15)>>>0)/4294967296;
+    };
+    const ix=Math.floor(x), iy=Math.floor(y);
+    const f=x-ix, q=y-iy, sx=f*f*(3-2*f), sy=q*q*(3-2*q);
+    const a=hash(ix,iy), b=hash(ix+1,iy), c=hash(ix,iy+1), d=hash(ix+1,iy+1);
+    return (a+(b-a)*sx)*(1-sy)+(c+(d-c)*sx)*sy;
+  }
+
+  function lowMist(seed) {
+    const w=160,h=46, tex=canvas(w,h),g=tex.getContext('2d'), img=g.createImageData(w,h);
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+      const u=x/(w-1),v=y/(h-1);
+      const billow=latticeNoise(u*6+seed,v*3+seed)*.65+latticeNoise(u*15,v*5+seed)*.35;
+      const height=.50+ .105*Math.sin(u*8+seed)+.05*Math.sin(u*18);
+      const haze=Math.exp(-Math.pow((v-height)/.27,2)) * Math.pow(Math.sin(u*Math.PI),1.4);
+      const a=Math.max(0,(billow-.19))*haze;
+      const i=4*(y*w+x);
+      img.data[i]=175;img.data[i+1]=185;img.data[i+2]=183;img.data[i+3]=Math.min(68,a*111);
+    }
+    g.putImageData(img,0,0);
+    return tex;
+  }
+
+  function lightShafts() {
+    // The photographed ceiling openings feed the shafts, which are feathered
+    // along their width and taper out before reaching the stairway.
+    const tex=canvas(160,200),g=tex.getContext('2d'),img=g.createImageData(160,200);
+    for(let y=0;y<200;y++) for(let x=0;x<160;x++) {
+      const u=x/159, v=y/199;
+      const drift=u+.51*v;
+      const beams=.74*Math.exp(-Math.pow((drift-.763)/(.017+.036*v),2))
+                 +.49*Math.exp(-Math.pow((drift-.722)/(.013+.021*v),2))
+                 +.56*Math.exp(-Math.pow((drift-.622)/(.018+.026*v),2));
+      const fade=Math.max(0,1-v/.70);
+      const a=beams*fade*(.78+.22*latticeNoise(u*12,v*8));
+      const i=4*(y*160+x);
+      img.data[i]=208;img.data[i+1]=220;img.data[i+2]=225;img.data[i+3]=a*131;
+    }
+    g.putImageData(img,0,0);return tex;
+  }
+
+  function smokyAir(ctx,cache,t) {
+    ctx.save();
+    const alpha=ctx.globalAlpha;
+    ctx.globalCompositeOperation='screen';
+    ctx.globalAlpha=alpha*(.46+.35*Math.sin(t*.85)+.10*Math.sin(t*1.47));
+    ctx.drawImage(cache.shaft,Math.sin(t*.69)*2.1,0,WIDTH,HEIGHT);
+    ctx.globalAlpha=alpha*.63;
+    ctx.drawImage(cache.mists[0],169+15*Math.sin(t*.34),485+3*Math.sin(t*.6),238,66);
+    ctx.globalAlpha=alpha*.61;
+    ctx.drawImage(cache.mists[1],187+19*Math.sin(t*.27+2),521+3*Math.sin(t*.39+1),244,49);
+    ctx.globalAlpha=alpha;
+    for(let p=0;p<17;p++) {
+      const life=(p*.618+t*(.035+p%3*.006))%1;
+      const y=46+life*306+p%3*9;
+      const x=458-.40*y+(p%5-2)*9+Math.sin(life*9+p)*7;
+      const opacity=Math.sin(life*Math.PI)*(.21+.14*Math.sin(t*1.72+p));
+      ctx.fillStyle='rgba(220,223,211,'+opacity.toFixed(3)+')';
+      ctx.beginPath();ctx.ellipse(x,y,.48+p%3*.17,.55+p%2*.32,-.4,0,2*Math.PI);ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function render(ctx,key,t,photo) {
+    if(!photo || !(photo.naturalWidth || photo.width)) return;
+    if(key==='amethyst'||key==='rose') { drawGemFaces(ctx,key,t,photo); return; }
+    if(key!=='citrine' && key!=='smoky') return;
+    let byRoom=roomCaches.get(photo);
+    if(!byRoom){byRoom=new Map();roomCaches.set(photo,byRoom);}
+    let cache=byRoom.get(key);
+    if(!cache){
+      cache={faces:prepareFaces(photo,key)};
+      if(key==='citrine') cache.water=makeReflections(photo);
+      if(key==='smoky') {cache.shaft=lightShafts();cache.mists=[lowMist(12),lowMist(36)];}
+      byRoom.set(key,cache);
+    }
+    ctx.save(); ctx.scale(1/WIDTH,1/HEIGHT);
+    if(key==='citrine') animateReflection(ctx,cache.water,t);
+    else smokyAir(ctx,cache,t);
+    movingFaces(ctx,cache.faces,t);
+    ctx.restore();
+  }
+
+  // Measured against the photographed mineral faces, in a 616 × 770 reference frame.
+  const refractionFaces = {
+    rose: [
+      [[47,295, 82,212, 117,180, 149,215, 122,306, 71,310], .1],
+      [[117,180, 149,198, 183,236, 151,220], .9],
+      [[124,307, 151,222, 181,242, 176,334], 2.4],
+      [[480,106, 496,56, 528,23, 516,68], 2.1],
+      [[480,106, 516,69, 548,44, 536,150, 506,191, 481,220], 2.7],
+      [[481,220, 506,191, 535,150, 559,118, 564,172, 525,219], 3.5],
+      [[376,473, 389,415, 433,365, 463,344, 419,415], .7],
+      [[375,472, 420,416, 462,345, 478,370, 405,477, 379,509], 1.6],
+      [[58,329, 87,371, 141,438, 105,417, 72,374], 3.3],
+      [[85,414, 119,434, 166,464, 203,504, 166,485, 109,448], 3.9],
+      [[200,362, 211,332, 235,349, 220,363], 2.2],
+      [[71,610, 88,576, 139,571, 164,608, 123,581, 90,581], .8]
+    ],
+    amethyst: [
+      [[16,294, 87,285, 43,318, 26,325], 2.3],
+      [[27,326, 87,285, 55,334, 30,350], 2.8],
+      [[105,393, 146,355, 142,407], .8],
+      [[55,474, 102,438, 146,421, 111,503], .4],
+      [[112,502, 146,423, 162,418, 136,506, 123,529], 1.2],
+      [[5,578, 34,543, 81,535, 65,582], 4.1],
+      [[56,613, 89,563, 126,548, 99,594, 66,630], 3.6],
+      [[108,681, 131,635, 139,617, 151,651], 2.7],
+      [[535,495, 544,451, 555,423, 576,441], 2.4],
+      [[554,421, 593,449, 598,464, 574,444], 3.2],
+      [[462,419, 478,392, 500,381, 495,411], .1],
+      [[466,493, 471,472, 492,450, 493,479], .75],
+      [[403,113, 423,96, 434,111, 421,130, 408,137], 4.7],
+      [[530,329, 546,304, 554,317, 543,345], 3.6],
+      [[215,726, 233,702, 261,692, 247,712], 1.0]
+    ]
+  };
+  const refractionCache = new WeakMap();
+
+  function prepareGemFaces(photo, key) {
+    // Extract the lit seams from the photograph. The lights will pick up its existing
+    // fractures and preserve the dark transparent pits within each illuminated plane.
+    const relief = document.createElement('canvas');
+    relief.width = 616; relief.height = 770;
+    const g = relief.getContext('2d', {willReadFrequently:true});
+    g.drawImage(photo, 0, 0, 616, 770);
+    const source = g.getImageData(0, 0, 616, 770);
+    const data = source.data;
+    const pink = key === 'rose';
+    for (let i=0; i<data.length; i+=4) {
+      const brightness = data[i] * .3 + data[i+1] * .52 + data[i+2] * .18;
+      const chroma = data[i+2] - data[i+1];
+      const strength = Math.max(0, Math.min(1, (brightness - (pink ? 74 : 21)) / (pink ? 133 : 156)));
+      data[i] = pink ? 255 : 218 + strength * 37;
+      data[i+1] = pink ? 183 + strength * 67 : 141 + strength * 87;
+      data[i+2] = pink ? 169 + strength * 81 : 248;
+      data[i+3] = Math.min(255, 255 * (.12 + .88 * strength * strength) * (pink ? 1 : Math.min(1,.74 + chroma / 130)));
+    }
+    g.putImageData(source, 0, 0);
+    const faces = refractionFaces[key].map(([points, phase], i) => {
+      const path = new Path2D();
+      const xs=[], ys=[];
+      for(let j=0;j<points.length;j+=2) {
+        const x=points[j], y=points[j+1];
+        xs.push(x); ys.push(y);
+        if(j===0) path.moveTo(x,y); else path.lineTo(x,y);
+      }
+      path.closePath();
+      const x=Math.min(...xs), y=Math.min(...ys), w=Math.max(...xs)-x, h=Math.max(...ys)-y;
+      return {path,x,y,w,h,phase,rate:.86 + (i%4)*.047};
+    });
+    return {relief, faces};
+  }
+
+  function drawGemFaces(ctx, key, t, photo) {
+    if (!photo || !refractionFaces[key] || !photo.naturalWidth) return;
+    let cache=refractionCache.get(photo);
+    if (!cache) { cache=prepareGemFaces(photo,key); refractionCache.set(photo,cache); }
+    const pink = key === 'rose';
+    const rayTint = pink ? '255,233,211' : '235,207,255';
+    ctx.save();
+    ctx.scale(1/616,1/770);
+    const inherited=ctx.globalAlpha;
+    for (const {path,x,y,w,h,phase,rate} of cache.faces) {
+      const theta=t*rate+phase;
+      // A broad return from the cleavage plane, with a narrower moving internal reflection.
+      const returnLight=Math.pow(.5+.5*Math.sin(theta),2.7);
+      if(returnLight < .006) continue;
+      ctx.save(); ctx.clip(path);
+      ctx.globalAlpha=inherited * returnLight * (pink ? .69 : .75);
+      ctx.drawImage(cache.relief,x,y,w,h,x,y,w,h);
+      const center=x+w*(.5+.48*Math.sin(theta-.64));
+      const sweep=ctx.createLinearGradient(center-w*.43,y+h*.4,center+w*.43,y+h*.57);
+      sweep.addColorStop(0,'rgba('+rayTint+',0)');
+      sweep.addColorStop(.33,'rgba('+rayTint+',.045)');
+      sweep.addColorStop(.50,'rgba('+rayTint+',.24)');
+      sweep.addColorStop(.56,'rgba('+rayTint+',.12)');
+      sweep.addColorStop(1,'rgba('+rayTint+',0)');
+      ctx.fillStyle=sweep; ctx.fillRect(x,y,w,h);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  KF.MineralMotion = { draw: render };
+})(globalThis.KF = globalThis.KF || {});
+
+// Photo-space effects. Coordinates refer to visible features in the original 4:5 plates.
+(function (KF) {
+  'use strict';
+  const tau = 2 * Math.PI;
+  const cache = new WeakMap();
+  const cloudSprites = new Map();
+  const clamp = x => Math.max(0, Math.min(1, x));
+  function hash(n) {
+    const x = Math.sin(n * 127.1 + 63.17) * 43758.5453;
+    return x - Math.floor(x);
+  }
+  function noise(x, y, seed) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const dx = x - ix, dy = y - iy;
+    const sx = dx * dx * (3 - 2 * dx), sy = dy * dy * (3 - 2 * dy);
+    const base = seed + ix + iy * 79;
+    const a = hash(base), b = hash(base + 1), c = hash(base + 79), d = hash(base + 80);
+    return (a + sx * (b - a)) * (1 - sy) + (c + sx * (d - c)) * sy;
+  }
+  function canvas(width, height) {
+    const cv = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(width, height) : document.createElement('canvas');
+    cv.width = width; cv.height = height;
+    return cv;
+  }
+  function path(ctx, coordinates) {
+    ctx.beginPath();
+    ctx.moveTo(coordinates[0], coordinates[1]);
+    for (let i = 2; i < coordinates.length; i += 2) ctx.lineTo(coordinates[i], coordinates[i + 1]);
+    ctx.closePath();
+  }
+
+  // Debris, submerged rocks and banks protrude into the water in both photographs.
+  const darkWater = [
+    .175,.702, .193,.685, .299,.681, .354,.669, .47,.669, .56,.681, .66,.689, .76,.694, .85,.708, 1,.722,
+    1,.852, .979,.860, .966,.882, .948,.868, .927,.898, .890,.903, .866,.918, .850,.888, .837,.879, .814,.915,
+    .800,.910, .786,.943, .751,.944, .730,.968, .659,.963, .591,.984, .525,.991, .297,.991,
+    .279,.974, .276,.947, .251,.935, .211,.931, .196,.922, .174,.927, .161,.912, .146,.922, .128,.897,
+    .100,.894, .081,.890, .075,.868, .029,.858, .023,.841, 0,.835, 0,.794, .075,.781, .101,.758, .144,.724
+  ];
+  const blueWater = [
+    .241,.661, .259,.659, .270,.652, .296,.649, .315,.655, .347,.653, .322,.644, .331,.64,
+    .425,.639, .526,.638, .608,.638, .639,.645, .694,.646, .760,.646, .782,.663, .807,.659, .834,.665, .890,.665, .916,.668, 1,.67,
+    1,1, .660,1, .587,.964, .597,.944, .568,.937, .549,.917, .546,.899, .530,.866, .503,.859, .461,.852,
+    .478,.829, .451,.812, .404,.805, .368,.803, .371,.779, .344,.765, .308,.760, .308,.743, .293,.725, .281,.715, .266,.690
+  ];
+  const water = {
+    ice: { shore: darkWater, horizon: .669, light: [[.119,.81,.030,.060],[.275,.733,.085,.058],[.892,.777,.066,.092]], speed: .79 },
+    lake: { shore: blueWater, horizon: .638, light: [[.849,.765,.096,.11],[.701,.700,.090,.054],[.401,.803,.094,.041]], speed: .99 }
+  };
+
+  // Wave fronts displace the underlying photograph. Both the reflections and the transparent
+  // shallows deform, while the exact rocky banks stay fixed. The waves widen towards the viewer.
+  function moveWater(ctx, t, photo, pool) {
+    const sw = photo.naturalWidth, sh = photo.naturalHeight;
+    ctx.save();
+    path(ctx, pool.shore);
+    ctx.clip();
+    const back = pool.horizon, range = 1 - back;
+    const steps = 60;
+    for (let i = 0; i < steps; i++) {
+      const z = i / steps, z2 = (i + 1) / steps;
+      const y = back + range * (z * .44 + .56 * z * z);
+      const end = back + range * (z2 * .44 + .56 * z2 * z2);
+      const depth = .21 + .79 * z, phase = t * pool.speed;
+      const h = end - y + .00016;
+      const wave = Math.sin(y * 304 - phase * 1.65) + .43 * Math.sin(y * 166 + phase * 1.24);
+      const sx = depth * (.0031 * wave), sy = depth * (.0019 * Math.sin(y * 278 - phase * 1.72));
+      ctx.globalAlpha = .57 * Math.min(1, (i + 1) / 6);
+      // Crop inside the image at left/right: displace adjacent visual detail without an exposed seam.
+      ctx.drawImage(photo, (.007 + sx) * sw, Math.min(.997, y + sy) * sh, .986 * sw, Math.min(h, 1 - y) * sh,
+                    .007, y, .986, h);
+    }
+    // Short, softly ended crests pass through the actual columns reflected from the bright openings.
+    for (let column = 0; column < pool.light.length; column++) {
+      const [cx, cy, width, height] = pool.light[column];
+      for (let i = 0; i < 9; i++) {
+        const seed = 30 * column + i;
+        const phase = (t * (.095 + hash(seed + 3) * .05) + hash(seed)) % 1;
+        const shade = Math.pow(Math.sin(phase * Math.PI), 1.7);
+        const x = cx + (hash(seed + 7.32) - .5) * width + .005 * Math.sin(t * .52 + seed);
+        const y = cy + (hash(seed + 13.2) - .5) * 2 * height + phase * .009;
+        const len = (.005 + .015 * hash(seed + 5.8)) * (1 + .22 * Math.sin(t * .76 + seed));
+        const g = ctx.createLinearGradient(x - len, y, x + len, y);
+        g.addColorStop(0, 'rgba(181,231,237,0)');
+        g.addColorStop(.46, 'rgba(191,238,242,.40)');
+        g.addColorStop(1, 'rgba(181,231,237,0)');
+        ctx.globalAlpha = shade * .72;
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.ellipse(x, y, len, .00048 + .00043 * hash(seed + 1.8), .012 * Math.sin(seed), 0, tau); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  // Actual stalactite tips, vertical drip lines and the perspective plane they strike.
+  const dripSites = [
+    [.445,.357,.769,8.8,3.1,.102], [.522,.292,.728,10.3,6.8,.084],
+    [.717,.303,.807,11.8,1.4,.124], [.197,.378,.715,13.8,7.4,.063]
+  ];
+  function strikeWater(ctx, t) {
+    for (let index = 0; index < dripSites.length; index++) {
+      const [x, tip, impact, period, offset, scale] = dripSites[index];
+      const count = Math.floor((t + offset) / period);
+      const age = (t + offset) % period - (1.05 + hash(count + index * 28) * 1.45);
+      if (age < -.56 || age > 3.4) continue;
+      if (age < 0) {
+        const u = (age + .56) / .56;
+        const y = tip + (impact - tip) * u * u;
+        ctx.strokeStyle = 'rgba(182,219,219,' + (.13 + u * .24) + ')';
+        ctx.lineWidth = .00118; ctx.beginPath();
+        ctx.moveTo(x, y - (.0013 + u * .0055)); ctx.lineTo(x, y); ctx.stroke();
+        ctx.fillStyle = 'rgba(219,238,234,.49)';
+        ctx.beginPath(); ctx.ellipse(x, y, .0009, .0015, 0, 0, tau); ctx.fill();
+        continue;
+      }
+      ctx.save(); path(ctx, darkWater); ctx.clip();
+      for (let k = 0; k < 3; k++) {
+        const life = age - k * .139;
+        if (life < 0 || life >= 2.94) continue;
+        const progress = life / 2.94;
+        const rx = (.032 + .968 * (1 - Math.pow(1 - progress, 1.5))) * scale;
+        const ry = rx * (.115 + .055 * (impact - .714) / .11);
+        const alpha = Math.pow(1 - progress, 1.4) * (1 - .19 * k) * Math.min(1, life * 20);
+        const ring = ctx.createLinearGradient(x - rx, impact, x + rx, impact);
+        ring.addColorStop(0, 'rgba(157,205,206,.30)'); ring.addColorStop(.23, 'rgba(182,219,218,.83)');
+        ring.addColorStop(.42, 'rgba(123,158,162,.12)'); ring.addColorStop(.64, 'rgba(160,213,212,.45)');
+        ring.addColorStop(1, 'rgba(114,149,151,.10)');
+        ctx.globalAlpha = alpha * .89; ctx.lineWidth = .00115 - progress * .00055; ctx.strokeStyle = ring;
+        ctx.beginPath(); ctx.ellipse(x, impact, rx, ry, 0, 0, tau); ctx.stroke();
+        ctx.globalAlpha = alpha * .48;
+        ctx.strokeStyle = '#031112';
+        ctx.beginPath(); ctx.ellipse(x, impact + .0011, rx, ry, 0, .12, Math.PI * .97); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+
+  // Texture of low water mist or airborne rock dust. The irregular transparent edges are baked once.
+  function cloudSprite(warm, seed) {
+    const key = (warm ? 20 : 0) + seed;
+    if (cloudSprites.has(key)) return cloudSprites.get(key);
+    const cv = canvas(190, 60), g = cv.getContext('2d'), data = g.createImageData(cv.width, cv.height);
+    const colour = warm ? [213,143,98] : [190,219,223];
+    for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+      const u = x / cv.width, v = y / cv.height;
+      const bend = .15 * Math.sin(tau * (u + seed * .34)) + .08 * Math.cos(10 * u);
+      const dy = (v - .50 - bend) / .48;
+      const edge = Math.max(0, 1 - dy * dy) * Math.sin(Math.PI * u);
+      const n = .56 * noise(u * 7, v * 4, seed * 83) + .30 * noise(u * 17, v * 9, seed * 43 + 7)
+              + .14 * noise(u * 37, v * 17, seed * 61);
+      const alpha = Math.pow(Math.max(0, n - .26) * 1.57, 1.45) * edge * edge;
+      const offset = 4 * (y * cv.width + x);
+      data.data.set([colour[0], colour[1], colour[2], Math.round(255 * alpha)], offset);
+    }
+    g.putImageData(data, 0, 0); cloudSprites.set(key, cv); return cv;
+  }
+
+  // Polygonal regions are traced along individual illuminated facets and bands in the photographs.
+  const iceRims = [
+    [.162,.546,.187,.488,.209,.465,.237,.447,.267,.434,.250,.467,.208,.495,.184,.531],
+    [.266,.404,.288,.356,.327,.323,.403,.303,.484,.272,.504,.235,.513,.245,.509,.298,.489,.323,.437,.338,.371,.335,.302,.371],
+    [.113,.267,.104,.217,.129,.177,.165,.157,.189,.160,.150,.185,.131,.222,.165,.287,.183,.307,.184,.349,.155,.326],
+    [.623,.184,.691,.164,.757,.167,.809,.149,.878,.128,.888,.136,.831,.165,.762,.183,.693,.190],
+    [.613,.638,.664,.603,.704,.582,.758,.548,.781,.535,.761,.566,.722,.595,.692,.620,.669,.647]
+  ];
+  const redFaces = [
+    [.031,.187,.079,.110,.130,.083,.174,.083,.212,.055,.197,.102,.141,.127,.101,.181,.078,.244,.055,.260,.050,.226],
+    [.002,.256,.049,.265,.083,.286,.102,.322,.150,.352,.168,.384,.125,.377,.081,.353,.053,.296],
+    [.143,.419,.160,.414,.208,.425,.244,.456,.214,.490,.169,.512,.177,.474],
+    [.765,.606,.786,.564,.818,.523,.873,.499,.914,.512,.935,.537,.917,.544,.873,.521,.825,.538,.807,.576,.797,.609],
+    [.894,.262,.924,.246,.993,.226,.999,.258,.964,.279,.936,.282,.906,.316,.883,.316],
+    [.654,.870,.675,.827,.681,.772,.702,.745,.709,.732,.746,.724,.731,.758,.710,.792,.691,.857]
+  ];
+  function highlights(photo, warm) {
+    if (cache.has(photo)) return cache.get(photo);
+    const faces = warm ? redFaces : iceRims;
+    const textures = [];
+    for (const face of faces) {
+      const xs = [], ys = [];
+      for (let i = 0; i < face.length; i += 2) { xs.push(face[i]); ys.push(face[i + 1]); }
+      const x = Math.min(...xs), y = Math.min(...ys), w = Math.max(...xs) - x, h = Math.max(...ys) - y;
+      const cv = canvas(Math.max(3, Math.ceil(w * 810)), Math.max(3, Math.ceil(h * 1013)));
+      const g = cv.getContext('2d', {willReadFrequently:true}), sw = photo.naturalWidth, sh = photo.naturalHeight;
+      const coords = face.map((v, i) => i % 2 ? (v-y) * cv.height/h : (v-x) * cv.width/w);
+      g.save(); path(g, coords); g.clip();
+      g.drawImage(photo, x*sw,y*sh,w*sw,h*sh,0,0,cv.width,cv.height); g.restore();
+      const bitmap = g.getImageData(0,0,cv.width,cv.height), p = bitmap.data;
+      const values = new Float32Array(p.length / 4);
+      for (let i = 0; i < values.length; i++) values[i] = .24*p[i*4]+.65*p[i*4+1]+.11*p[i*4+2];
+      for (let i = 0; i < values.length; i++) {
+        const j = i*4, luma = values[i], r = p[j], green = p[j+1], blue = p[j+2];
+        const before = values[Math.max(0,i-1)], above = values[Math.max(0,i-cv.width)];
+        const border = Math.min(before, above);
+        const edge = Math.max(0, luma - border);
+        const originalAlpha = p[j+3] / 255;
+        const reflect = warm ? clamp((green-49)/116) * clamp((r-green+40)/108) : clamp((luma-96)/125) * clamp((blue-r+48)/100);
+        const mask = clamp(reflect * (.25 + .85 * clamp(edge/30)) + .32 * clamp((luma-166)/65));
+        p[j]=warm?255:181; p[j+1]=warm?213:235; p[j+2]=warm?163:255;
+        p[j+3]=Math.round(originalAlpha * mask * 255);
+      }
+      g.putImageData(bitmap,0,0);
+      textures.push({cv,x,y,w,h});
+    }
+    cache.set(photo,textures); return textures;
+  }
+  function shimmer(ctx, time, photo, warm) {
+    const maps = highlights(photo,warm);
+    ctx.save(); ctx.globalCompositeOperation='screen';
+    for(let i=0; i<maps.length; i++) {
+      const {cv,x,y,w,h} = maps[i];
+      const period=(warm?6.8:5.6)+i*1.53;
+      const cycle=(time/period + hash(i+12))%1, active = warm ? .40 : .72;
+      if(cycle>=active) continue;
+      const u=cycle/active, strength=Math.sin(Math.PI*u);
+      for(let j=0;j<18;j++) {
+        const a=Math.floor(j*cv.width/18), b=Math.floor((j+1)*cv.width/18);
+        const head=1.35*u-.16, d=((j+.5)/18-head)*4.7;
+        const light=Math.exp(-d*d)*strength*(warm?.53:.39);
+        if(light<.009 || a===b) continue;
+        ctx.globalAlpha=light;
+        ctx.drawImage(cv,a,0,b-a,cv.height,x+w*a/cv.width,y,w*(b-a)/cv.width,h);
+      }
+    }
+    ctx.restore();
+  }
+
+  function glacierMist(ctx,t) {
+    // Cold vapour rises off the back and right-hand water. Left-hand foreground moraine stays clear.
+    const wisps=[
+      [.408,.640,.27,.025,.012,.15,1], [.633,.656,.37,.032,.023,.14,2],
+      [.848,.672,.31,.025,.023,.139,3], [.696,.699,.36,.032,.029,.099,1]
+    ];
+    ctx.save();
+    ctx.globalCompositeOperation='screen';
+    for (let i=0;i<wisps.length;i++) {
+      const [cx,cy,w,h,drift,opacity,seed]=wisps[i];
+      const a=t*(.235-.028*i)+seed, b=t*(.105+i*.009)+seed*2.3;
+      const x=cx+drift*Math.sin(a), y=cy+.0024*Math.sin(b)-h*.49;
+      ctx.globalAlpha=opacity*(.76+.24*Math.sin(.88*b));
+      ctx.drawImage(cloudSprite(false,seed),x-w/2,y-h*.5,w,h*(1+.16*Math.sin(a*.67)));
+    }
+    ctx.restore();
+  }
+
+  const scree = [
+    // Eroded shelf, fall distance, horizontal drift, idle interval, initial phase.
+    [.300,.365,.141,.020,7.1,1.3], [.693,.294,.168,-.035,9.0,3.9],
+    [.796,.468,.134,-.033,10.7,6.5], [.273,.594,.108,.030,12.3,3.2]
+  ];
+  function stoneDust(ctx,time) {
+    ctx.save();
+    for(let i=0;i<scree.length;i++) {
+      const [x,y,fall,drift,period,offset]=scree[i];
+      const cycle=Math.floor((time+offset)/period);
+      const age=(time+offset)%period - hash(cycle+i*16)*1.1;
+      if(age<0 || age>4.1) continue;
+      const u=age/4.1, phase=hash(cycle*3.7+i)*tau;
+      // Dust leaves the underside of a ledge, disperses in the shaft and settles downslope.
+      const sx=x+drift*u+.006*Math.sin(u*4+phase)*u, sy=y+fall*(.35*u+.65*u*u);
+      const w=.020+.092*u,h=.019+.044*u;
+      ctx.globalAlpha=.28*Math.sin(u*Math.PI);
+      ctx.drawImage(cloudSprite(true,1+i%3),sx-w*.5,sy-h*.44,w,h);
+      for(let j=0;j<7;j++){
+        const seed=cycle*93+i*18+j*4.19;
+        const v=(age-.83*hash(seed+.94))/(1.22+.94*hash(seed+5.61));
+        if(v<0 || v>1) continue;
+        const dx=x+(hash(seed+2.12)-.5)*(.005+.032*v)+drift*v*.63;
+        const dy=y+fall*(.18*v+.78*v*v)*( .67+.35*hash(seed+3.51));
+        const size=.0008+.00125*hash(seed+.7), gain=(.42+.44*hash(seed+4.11))*Math.sin(Math.PI*v);
+        ctx.globalAlpha=gain;
+        ctx.fillStyle=j%3===0?'#d79c71':'#9b6951';
+        ctx.beginPath();ctx.moveTo(dx-size,dy-size*.39);ctx.lineTo(dx+size*.46,dy-size*.65);ctx.lineTo(dx+size*.68,dy+size*.80);ctx.lineTo(dx-size*.46,dy+size*.45);ctx.closePath();ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  function draw(ctx,key,timeSeconds,photo) {
+    if(!photo || !photo.naturalWidth || !photo.naturalHeight || !Number.isFinite(timeSeconds)) return;
+    ctx.save();
+    if(key==='ice'){
+      moveWater(ctx,timeSeconds,photo,water.ice);
+      strikeWater(ctx,timeSeconds);
+    }else if(key==='lake'){
+      moveWater(ctx,timeSeconds,photo,water.lake);
+      glacierMist(ctx,timeSeconds);
+      shimmer(ctx,timeSeconds,photo,false);
+    }else if(key==='carnelian'){
+      stoneDust(ctx,timeSeconds);
+      shimmer(ctx,timeSeconds,photo,true);
+    }
+    ctx.restore();
+  }
+  KF.CavernMotion={draw};
+})(globalThis.KF=globalThis.KF||{});
+
+// One moving surface follows the same object-fit rectangle as the room photograph.
 (function (KF) {
   'use strict';
 
-  const TAU = Math.PI * 2;
-  const FADE_MS = 1500;                       // crossfade between two themes
-  const MAX_BAKE_PIXELS = 2e6;                // huge canvases are baked at a reduced scale and stretched
-  const LOW_MIN = 120000, LOW_MAX = 250000;   // pixel budget of the lit rock maps (phone .. desktop)
-  const BAND_PIXELS = 30000;                  // rock-map pixels shaded per bake step
-  const STEPS_PER_UPDATE = 1;                 // bake steps per update() while a level change is pending
-  const NL = 4;                               // rock walls; layer NL is the back wall, NL + 1 the lava surface
-
-  // Rock walls from near to far. side / top / bot: wall thickness as a fraction of width / height,
-  // amp: waviness of the opening, blur: bevel radius, scale: size of spikes, bumps and crystals
-  // (amp, blur in S = 1/100 of the short side), gain: light the rock takes, veil: haze laid over
-  // this wall and everything behind it, clusters / spikes: how many.
-  const LAYERS = [
-    { side: 0.062, top: 0.066, bot: 0.058, amp: 3.2, blur: 2.6, scale: 1.5, gain: 0.6, veil: 0, clusters: 2, spikes: 5 },
-    { side: 0.165, top: 0.132, bot: 0.112, amp: 3.0, blur: 2.0, scale: 1.1, gain: 1, veil: 0.14, clusters: 4, spikes: 7 },
-    { side: 0.262, top: 0.192, bot: 0.162, amp: 2.6, blur: 1.5, scale: 0.8, gain: 1, veil: 0.24, clusters: 4, spikes: 8 },
-    { side: 0.352, top: 0.248, bot: 0.208, amp: 2.2, blur: 1.1, scale: 0.58, gain: 0.95, veil: 0.32, clusters: 3, spikes: 8 },
-    { blur: 1, scale: 0.62, gain: 0.9, veil: 0.36 },
-    { blur: 1, scale: 0.8, gain: 1, veil: 0 },
-  ];
-
-  // Colours are [h, s, l]. rock / stain: the two albedo tones of the rock, deep: darkest tone, haze: colour of the
-  // air, light: colour of the ambient glow, crystals: three quartz tones. wet: gloss of the rock, chamber: brightness
-  // of the far chamber, opening: [x, y, strength] of daylight falling in (fractions), bend: sideways drift of the
-  // far walls. Materials (0..1): frost, moss, vein, geode. Details: icicles, fungi, druse, drips, fog, liquid.
-  const THEMES = [
-    { key: 'ice', name: 'Bergkristall', seed: 11, rock: [212, 14, 31], stain: [204, 20, 39], deep: [218, 44, 5], haze: [210, 34, 16], light: [198, 60, 78],
-      crystals: [[204, 32, 78], [192, 28, 84], [214, 38, 72]], density: 1, crystalSize: 1.05, spikes: 1.2, wet: 0.9, glow: 1, chamber: 0.5, bend: 0.04,
-      opening: [0.4, 0.3, 0.7], frost: 1, icicles: 1, drips: 3, fog: [[0.86, 0.5, 2]], particles: { kind: 'snow', count: 22 } },
-    { key: 'amethyst', name: 'Amethyst', seed: 23, rock: [268, 10, 25], stain: [300, 14, 33], deep: [266, 40, 5], haze: [270, 30, 13], light: [280, 62, 74],
-      crystals: [[272, 50, 62], [288, 44, 66], [258, 48, 68]], density: 1.15, crystalSize: 0.95, spikes: 0.6, wet: 0.5, glow: 1.05, chamber: 0.4, bend: -0.02,
-      geode: 1, druse: 1, particles: { kind: 'dust', count: 20 } },
-    { key: 'moss', name: 'Prasiolith', seed: 37, rock: [100, 8, 23], stain: [40, 14, 30], deep: [150, 40, 4], haze: [140, 26, 12], light: [112, 48, 72],
-      crystals: [[140, 38, 60], [122, 34, 66], [158, 40, 56]], density: 0.9, crystalSize: 1, spikes: 0.9, wet: 1, glow: 0.9, chamber: 0.45, bend: -0.05,
-      opening: [0.62, 0.3, 0.6], moss: 1, fungi: 1, drips: 3, particles: { kind: 'spore', count: 20 } },
-    { key: 'citrine', name: 'Citrin', seed: 41, rock: [26, 16, 25], stain: [34, 34, 32], deep: [18, 44, 5], haze: [26, 34, 12], light: [42, 80, 70],
-      crystals: [[44, 72, 58], [36, 76, 60], [50, 68, 66]], density: 1, crystalSize: 1.05, spikes: 0.8, wet: 0.4, glow: 1, chamber: 0.4, bend: 0.05,
-      vein: 1, particles: { kind: 'dust', count: 22 } },
-    { key: 'rose', name: 'Rosenquarz', seed: 53, rock: [338, 9, 29], stain: [18, 16, 38], deep: [320, 34, 6], haze: [326, 24, 15], light: [344, 66, 82],
-      crystals: [[340, 54, 76], [352, 50, 80], [326, 44, 74]], density: 0.85, crystalSize: 1.15, spikes: 0.6, wet: 0.45, glow: 1, chamber: 0.5, bend: 0.03,
-      fog: [[0.8, 0.8, 3], [0.9, 0.9, 2]], particles: { kind: 'dust', count: 18 } },
-    { key: 'carnelian', name: 'Karneol', seed: 67, rock: [14, 12, 17], stain: [22, 26, 22], deep: [6, 50, 4], haze: [10, 44, 10], light: [22, 96, 58],
-      crystals: [[18, 80, 54], [8, 74, 50], [30, 86, 58]], density: 0.9, crystalSize: 1, spikes: 1.1, wet: 0.3, glow: 0.95, chamber: 0.25, bend: -0.04,
-      liquid: 'lava', particles: { kind: 'ember', count: 26 } },
-    { key: 'lake', name: 'Blauquarz', seed: 79, rock: [222, 14, 22], stain: [186, 20, 30], deep: [226, 50, 5], haze: [220, 40, 13], light: [192, 58, 72],
-      crystals: [[216, 60, 62], [204, 64, 64], [232, 50, 68]], density: 1, crystalSize: 1, spikes: 1, wet: 1, glow: 1, chamber: 0.45, bend: 0.03,
-      opening: [0.57, 0.3, 0.55], liquid: 'lake', drips: 4, fog: [[0.74, 0.35, 2]], particles: { kind: 'dust', count: 16 } },
-    { key: 'smoky', name: 'Rauchquarz', seed: 97, rock: [30, 5, 24], stain: [34, 9, 36], deep: [250, 12, 4], haze: [232, 8, 15], light: [38, 24, 80],
-      crystals: [[32, 18, 68], [24, 12, 78], [42, 12, 56]], density: 0.75, crystalSize: 1.3, spikes: 0.75, wet: 0.35, glow: 0.9, chamber: 0.45, bend: -0.03,
-      fog: [[0.42, 0.55, 2], [0.66, 0.7, 2], [0.88, 0.8, 2]], particles: { kind: 'dust', count: 16 } },
-  ];
-
-  // Particle behaviours. Speeds and radii in S per second / S, zone = vertical band (fractions of the height).
-  const PARTICLE_KINDS = {
-    dust:  { vx: [-0.5, 0.5], vy: [-0.45, 0.15], r: [0.2, 0.46], a: [0.18, 0.5], wob: 1.4, pulse: 0.6, zone: [0.04, 0.96] },
-    snow:  { vx: [-0.5, 0.1], vy: [0.8, 2], r: [0.18, 0.42], a: [0.22, 0.55], wob: 1.2, pulse: 0.3, zone: [0, 1] },
-    spore: { vx: [-0.3, 0.3], vy: [-1, -0.3], r: [0.22, 0.46], a: [0.22, 0.55], wob: 1.8, pulse: 0.7, zone: [0.1, 1] },
-    ember: { vx: [-0.5, 0.5], vy: [-4.5, -1.8], r: [0.18, 0.38], a: [0.4, 0.85], wob: 1.6, pulse: 0.5, zone: [0.22, 0.86], fadeTop: true },
-  };
-
-  // ------------------------------------------------------------------ small helpers
-  function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-  function mod(v, m) { return ((v % m) + m) % m; }
-  function makeRng(seed) {                       // mulberry32
-    let a = seed >>> 0;
-    const R = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    R.range = (lo, hi) => lo + (hi - lo) * R();
-    R.int = n => Math.floor(R() * n);
-    return R;
-  }
-  function hsl(c) {                              // [h, s, l] -> [r, g, b] 0..255
-    const h = mod(c[0], 360) / 60, s = clamp(c[1], 0, 100) / 100, l = clamp(c[2], 0, 100) / 100;
-    const k = (1 - Math.abs(2 * l - 1)) * s, x = k * (1 - Math.abs(h % 2 - 1)), m = l - k / 2;
-    const v = h < 1 ? [k, x, 0] : h < 2 ? [x, k, 0] : h < 3 ? [0, k, x] : h < 4 ? [0, x, k] : h < 5 ? [x, 0, k] : [k, 0, x];
-    return [(v[0] + m) * 255, (v[1] + m) * 255, (v[2] + m) * 255];
-  }
-  function mix(a, b, t) { return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]; }
-  function mul(a, f) { return [a[0] * f, a[1] * f, a[2] * f]; }
-  function css(c, alpha) { return 'rgba(' + clamp(Math.round(c[0]), 0, 255) + ',' + clamp(Math.round(c[1]), 0, 255) + ',' + clamp(Math.round(c[2]), 0, 255) + ',' + clamp(alpha, 0, 1).toFixed(3) + ')'; }
-  function makeCanvas(w, h) { const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h)); return c; }
-  const WHITE = [255, 255, 255];
-  const SIN = new Float32Array(256);
-  for (let i = 0; i < 256; i++) SIN[i] = Math.sin(i / 256 * TAU);
-
-  function makePalette(T) {
-    const unit = c => mul(hsl(c), 1 / 255), light = hsl(T.light);
-    return {
-      rock: unit(T.rock), stain: unit(T.stain), deep: hsl(T.deep), haze: hsl(T.haze), light, lightU: mul(light, 1 / 255),
-      crystals: T.crystals.map(c => ({ deep: hsl([c[0], c[1] * 0.95, c[2] * 0.24]), body: hsl([c[0], c[1] * 0.85, c[2] * 0.78]), pale: hsl([c[0], c[1] * 0.5, 93]),
-        glow: mix(hsl([c[0], Math.min(100, c[1] * 1.1), 66]), light, 0.35) })),
-    };
-  }
-
-  // ------------------------------------------------------------------ shared textures (made once)
-  // Three canvases of white noise, one per colour channel: scaled up smoothly and added together
-  // they give value-noise octaves in the R, G and B channel of a rock map without any per-pixel code.
-  let NOISE_SRC = null, GRAIN = null, WARM = false;
-  function noiseSources() {
-    if (NOISE_SRC) return NOISE_SRC;
-    const n = 256, all = makeCanvas(n, n), ag = all.getContext('2d'), im = ag.createImageData(n, n), d = im.data;
-    let v = 0x9E3779B9 | 0;
-    for (let i = 0, m = n * n * 4; i < m; i += 4) { v ^= v << 13; v ^= v >>> 17; v ^= v << 5; d[i] = v & 255; d[i + 1] = (v >>> 8) & 255; d[i + 2] = (v >>> 16) & 255; d[i + 3] = 255; }
-    ag.putImageData(im, 0, 0);
-    NOISE_SRC = ['#f00', '#0f0', '#00f'].map((col, ch) => {
-      const c = makeCanvas(n, n), g = c.getContext('2d');
-      g.drawImage(all, 0, 0); g.globalCompositeOperation = 'multiply';
-      if (g.globalCompositeOperation === 'multiply') { g.fillStyle = col; g.fillRect(0, 0, n, n); }
-      else { const o = g.createImageData(n, n), e = o.data; for (let i = 0, m = n * n * 4; i < m; i += 4) { e[i + ch] = d[i + ch]; e[i + 3] = 255; } g.putImageData(o, 0, 0); }
-      return c;
-    });
-    return NOISE_SRC;
-  }
-  // Tileable embossed grain as translucent black: laid over the lit rock at full resolution it multiplies
-  // crisp pits and micro shadows into the soft rock map.
-  function grainTile() {
-    if (GRAIN) return GRAIN;
-    const n = 128, c = makeCanvas(n, n), g = c.getContext('2d'), im = g.createImageData(n, n), d = im.data, r = makeRng(4242);
-    const a = new Float32Array(n * n), b = new Float32Array(n * n);
-    for (let i = 0; i < n * n; i++) a[i] = r();
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++)     // a softer 3 px octave
-      b[y * n + x] = (a[y * n + x] + a[y * n + (x + 1) % n] + a[((y + 1) % n) * n + x] + a[((y + 2) % n) * n + (x + 2) % n] + a[((y + 1) % n) * n + (x + 2) % n]) / 5;
-    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-      const i = y * n + x, j = ((y + n - 1) % n) * n + (x + n - 1) % n, j2 = ((y + n - 2) % n) * n + (x + n - 2) % n;
-      let v = 24 + (a[j] - a[i]) * 56 + (b[j2] - b[i]) * 170;
-      d[i * 4 + 3] = v;
-    }
-    g.putImageData(im, 0, 0);
-    return (GRAIN = c);
-  }
-
-  // Low-resolution work buffers of one cave instance (reused by all its bakes).
-  function preparePool(P, lw, lh) {
-    if (P.lw === lw && P.lh === lh) return;
-    const mk = (w, h) => { const c = makeCanvas(w, h), g = c.getContext('2d', { willReadFrequently: true }); return { c, g, w: c.width, h: c.height }; };
-    P.lw = lw; P.lh = lh;
-    P.noise = mk(lw, lh); P.mask = mk(lw, lh); P.lit = mk(lw, lh);
-    P.pyr = [mk(lw / 2, lh / 2), mk(lw / 4, lh / 4), mk(lw / 8, lh / 8), mk(lw / 16, lh / 16)];
-    P.out = P.lit.g.createImageData(lw, lh);
-    P.H = new Float32Array(lw * lh);
-    const vig = (n, mid, amt) => { const t = new Float32Array(n); for (let i = 0; i < n; i++) { let u = (Math.abs(i / n - mid) * 2 - 0.45) / 0.55; u = clamp(u, 0, 1); t[i] = 1 - amt * u * u * (3 - 2 * u); } return t; };
-    P.VX = vig(lw, 0.5, 0.14); P.VY = vig(lh, 0.48, 0.4);              // vignette, multiplied into the rock light
-  }
-
-  // ------------------------------------------------------------------ geometry
-  function ringNoise(R, n) {                     // smooth periodic noise over an angle, -1..1
-    const v = []; for (let i = 0; i < n; i++) v.push(R.range(-1, 1));
-    return a => { const p = mod(a / TAU, 1) * n, i = Math.floor(p) % n, f = p - Math.floor(p), s = f * f * (3 - 2 * f); return v[i] + (v[(i + 1) % n] - v[i]) * s; };
-  }
-  function tracePts(g, p) {                      // closed smooth curve through the midpoints of a polygon
-    const n = p.length; g.moveTo((p[n - 1][0] + p[0][0]) / 2, (p[n - 1][1] + p[0][1]) / 2);
-    for (let i = 0; i < n; i++) { const q = p[i], r = p[(i + 1) % n]; g.quadraticCurveTo(q[0], q[1], (q[0] + r[0]) / 2, (q[1] + r[1]) / 2); }
-    g.closePath();
-  }
-  function wind(p, positive) {                   // force the winding of a polygon (non-zero fill: rock adds, the opening cuts)
-    let s = 0; for (let i = 0, n = p.length; i < n; i++) { const a = p[i], b = p[(i + 1) % n]; s += a[0] * b[1] - b[0] * a[1]; }
-    if ((s > 0) !== positive) p.reverse();
-    return p;
-  }
-  // Tapered, slightly bent spike (stalactite, stalagmite) from (bx, by) along (dx, dy).
-  function spike(R, bx, by, dx, dy, len, w, tipR) {
-    const px = -dy, py = dx, bend = R.range(-0.13, 0.13) * len, n = 7, A = [], C = [];
-    for (let i = -1; i < n; i++) {
-      const t = i / n, tt = Math.max(0, t), hw = i < 0 ? w * 0.9 : w * 0.5 * Math.pow(1 - tt, 1.5) + tipR * (1 - tt * tt * tt);
-      const qx = bx + dx * len * t + px * bend * tt * tt, qy = by + dy * len * t + py * bend * tt * tt;
-      A.push([qx + px * hw, qy + py * hw]); C.push([qx - px * hw, qy - py * hw]);
-    }
-    const tip = [bx + dx * len + px * bend, by + dy * len + py * bend];
-    return { pts: A.concat([tip], C.reverse()), tip };
-  }
-  function blob(R, x, y, rx, ry, n, jit) {
-    const p = [], a0 = R() * TAU;
-    for (let i = 0; i < n; i++) { const a = a0 + i / n * TAU, r = 1 + R.range(-jit, jit); p.push([x + Math.cos(a) * rx * r, y + Math.sin(a) * ry * r]); }
-    return p;
-  }
-
-  // One rock wall: everything outside a wavy rounded opening, plus stalactites, stalagmites,
-  // rubble and (wide screens) columns. rim(t) = point on the opening + unit vector into it.
-  function buildLayer(B, k) {
-    const D = LAYERS[k], T = B.T, R = B.R, W = B.W, H = B.H, S = B.S;
-    const noFloor = !!(B.liquid && k >= B.liquid.after), j = () => R.range(0.86, 1.2), jx = () => R.range(0.7, 1.32);
-    const x0 = D.side * W * jx(), x1 = W - D.side * W * jx(), y0 = D.top * H * j(), y1 = noFloor ? H * 1.4 : H - D.bot * H * j();
-    const cx = (x0 + x1) / 2 + (T.bend || 0) * W * (k / 3) + (k ? R.range(-0.025, 0.025) * W : 0), cy = (y0 + y1) / 2, a = (x1 - x0) / 2, b = (y1 - y0) / 2;
-    const n = R.range(2.8, 4.6), e = 2 / n, ampX = W * 0.085 * D.amp / 3, ampY = H * 0.05 * D.amp / 3;
-    const N1 = ringNoise(R, 4 + R.int(3)), N2 = ringNoise(R, 9 + R.int(5)), N3 = ringNoise(R, 27), N4 = ringNoise(R, 67);
-    const rim = t => {
-      const c = Math.cos(t), s = Math.sin(t), ac = Math.abs(c), as = Math.abs(s), sc = c < 0 ? -1 : 1, ss = s < 0 ? -1 : 1;
-      let ox = sc * Math.pow(ac, e * (n - 1)) / a, oy = ss * Math.pow(as, e * (n - 1)) / b;
-      const il = 1 / (Math.hypot(ox, oy) || 1); ox *= il; oy *= il;
-      const d = (N1(t) * 0.46 + (Math.abs(N2(t)) * 2 - 0.9) * 0.28 + N3(t) * 0.18 + N4(t) * 0.08) * (Math.abs(ox) * ampX + Math.abs(oy) * ampY);   // lumps, sharp nooks, small teeth
-      return { x: cx + a * sc * Math.pow(ac, e) - ox * d, y: cy + b * ss * Math.pow(as, e) - oy * d, ix: -ox, iy: -oy };
-    };
-    const hole = [], shapes = [], tips = [], M = 200;
-    for (let i = 0; i < M; i++) { const p = rim(i / M * TAU); hole.push([p.x, p.y]); }
-    const wideMul = B.wide ? 1.7 : 1, nSp = Math.round(D.spikes * T.spikes * wideMul * 1.3);
-    for (let i = 0; i < nSp; i++) {                                           // stalactites
-      const p = rim(R.range(Math.PI + 0.3, TAU - 0.3)); if (p.iy < 0.35) continue;
-      const len = S * D.scale * R.range(3, 12) * (R() < 0.22 ? 1.5 : 1), w = len * R.range(0.2, 0.34) + S * 0.8 * D.scale;
-      const s = spike(R, p.x, p.y - len * 0.1, R.range(-0.06, 0.06), 1, len, w, S * 0.22 * D.scale);
-      shapes.push(s.pts); tips.push({ x: s.tip[0], y: s.tip[1] });
-    }
-    if (!noFloor) {
-      for (let i = 0; i < Math.round(nSp * 0.7); i++) {                       // stalagmites
-        const p = rim(R.range(0.3, Math.PI - 0.3)); if (p.iy > -0.35) continue;
-        const len = S * D.scale * R.range(2, 7.5), w = len * R.range(0.34, 0.6) + S * D.scale;
-        shapes.push(spike(R, p.x, p.y + len * 0.12, R.range(-0.08, 0.08), -1, len, w, S * 0.3 * D.scale).pts);
-      }
-      for (let i = 0, m = Math.round((3 + R.int(4)) * wideMul); i < m; i++) { // rubble
-        const p = rim(R.range(0.2, Math.PI - 0.2)), r = S * D.scale * R.range(1.4, 4.6);
-        shapes.push(blob(R, p.x, p.y + r * 0.25, r * R.range(1, 1.6), r * 0.8, 9, 0.2));
-      }
-    }
-    if (B.wide && (k === 1 || k === 2)) {                                     // a column near one side of the opening
-      const left = (k === 1) === (T.seed % 2 === 0), x = left ? x0 + W * R.range(0.03, 0.07) : x1 - W * R.range(0.03, 0.07), w = S * D.scale * R.range(3.5, 5.5), col = [];
-      const prof = v => w * (0.42 + 0.58 * Math.pow(Math.abs(2 * v - 1), 1.6)) * (1 + 0.12 * N2(v * 9));
-      for (let i = 0; i <= 12; i++) col.push([x - prof(i / 12), -S + (H + 2 * S) * i / 12]);
-      for (let i = 12; i >= 0; i--) col.push([x + prof(i / 12) * R.range(0.9, 1.1), -S + (H + 2 * S) * i / 12]);
-      shapes.push(col);
-    }
-    wind(hole, true); for (const s of shapes) wind(s, false);
-    const m = S * 6, hb = [1e9, 1e9, -1e9, -1e9];                               // bounding box of the opening
-    for (const p of hole) { hb[0] = Math.min(hb[0], p[0]); hb[1] = Math.min(hb[1], p[1]); hb[2] = Math.max(hb[2], p[0]); hb[3] = Math.max(hb[3], p[1]); }
-    const L = makeLayer(k, D);
-    L.rim = rim; L.tips = tips; L.hb = hb;
-    L.trace = g => {
-      g.beginPath(); g.moveTo(-m, -m); g.lineTo(-m, H + m); g.lineTo(W + m, H + m); g.lineTo(W + m, -m); g.closePath();
-      g.moveTo(hole[0][0], hole[0][1]); for (let i = 1; i < M; i++) g.lineTo(hole[i][0], hole[i][1]); g.closePath();   // angular rock edge
-      for (const s of shapes) tracePts(g, s);
-    };
-    return L;
-  }
-
-  // Quartz clusters grow from the rim of the openings into them.
-  function placeClusters(B) {
-    const { R, T, S, W, H } = B, all = [], f = B.focus;
-    for (let k = 0; k < NL; k++) {
-      const L = B.layers[k], D = LAYERS[k];
-      let want = Math.round(D.clusters * T.density * (B.wide ? 1.5 : 1)), tries = 120;
-      while (want > 0 && tries-- > 0) {
-        const p = L.rim(R() * TAU);
-        if (p.x < S || p.x > W - S || p.y < S || p.y > H - S) continue;
-        if (B.liquid && k >= B.liquid.after && p.y > B.liquid.y - S * 4) continue;
-        if (f && k < 2 && tries > 40 && p.x > f.x - S && p.x < f.x + f.w + S && p.y > f.y - S && p.y < f.y + f.h + S) continue;
-        let size = S * D.scale * T.crystalSize * R.range(4.6, 10), glow = 1, ok = true;
-        const P = B.P, mi = clamp(Math.round((p.y + p.iy * size * 0.4) * B.sy), 0, P.lh - 1) * P.lw + clamp(Math.round((p.x + p.ix * size * 0.4) * B.sx), 0, P.lw - 1);
-        for (let q = 0; q < k; q++) if (B.layers[q].Bm[mi << 2] > 100) ok = false;        // behind a nearer wall
-        for (const c of all) if (Math.hypot(c.x - p.x, c.y - p.y) < (c.size + size) * 1.1 + S * 4) { ok = false; break; }
-        if (!ok) continue;
-        if (f && p.x > f.x + f.w * 0.12 && p.x < f.x + f.w * 0.88 && p.y > f.y + f.h * 0.06 && p.y < f.y + f.h * 0.94) { size *= 0.78; glow = 0.7; }
-        const ang = Math.atan2(p.iy, p.ix) + R.range(-0.4, 0.4), col = R.int(3);
-        const c = { k, x: p.x - p.ix * size * 0.1, y: p.y - p.iy * size * 0.1, ang, size, glow: glow * T.glow, col, seed: R.int(1e9) };
-        c.gx = c.x + Math.cos(ang) * size * 0.42; c.gy = c.y + Math.sin(ang) * size * 0.42;
-        all.push(c); want--;
-      }
-    }
-    return all;
-  }
-
-  // ------------------------------------------------------------------ rock maps (per-pixel, low resolution, bake only)
-  // Blurred coverage of a wall: its silhouette filled white, blurred by halving / doubling.
-  // Sets L.Bm (bevel) and, with shadowPx, L.Sm (wide blur: the shadow this wall casts on the next one).
-  function rasterMask(B, L, shadowPx) {
-    const P = B.P, lw = P.lw, lh = P.lh, g = P.mask.g;
-    L.Sm = null;
-    if (L.full) { L.Bm = new Uint8ClampedArray(lw * lh * 4).fill(255); return; }
-    const blur = px => {
-      const levels = clamp(Math.round(Math.log(px / 1.3) / Math.LN2), 1, 4);
-      let src = P.mask;
-      for (let i = 0; i < levels; i++) { const d = P.pyr[i]; d.g.drawImage(src.c, 0, 0, src.w, src.h, 0, 0, d.w, d.h); src = d; }
-      for (let i = levels - 2; i >= 0; i--) { const d = P.pyr[i]; d.g.drawImage(src.c, 0, 0, src.w, src.h, 0, 0, d.w, d.h); src = d; }
-      P.noise.g.drawImage(src.c, 0, 0, src.w, src.h, 0, 0, lw, lh);
-      return P.noise.g.getImageData(0, 0, lw, lh).data;         // RGBA: read with index << 2
-    };
-    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, lw, lh);
-    g.setTransform(B.sx, 0, 0, B.sy, 0, 0); g.fillStyle = '#fff'; L.trace(g); g.fill(); g.setTransform(1, 0, 0, 1, 0, 0);
-    L.Bm = blur(L.blurPx);
-    if (shadowPx) L.Sm = blur(shadowPx);
-  }
-  // octaves: [channel, cell size in px, weight, horizontal stretch]. Each octave is turned by its own angle.
-  function rasterNoise(P, R, octaves, L) {
-    const g = P.noise.g, lw = P.lw, lh = P.lh, src = noiseSources(), dia = Math.hypot(lw, lh);
-    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
-    g.save(); g.beginPath(); g.rect(L.bx0, L.by0, L.bx1 - L.bx0, L.by1 - L.by0); g.clip();
-    g.fillStyle = '#000'; g.fillRect(0, 0, lw, lh);
-    g.globalCompositeOperation = 'lighter';
-    for (const o of octaves) {
-      const cell = Math.max(o[1], dia / 230), n = dia / cell, st = o[3] || 1;
-      g.save(); g.translate(lw / 2, lh / 2); if (st === 1) g.rotate(R.range(0.2, 1.3)); g.globalAlpha = o[2];
-      g.drawImage(src[o[0]], R.range(0, 255 - n / st), R.range(0, 255 - n), n / st, n, -dia / 2, -dia / 2, dia, dia);
-      g.restore();
-    }
-    g.restore(); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
-    return g.getImageData(0, 0, lw, lh).data;
-  }
-
-  // All walls and materials share one object layout (keeps the per-pixel loops monomorphic for the JIT).
-  function makeLayer(k, D) {
-    return { k, D, full: false, lava: false, rim: null, tips: [], hb: null, trace: null, blurPx: 1.5, cov: null, bx0: 0, bx1: 0, by0: 0, by1: 0, Bm: null, Sm: null, shadow: null,
-      nd: null, nl: 0, LX: null, LY: null, LZ: null, LQ: null, LK: null, LR: null, LG: null, LB: null, mat: null };
-  }
-  const F = a => new Float64Array(a);
-  function makeMat() {
-    return { alb: null, stain: null, amb: null, key: null, keyC: null, fill: null, fillC: null, fA: 0.5, fB: 0.5, mA: 0.5, mx: 0.5, my: 0.5, mq: 0.5, mistC: null,
-      wet: 0.5, moss: 0.5, frost: 0.5, vein: 0.5, geode: 0.5, emis: 0.5, mossC: F(mul(hsl([96, 44, 26]), 1 / 255)), frostC: F(mul(hsl([204, 26, 64]), 1 / 255)), veinC: F([0.95, 0.66, 0.2]), geoC: null };
-  }
-  function setLights(L, ls, sx, sy) {              // ls: [x, y, z, radius, intensity, rgb 0..255, core size] in CSS px
-    const n = L.nl = ls.length, f32 = () => new Float32Array(n);
-    L.LX = f32(); L.LY = f32(); L.LZ = f32(); L.LQ = f32(); L.LK = f32(); L.LR = f32(); L.LG = f32(); L.LB = f32();
-    ls.forEach((l, i) => {
-      L.LX[i] = l[0] * sx; L.LY[i] = l[1] * sy; L.LZ[i] = l[2] * sx; L.LQ[i] = l[3] * l[3] * sx * sx; L.LK[i] = 1 / (l[6] * l[6] * sx * sx);
-      L.LR[i] = l[5][0] / 255 * l[4]; L.LG[i] = l[5][1] / 255 * l[4]; L.LB[i] = l[5][2] / 255 * l[4];
-    });
-  }
-  // Height field of a wall inside its box: bevelled silhouette + lumps with sharp creases + fine bumps + strata - cracks.
-  function heights(P, L, bevH, A1, A2, A3, A4, sf, tilt) {
-    const lw = P.lw, Hh = P.H, nd = L.nd, Bm = L.Bm, K = 1 / 255, bx0 = L.bx0, bx1 = L.bx1;
-    for (let y = L.by0; y < L.by1; y++) for (let x = bx0, i = y * lw + x; x < bx1; x++, i++) {
-      const o = i << 2, n1 = nd[o] * K - 0.5, n2 = nd[o + 1] * K - 0.5, n3 = nd[o + 2] * K - 0.5;
-      let h = Bm[o] * K * bevH + (n1 * 0.4 + Math.abs(n1) * 1.7 - 0.42) * A1 + n2 * A2 + SIN[((y * sf + x * tilt + n1 * 1.3) * 256) & 255] * A4;
-      const ck = 1 - Math.abs(n3 + n2 * 0.25) * 16; if (ck > 0) h -= ck * A3;       // cracks along the stain borders
-      Hh[i] = h;
-    }
-  }
-  // Runs both per-pixel loops once on a small patch with every material switched on. The JIT then compiles them
-  // in the background while the bake goes on with canvas work, and no theme hits an unseen code path later.
-  function warmUp(P) {
-    const n = P.lw * P.lh, L = makeLayer(1, LAYERS[1]), m = L.mat = makeMat(), d = new Uint8ClampedArray(n * 4);
-    let v = 0x1234567;
-    for (let i = 0; i < n * 4; i++) { v ^= v << 13; v ^= v >>> 17; v ^= v << 5; d[i] = v & 255; }
-    L.nd = d; L.Bm = d; L.shadow = d; L.cov = new Uint8Array(n); L.bx1 = Math.min(P.lw, 72); L.by1 = Math.min(P.lh, 40);
-    setLights(L, [[20, 20, 9, 90, 1, WHITE, 20], [70, 30, 4, 60, 1, WHITE, 9], [300, 300, 2, 30, 1, WHITE, 9]], 1, 1);
-    m.alb = F([0.3, 0.3, 0.3]); m.stain = F([0.4, 0.3, 0.3]); m.amb = F([0.1, 0.1, 0.1]); m.key = F([-0.42, -0.62, 0.66]); m.keyC = F([0.2, 0.2, 0.2]); m.fill = F([0, 0.9, 0.44]); m.fillC = F([1, 0.4, 0.1]);
-    m.mx = 30; m.my = 30; m.mq = 0.001; m.mistC = F([0.5, 0.5, 0.5]); m.geoC = F([0.5, 0.3, 0.6]);
-    heights(P, L, 3, 4, 1, 1, 0.3, 0.1, 0.01); litBand(P, L, 0, L.by1);
-    L.shadow = null; m.fA = 0; m.fB = 0; m.mA = 0; m.wet = 0; m.moss = 0; m.frost = 0; m.vein = 0; m.geode = 0; m.emis = 0; litBand(P, L, 0, 8);
-  }
-
-  // Noise, height field, material and light list of one wall.
-  function prepLayer(B, k) {
-    const P = B.P, L = B.layers[k], D = L.D, T = B.T, pal = B.pal, lh = P.lh, u = B.S * B.sx * D.scale;
-    const R = makeRng(T.seed * 131 + k * 977 + 5), lava = L.lava, back = k === NL;
-    const c1 = 11 * u, c2 = 2.5 * u, c3 = 15 * u, rough = T.rough || 1;
-    L.nd = rasterNoise(P, R, lava
-      ? [[0, c1 * 0.5, 0.6, 3.2], [0, c1 * 0.2, 0.4, 2.6], [1, c2, 0.6, 2.4], [1, Math.max(1.5, c2 * 0.45), 0.4, 2], [2, c3, 1, 3]]
-      : [[0, c1, 0.6], [0, c1 * 0.42, 0.4], [1, c2, 0.6], [1, Math.max(1.5, c2 * 0.42), 0.4], [2, c3, 0.6], [2, c3 * 0.35, 0.4]], L);
-    const sf = 1 / (5.5 * u);
-    if (lava) heights(P, L, 0, 0, c2 * 0.15, 0, 0, sf, 0);
-    else heights(P, L, L.blurPx * 2, c1 * 0.36 * rough, c2 * 0.42 * rough, 0.9 * u, 0.12 * u * (T.strata === undefined ? 1 : T.strata), sf, R.range(-0.2, 0.2) * sf);
-    P.out.data.fill(0);
-
-    // lights: this wall's own clusters graze it, nearer ones shine onto it, farther ones rim it; plus the far chamber
-    const ls = [];
-    for (const c of B.clusters) {
-      const dk = (lava ? 3 : k) - c.k; let I, z;
-      if (dk === 0) { I = 2.5; z = 0.3; } else if (dk > 0 && dk <= 2) { I = 1.4 / dk; z = 0.45 + 0.5 * dk; } else if (dk === -1) { I = 0.7; z = 0.1; } else continue;
-      ls.push([c.gx, c.gy, c.size * z, c.size * (5 + dk), I * c.glow * D.gain, pal.crystals[c.col].glow, c.size]);
-    }
-    for (const e of B.extra) if (Math.abs(e.k - k) <= 1) ls.push([e.x, e.y, e.r * 0.3, e.r, e.I * D.gain, e.col, e.r * 0.3]);
-    const ch = T.chamber * (back ? 1.15 : 2.2) * D.gain, big = Math.max(B.W, B.H);
-    ls.push([B.open.x, B.open.y, back ? big * 0.2 : B.S * 2.5, big * (back ? 0.85 : 1.3), ch, pal.light, big * (back ? 0.3 : 0.6)]);
-    setLights(L, ls, B.sx, B.sy);
-
-    const hazeU = mul(pal.haze, 1 / 255), left = B.open.x < B.W / 2, m = L.mat = makeMat();
-    m.alb = F(lava ? [0.07, 0.045, 0.04] : pal.rock); m.stain = F(lava ? [0.1, 0.06, 0.05] : pal.stain);
-    m.amb = F(mul(mix(hazeU, [0.5, 0.5, 0.5], 0.3), (back ? 0.45 : 0.27) * D.gain));
-    m.key = F([left ? -0.42 : 0.42, -0.62, 0.66]); m.keyC = F(mul(mix(pal.lightU, [1, 1, 1], 0.45), 0.19 * D.gain));
-    m.fill = F([0, 0, 1]); m.fillC = F([0, 0, 0]); m.fA = 0; m.fB = 0;
-    if (T.liquid === 'lava') { const yl = B.liquid.y * B.sy, rg = 0.8 * lh; m.fill = F([0, 0.9, 0.44]); m.fillC = F(mul([1, 0.4, 0.1], 2.5 * D.gain)); m.fA = 1 - yl / rg; m.fB = 1 / rg; }
-    else if (B.open.a > 0) { m.fill = F([left ? -0.34 : 0.34, -0.8, 0.5]); m.fillC = F(mul(mix(pal.lightU, [1, 1, 1], 0.3), 0.42 * B.open.a * D.gain)); m.fA = 1.05; m.fB = -1 / (0.78 * lh); }
-    m.mA = back ? 1.6 * (0.09 + 0.15 * T.chamber) : 0; m.mx = B.open.x * B.sx; m.my = B.open.y * B.sy; m.mq = 1 / Math.pow(big * 0.2 * B.sx, 2); m.mistC = F(pal.lightU);
-    m.wet = T.wet * (lava ? 0.5 : 1); m.moss = T.moss || 0; m.frost = T.frost || 0; m.vein = lava ? 0 : (T.vein || 0); m.geode = k >= 1 && !lava ? (T.geode || 0) : 0; m.emis = lava ? 1 : 0;
-    m.geoC = F(mul(pal.crystals[0].body, 1 / 255));
-  }
-
-  // Shade rows y0..y1 of a wall into P.out.
-  function litBand(P, L, y0, y1) {
-    const lw = P.lw, lh = P.lh, Bm = L.Bm, cov = L.cov, sh = L.shadow, Hh = P.H, nd = L.nd, out = P.out.data, m = L.mat, K = 1 / 255;
-    const aR = m.alb[0], aG = m.alb[1], aB = m.alb[2], sR = m.stain[0], sG = m.stain[1], sB = m.stain[2];
-    const amR = m.amb[0], amG = m.amb[1], amB = m.amb[2], kx = m.key[0], ky = m.key[1], kz = m.key[2], kR = m.keyC[0], kG = m.keyC[1], kB = m.keyC[2];
-    const fx = m.fill[0], fy = m.fill[1], fz = m.fill[2], fR = m.fillC[0], fG = m.fillC[1], fB = m.fillC[2], fA = m.fA, fBv = m.fB;
-    const wet = m.wet, moss = m.moss, frost = m.frost, vein = m.vein, geode = m.geode, emis = m.emis, moC = m.mossC, fC = m.frostC, vC = m.veinC, gC = m.geoC;
-    const nl = L.nl, LX = L.LX, LY = L.LY, LZ = L.LZ, LQ = L.LQ, LK = L.LK, LR = L.LR, LG = L.LG, LB = L.LB;
-    const bx0 = L.bx0, bx1 = L.bx1, VX = P.VX, VY = P.VY, mA = m.mA, mx = m.mx, my = m.my, mq = m.mq, mC = m.mistC;
-    if (y0 < L.by0) y0 = L.by0; if (y1 > L.by1) y1 = L.by1;
-    for (let y = y0; y < y1; y++) {
-      const up = y > 0 ? lw : 0, dn = y < lh - 1 ? lw : 0;
-      let fa = fA + y * fBv; fa = fa < 0 ? 0 : fa > 1 ? 1 : fa; fa *= fa;
-      const vy = VY[y];
-      for (let x = bx0, i = y * lw + x; x < bx1; x++, i++) {
-        const o = i << 2, b = Bm[o];
-        if (b < 2 || cov[i]) continue;
-        const hx = Hh[x > 0 ? i - 1 : i] - Hh[x < lw - 1 ? i + 1 : i], hy = Hh[i - up] - Hh[i + dn];
-        let inv = 1 / Math.sqrt(hx * hx + hy * hy + 4), nx = hx * inv, ny = hy * inv, nz = 2 * inv;
-        const n1 = nd[o] * K - 0.5, n2 = nd[o + 1] * K - 0.5, n3 = nd[o + 2] * K - 0.5;
-        let st = 0.5 + n3 * 2.6; st = st < 0 ? 0 : st > 1 ? 1 : st;
-        let ar = aR + (sR - aR) * st, ag = aG + (sG - aG) * st, ab = aB + (sB - aB) * st;
-        let shade = (1 + n2 * 1.1 + n1 * 0.5) * vy * VX[x];
-        const ck = 1 - Math.abs(n3 + n2 * 0.25) * 16; if (ck > 0) shade *= 1 - 0.75 * ck;
-        let ao = 0.8 + n2 * 2.4; ao = ao < 0.1 ? 0.1 : ao > 1.15 ? 1.15 : ao;                 // pits and crevices go dark
-        let q = Math.abs(n1) * 8; if (q < 1) ao *= 0.3 + 0.7 * q;
-        if (sh) { q = sh[o] * K * 1.8; shade *= q > 1 ? 0.15 : 1 - 0.85 * q; }                 // in the shadow of the nearer wall
-        let gl = wet * (0.6 + n1 * 1.8); if (gl < 0) gl = 0;                                   // wet patches
-        let er = 0, eg = 0, eb = 0;
-        if (moss > 0) { q = (moss - 0.6 - ny * 1.1 + n3 * 2.4 + n1) * 3; if (q > 0) { if (q > 1) q = 1; const v = 1 + n2 * 1.6; ar += (moC[0] * v - ar) * q; ag += (moC[1] * v - ag) * q; ab += (moC[2] * v - ab) * q; gl *= 1 - 0.8 * q; } }
-        if (frost > 0) { q = (frost - 1.25 - ny * 1.8 + n1 * 1.3) * 2; if (q > 0) { if (q > 0.75) q = 0.75; ar += (fC[0] - ar) * q; ag += (fC[1] - ag) * q; ab += (fC[2] - ab) * q; gl += q * 0.4; } }
-        if (vein > 0) { q = 1 - Math.abs(Math.abs(n3 - n1 * 0.35) - 0.15) * 42; if (q > 0 && n1 > 0.02) { q *= q * vein * (n1 > 0.1 ? 1 : (n1 - 0.02) * 12.5); ar += (vC[0] - ar) * q; ag += (vC[1] - ag) * q; ab += (vC[2] - ab) * q; gl += q * 2.2; shade += (1.15 - shade) * q; er = vC[0] * q * 0.1; eg = vC[1] * q * 0.1; eb = vC[2] * q * 0.1; } }
-        if (geode > 0) {                           // band of fine sparkling crystals just inside the rim
-          q = 0.9 - Math.abs(b - 165) * 0.02 + n3 * 6; if (q > 0) {
-            if (q > 1) q = 1; q *= geode;
-            const hh = Math.imul(Math.imul(x, 73856093) ^ Math.imul(y, 19349663), 0x9E3779B1) >>> 8;
-            nx += ((hh & 255) * K - 0.5) * 1.5 * q; ny += (((hh >>> 8) & 255) * K - 0.5) * 1.5 * q;
-            inv = 1 / Math.sqrt(nx * nx + ny * ny + nz * nz); nx *= inv; ny *= inv; nz *= inv;
-            ar += (gC[0] - ar) * q; ag += (gC[1] - ag) * q; ab += (gC[2] - ab) * q; gl += q * 1.6; ao += (1 - ao) * q * 0.6;
-          }
-        }
-        if (emis > 0) { q = 1 - Math.abs(n1 + n2 * 0.4) * 9.5; if (q < 0) q = 0; let q2 = 1 - Math.abs(n3) * 13; if (q2 < 0) q2 = 0; const c = q * q; er = 0.085 + q * 1.05 + c * 0.45 + q2 * 0.45; eg = 0.012 + c * 0.6 + q * 0.1 + q2 * q2 * 0.14; eb = c * c * 0.18; }
-        let lr = amR * ao, lg = amG * ao, lb = amB * ao, sr = 0, sg = 0, sb = 0;
-        let d = nx * kx + ny * ky + nz * kz; if (d > 0) { lr += kR * d; lg += kG * d; lb += kB * d; }
-        if (fa > 0) { d = nx * fx + ny * fy + nz * fz; if (d > 0) { d *= fa; lr += fR * d; lg += fG * d; lb += fB * d; if (gl > 0) { let s = d * d; s *= s * gl * 0.6; sr += fR * s; sg += fG * s; sb += fB * s; } } }
-        for (let j = 0; j < nl; j++) {
-          const dx = LX[j] - x, dy = LY[j] - y, d2 = dx * dx + dy * dy, r2 = LQ[j];
-          if (d2 >= r2) continue;
-          const dz = LZ[j], il = 1 / Math.sqrt(d2 + dz * dz), ndl = (nx * dx + ny * dy + nz * dz) * il;
-          if (ndl <= 0) continue;
-          let f = 1 - d2 / r2; f = f * f / (1 + d2 * LK[j]);
-          const df = ndl * f;
-          lr += LR[j] * df; lg += LG[j] * df; lb += LB[j] * df;
-          if (gl > 0) { let s = (ndl + nz) / Math.sqrt(2 + 2 * dz * il); s *= s; s *= s; s *= s; s *= s * f * gl; sr += LR[j] * s; sg += LG[j] * s; sb += LB[j] * s; }
-        }
-        if (shade < 0.12) shade = 0.12;
-        if (mA > 0) { const dx = mx - x, dy = my - y; let f = 1 / (1 + (dx * dx + dy * dy) * mq); f *= f * mA; er += mC[0] * f; eg += mC[1] * f; eb += mC[2] * f; }   // lit mist in front of the back wall
-        let r = ar * shade * lr + sr * 0.55 + er, gg = ag * shade * lg + sg * 0.55 + eg, bb = ab * shade * lb + sb * 0.55 + eb;
-        if (r > 0.6) r = 0.6 + (r - 0.6) / (1 + (r - 0.6) * 1.6); if (gg > 0.6) gg = 0.6 + (gg - 0.6) / (1 + (gg - 0.6) * 1.6); if (bb > 0.6) bb = 0.6 + (bb - 0.6) / (1 + (bb - 0.6) * 1.6);
-        out[o] = r * 255; out[o + 1] = gg * 255; out[o + 2] = bb * 255; out[o + 3] = 255;
-      }
-    }
-  }
-
-  // ------------------------------------------------------------------ full-resolution drawing (bake only)
-  function glowAt(g, x, y, r, rgb, a) {            // additive soft halo
-    const gr = g.createRadialGradient(x, y, 0, x, y, r);
-    gr.addColorStop(0, css(rgb, a)); gr.addColorStop(0.3, css(rgb, a * 0.45)); gr.addColorStop(0.65, css(rgb, a * 0.12)); gr.addColorStop(1, css(rgb, 0));
-    g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(x - r, y - r, 2 * r, 2 * r); g.globalCompositeOperation = 'source-over';
-  }
-
-  // The lit rock map of a wall, scaled up, cut out along its crisp silhouette, with fine grain.
-  function composeRock(B, k) {
-    const g = B.g, L = B.layers[k], P = B.P;
-    const bw = L.bx1 - L.bx0, bh = L.by1 - L.by0, X = L.bx0 / B.sx, Y = L.by0 / B.sy, Wd = bw / B.sx, Hd = bh / B.sy;
-    if (bw < 1 || bh < 1) return;
-    P.lit.g.putImageData(P.out, 0, 0, L.bx0, L.by0, bw, bh);
-    g.save();
-    if (!L.full) { L.trace(g); g.clip(); }
-    g.drawImage(P.lit.c, L.bx0, L.by0, bw, bh, X, Y, Wd, Hd);
-    if (!L.lava) {
-      const gs = (0.6 + 0.4 * L.D.scale) * Math.max(1, B.S / 7) / B.scale;
-      g.scale(gs, gs); g.fillStyle = B.grain; g.fillRect(X / gs, Y / gs, Wd / gs, Hd / gs);
-    }
-    g.restore();
-  }
-
-  // One quartz point: a hexagonal prism seen from the side with a pyramid tip. No outlines: smooth
-  // gradient from the dark root to the pale tip, a lit and a shaded face, bright edges, inner glow.
-  function drawPoint(g, R, x, y, ang, len, w, C, fine) {
-    g.save(); g.translate(x, y); g.rotate(ang + Math.PI / 2);                    // local: root at 0, tip at (ax, -len)
-    const hw = w / 2, th = Math.min(len * 0.4, w * R.range(0.8, 1.3)), yb = -(len - th), lit = R() < 0.5 ? 0 : 2;
-    const f1 = -hw + w * R.range(0.24, 0.38), f2 = hw - w * R.range(0.18, 0.3), ax = R.range(-0.2, 0.2) * w, xs = [-hw, f1, f2, hw];
-    const face = i => { g.beginPath(); g.moveTo(xs[i], w * 0.2); g.lineTo(xs[i + 1], w * 0.2); g.lineTo(xs[i + 1], yb); g.lineTo(ax, -len); g.lineTo(xs[i], yb); g.closePath(); };
-    const body = () => { g.beginPath(); g.moveTo(-hw, w * 0.2); g.lineTo(hw, w * 0.2); g.lineTo(hw, yb); g.lineTo(ax, -len); g.lineTo(-hw, yb); g.closePath(); };
-    let gr = g.createLinearGradient(0, 0, 0, -len);
-    gr.addColorStop(0, css(mul(C.deep, 0.4), 0)); gr.addColorStop(0.1, css(mul(C.deep, 0.45), 0.95)); gr.addColorStop(0.3, css(C.deep, 0.9)); gr.addColorStop(0.72, css(mix(C.deep, C.body, 0.8), 0.74)); gr.addColorStop(1, css(mix(C.body, C.pale, 0.45), 0.72));
-    g.fillStyle = gr; body(); g.fill();
-    const wg = g.createLinearGradient(0, 0, 0, -len);                            // white, fading in towards the tip
-    wg.addColorStop(0, 'rgba(255,255,255,0)'); wg.addColorStop(0.35, 'rgba(255,255,255,0.3)'); wg.addColorStop(1, 'rgba(255,255,255,0.95)');
-    g.globalAlpha = 0.34; g.fillStyle = wg; face(lit); g.fill();                 // lit face
-    g.globalAlpha = 0.5; g.fillStyle = css(mul(C.deep, 0.5), 1); face(2 - lit); g.fill();   // shaded face
-    g.globalAlpha = 0.3; g.fillStyle = css(C.pale, 1); g.beginPath(); g.moveTo(xs[lit], yb); g.lineTo(xs[lit + 1], yb); g.lineTo(ax, -len); g.closePath(); g.fill();   // lit tip facet
-    g.globalAlpha = 0.14; g.beginPath(); g.moveTo(f1, yb); g.lineTo(f2, yb); g.lineTo(ax, -len); g.closePath(); g.fill();
-    g.globalCompositeOperation = 'lighter';                                      // light gathered inside
-    gr = g.createLinearGradient(0, 0, 0, -len);
-    gr.addColorStop(0, css(C.glow, 0)); gr.addColorStop(0.5, css(C.glow, 0.2)); gr.addColorStop(1, css(mix(C.glow, C.pale, 0.5), 0.42));
-    g.globalAlpha = 1; g.fillStyle = gr; body(); g.fill();
-    if (fine) {
-      g.strokeStyle = wg; g.lineCap = 'round'; g.lineWidth = clamp(w * 0.045, 0.5, 1.5);
-      g.globalAlpha = 0.6; g.beginPath(); g.moveTo(f1, 0); g.lineTo(f1, yb); g.lineTo(ax, -len); g.moveTo(f2, 0); g.lineTo(f2, yb); g.lineTo(ax, -len); g.stroke();   // edges between the faces
-      g.globalAlpha = 0.4; g.beginPath(); g.moveTo(xs[lit ? 3 : 0], 0); g.lineTo(xs[lit ? 3 : 0], yb); g.lineTo(ax, -len); g.stroke();                               // rim on the lit side
-      const e = lit ? f2 : f1, s = lit ? 1 : -1;
-      g.globalAlpha = 0.5; g.fillStyle = wg; g.beginPath(); g.moveTo(e + s * w * 0.05, yb * 0.3); g.lineTo(e + s * w * 0.13, yb * 0.3); g.lineTo(e + s * w * 0.13, yb * 0.92); g.lineTo(e + s * w * 0.05, yb * 0.97); g.closePath(); g.fill();   // specular streak
-      g.globalAlpha = 0.16; g.lineWidth = clamp(w * 0.03, 0.4, 1); g.beginPath(); g.moveTo(f1 + w * 0.04, yb * R.range(0.3, 0.5)); g.lineTo(f2 - w * 0.03, yb * R.range(0.55, 0.8)); g.stroke();   // inner veil
-      g.globalAlpha = 0.95; g.fillStyle = '#fff'; g.beginPath(); g.arc(e, yb, clamp(w * 0.07, 0.5, 1.6), 0, TAU); g.fill();   // sharp specular
-    }
-    g.restore();
-  }
-
-  // A cluster: a fan of points around the direction c.ang (the longest in the middle) rooted in a
-  // crust of rock matrix, with a bloom halo. It also registers its breathing glow and glints.
-  function drawCluster(B, c) {
-    const g = B.g, R = makeRng(c.seed), S = B.S, C = B.pal.crystals[c.col], sc = B.scene;
-    const dx = Math.cos(c.ang), dy = Math.sin(c.ang), px = -dy, py = dx, n = 3 + R.int(3), pts = [];
-    glowAt(g, c.gx, c.gy, c.size * 2, C.glow, 0.32 * c.glow);
-    for (let i = 0; i < n + 3; i++) {
-      const small = i >= n, off = small ? R.range(-1.1, 1.1) : (n > 1 ? i / (n - 1) * 2 - 1 : 0) * 0.9 + R.range(-0.14, 0.14);
-      const len = c.size * (small ? R.range(0.22, 0.4) : (1 - 0.5 * Math.abs(off)) * R.range(0.72, 1));
-      pts.push({ a: c.ang + off * R.range(0.28, 0.55) + R.range(-0.08, 0.08), len, w: Math.max(len * R.range(0.2, 0.3), c.size * 0.07), x: c.x + px * off * c.size * 0.36, y: c.y + py * off * c.size * 0.36 });
-    }
-    pts.sort((p, q) => q.len - p.len);
-    for (const p of pts) drawPoint(g, R, p.x, p.y, p.a, p.len, p.w, C, p.len > S * 2.2);
-    glowAt(g, c.gx, c.gy, c.size * 0.9, mix(C.glow, WHITE, 0.25), 0.2 * c.glow);
-    if (c.k < 3) sc.glows.push(place(glowSprite(C.glow, c.size * 1.3 * B.scale), c.gx, c.gy, B.scale, { a: 0.3 * c.glow, speed: R.range(0.35, 0.7), phase: R() * TAU }));
-    const p = pts[0];
-    if (c.k < 3 && R() < 0.8) sc.glints.push({ x: p.x + Math.cos(p.a) * p.len * 0.8, y: p.y + Math.sin(p.a) * p.len * 0.8, r: clamp(c.size * 0.12, S * 0.5, S * 1.4), period: R.range(5, 11), off: R() });
-  }
-
-  function icicles(B, k) {                         // glassy icicles under the ceiling of a wall
-    const g = B.g, R = B.R, S = B.S, L = B.layers[k], D = L.D, ice = hsl([200, 40, 78]), pale = hsl([196, 50, 92]);
-    for (let n = Math.round((B.wide ? 7 : 5) * (1.2 - k * 0.15)); n > 0; n--) {
-      const t0 = R.range(Math.PI + 0.25, TAU - 0.25);
-      for (let i = 0, m = 2 + R.int(4); i < m; i++) {
-        const p = L.rim(t0 + i * 0.025 * R.range(0.7, 1.3)); if (p.iy < 0.45) continue;
-        const len = S * D.scale * R.range(2.2, 8.5), w = len * R.range(0.08, 0.13) + S * 0.3, x = p.x, y = p.y - S * 0.6, bend = R.range(-0.05, 0.05) * len;
-        g.beginPath(); g.moveTo(x - w / 2, y); g.quadraticCurveTo(x - w * 0.16, y + len * 0.55, x + bend, y + len); g.quadraticCurveTo(x + w * 0.2, y + len * 0.5, x + w / 2, y); g.closePath();
-        const gr = g.createLinearGradient(0, y, 0, y + len); gr.addColorStop(0, css(ice, 0.12)); gr.addColorStop(0.55, css(ice, 0.26)); gr.addColorStop(1, css(pale, 0.75));
-        g.fillStyle = gr; g.fill();
-        g.strokeStyle = css(B.pal.deep, 0.3); g.lineWidth = Math.max(0.5, w * 0.16); g.lineCap = 'round';
-        g.beginPath(); g.moveTo(x + w * 0.3, y + len * 0.06); g.quadraticCurveTo(x + w * 0.14, y + len * 0.5, x + bend, y + len * 0.9); g.stroke();
-        g.strokeStyle = 'rgba(255,255,255,0.5)'; g.lineWidth = Math.max(0.5, w * 0.12);
-        g.beginPath(); g.moveTo(x - w * 0.2, y + len * 0.1); g.quadraticCurveTo(x - w * 0.08, y + len * 0.5, x + bend * 0.9, y + len * 0.94); g.stroke();
-        if (k >= 1 && R() < 0.25) L.tips.push({ x: x + bend, y: y + len });
-      }
-    }
-  }
-  function druse(B, k) {                           // geode lining: a dense fringe of tiny points along the rim
-    const g = B.g, R = B.R, S = B.S, L = B.layers[k], D = L.D, cs = B.pal.crystals;
-    const arcs = [0, 1, 2, 3].map(() => [R() * TAU, R.range(0.2, 0.5)]);
-    for (let n = Math.round((B.wide ? 150 : 90) * (1.1 - k * 0.12)); n > 0; n--) {
-      const arc = arcs[n % 4], p = L.rim(arc[0] + (R() + R() - 1) * arc[1]), C = cs[R.int(3)], len = S * D.scale * R.range(0.8, 2.6), a = Math.atan2(p.iy, p.ix) + R.range(-0.7, 0.7), w = len * R.range(0.28, 0.42);
-      const dx = Math.cos(a), dy = Math.sin(a), px = -dy * w / 2, py = dx * w / 2, x = p.x - p.ix * len * 0.25, y = p.y - p.iy * len * 0.25, mx = x + dx * len * 0.62, my = y + dy * len * 0.62, tx = x + dx * len, ty = y + dy * len;
-      g.fillStyle = css(mix(C.deep, C.body, 0.55), 0.9); g.beginPath(); g.moveTo(x + px, y + py); g.lineTo(mx + px, my + py); g.lineTo(tx, ty); g.lineTo(mx - px, my - py); g.lineTo(x - px, y - py); g.closePath(); g.fill();
-      g.fillStyle = css(C.pale, 0.4); g.beginPath(); g.moveTo(x + px, y + py); g.lineTo(mx + px, my + py); g.lineTo(tx, ty); g.lineTo(x + px * 0.2, y + py * 0.2); g.closePath(); g.fill();
-    }
-  }
-  function fungi(B, k) {                           // bioluminescent caps on the rock (their light is in B.extra)
-    const g = B.g, R = makeRng(B.T.seed + k * 31);
-    for (const e of B.extra) if (e.k === k) {
-      glowAt(g, e.x, e.y, e.r * 0.5, e.col, 0.3);
-      for (let i = 0; i < 6; i++) {
-        const x = e.x + R.range(-1, 1) * e.r * 0.16, y = e.y + R.range(-1, 1) * e.r * 0.12, r = e.r * R.range(0.018, 0.04);
-        g.fillStyle = css(mix(e.col, WHITE, 0.55), 0.95); g.beginPath(); g.ellipse(x, y, r * 1.5, r, 0, Math.PI, TAU); g.fill();
-        g.fillStyle = css(e.col, 0.5); g.fillRect(x - r * 0.2, y, r * 0.4, r * 1.6);
-      }
-      B.scene.glows.push(place(glowSprite(e.col, e.r * 0.4 * B.scale), e.x, e.y, B.scale, { a: 0.4, speed: R.range(0.25, 0.5), phase: R() * TAU }));
-    }
-  }
-
-  // Still water: everything standing above the water line, mirrored in thin strips that wobble sideways.
-  function lakeReflect(B) {
-    const g = B.g, W = B.W, H = B.H, S = B.S, y0 = B.liquid.y, hgt = H - y0, sc = B.scale, pal = B.pal, R = makeRng(B.T.seed + 99);
-    const take = Math.min(y0, hgt * 1.25), tmp = makeCanvas(B.canvas.width, hgt * sc), tg = tmp.getContext('2d');
-    tg.translate(0, tmp.height); tg.scale(1, -1); tg.drawImage(B.canvas, 0, (y0 - take) * sc, B.canvas.width, take * sc, 0, 0, tmp.width, tmp.height);
-    g.save(); g.beginPath(); g.rect(0, y0, W, hgt); g.clip();
-    g.fillStyle = css(pal.deep, 1); g.fillRect(0, y0, W, hgt);
-    const strip = Math.max(1.5, S * 0.45), ph = R() * TAU;
-    for (let y = 0; y < hgt; y += strip) {
-      const q = y / hgt;
-      g.globalAlpha = 0.95 - 0.3 * q;
-      g.drawImage(tmp, 0, y * sc, tmp.width, strip * sc, Math.sin(y / S * 1.9 + ph + Math.sin(y / S * 0.7) * 2) * S * (0.1 + 0.55 * q), y0 + y, W, strip + 0.6);
-    }
-    g.globalAlpha = 1;
-    let gr = g.createLinearGradient(0, y0, 0, H); gr.addColorStop(0, css(mix(pal.deep, pal.haze, 0.5), 0.1)); gr.addColorStop(1, css(pal.deep, 0.6));
-    g.fillStyle = gr; g.fillRect(0, y0, W, hgt);
-    gr = g.createLinearGradient(0, y0 - S * 0.4, 0, y0 + S * 1.6); gr.addColorStop(0, css(pal.light, 0)); gr.addColorStop(0.3, css(pal.light, 0.3)); gr.addColorStop(1, css(pal.light, 0));
-    g.restore(); g.fillStyle = gr; g.fillRect(0, y0 - S * 0.4, W, S * 2);       // mist on the far shore line
-    for (let i = 0; i < 12; i++) B.scene.shimmers.push({ x: W * R.range(0.28, 0.72), y: y0 + hgt * R.range(0.03, 0.4), w: S * R.range(3, 9), h: Math.max(1, S * 0.14), speed: R.range(0.3, 0.8), phase: R() * TAU });
-    B.scene.shimmerColor = css(mix(pal.light, WHITE, 0.4), 1);
-  }
-
-  // Everything that sits on a wall once its rock is there, then the haze veil in front of it.
-  function composeDetail(B, k) {
-    const g = B.g, T = B.T, W = B.W, H = B.H, S = B.S, pal = B.pal, L = B.layers[k];
-    if (k === NL) {                                // far chamber: soft glow, daylight if the theme has an opening
-      if (B.open.a > 0) glowAt(g, B.open.x, B.open.y - S * 6, S * 26, mix(pal.light, WHITE, 0.5), 0.34 * B.open.a);
-    } else if (L.lava) {                           // heat glow over the lava
-      const y = B.liquid.y, gr = g.createLinearGradient(0, y - S * 22, 0, y + S * 4);
-      gr.addColorStop(0, 'rgba(255,90,20,0)'); gr.addColorStop(0.8, 'rgba(255,96,24,0.26)'); gr.addColorStop(1, 'rgba(255,120,40,0.1)');
-      g.globalCompositeOperation = 'lighter'; g.fillStyle = gr; g.fillRect(0, y - S * 22, W, S * 26); g.globalCompositeOperation = 'source-over';
-    } else {
-      if (T.fungi) fungi(B, k);
-      if (T.druse && k >= 1) druse(B, k);
-      for (const c of B.clusters) if (c.k === k) drawCluster(B, c);
-      if (T.icicles && k <= 2) icicles(B, k);
-    }
-    const v = L.D.veil;
-    if (v > 0) { g.globalAlpha = v; g.fillStyle = B.hazeGrad; g.fillRect(L.bx0 / B.sx, L.by0 / B.sy, (L.bx1 - L.bx0) / B.sx, (L.by1 - L.by0) / B.sy); g.globalAlpha = 1; }
-  }
-
-  // ------------------------------------------------------------------ sprites for the animated overlays
-  function radialSprite(n, stops) {
-    const c = makeCanvas(n, n), g = c.getContext('2d'), gr = g.createRadialGradient(n / 2, n / 2, 0, n / 2, n / 2, n / 2);
-    for (const s of stops) gr.addColorStop(s[0], css(s[1], s[2]));
-    g.fillStyle = gr; g.fillRect(0, 0, n, n);
-    return c;
-  }
-  function glowSprite(rgb, r) { return radialSprite(Math.max(4, Math.round(r * 2)), [[0, rgb, 0.8], [0.25, rgb, 0.38], [0.6, rgb, 0.1], [1, rgb, 0]]); }
-  // Big overlays are rendered at the resolution of the baked picture and blitted 1:1 on whole pixels with plain
-  // source-over: several times cheaper than filtered or additive blits. (x, y) = centre in CSS px.
-  function place(img, x, y, scale, o) {
-    o.img = img; o.w = img.width / scale; o.h = img.height / scale; o.x = Math.round((x - o.w / 2) * scale) / scale; o.y = Math.round((y - o.h / 2) * scale) / scale;
-    return o;
-  }
-  function shaftSprite(rgb, w, h, lean) {          // slanted soft beam, bright at the top, gone at the bottom
-    const c = makeCanvas(w + Math.abs(lean), h), g = c.getContext('2d'), x0 = lean < 0 ? -lean : 0;
-    const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, css(rgb, 0)); gr.addColorStop(0.16, css(rgb, 0.105)); gr.addColorStop(0.6, css(rgb, 0.05)); gr.addColorStop(1, css(rgb, 0));
-    g.fillStyle = gr;
-    for (let i = 0; i < 10; i++) { const q = i / 10; g.beginPath(); g.moveTo(x0 + w * (0.26 + 0.16 * q), 0); g.lineTo(x0 + w * (0.6 - 0.16 * q), 0); g.lineTo(x0 + lean + w * (1 - 0.46 * q), h); g.lineTo(x0 + lean + w * 0.46 * q, h); g.closePath(); g.fill(); }
-    return c;
-  }
-  function fogSprite(R, rgb, w, h) {               // a bank of overlapping soft puffs
-    const c = makeCanvas(w, h), g = c.getContext('2d');
-    for (let i = 0; i < 12; i++) {
-      const r = h * R.range(0.2, 0.5), st = R.range(1.6, 3.2), x = R.range(r * st, w - r * st), y = R.range(r, h - r);
-      const gr = g.createRadialGradient(0, 0, 0, 0, 0, r); gr.addColorStop(0, css(rgb, 0.13)); gr.addColorStop(0.5, css(rgb, 0.05)); gr.addColorStop(1, css(rgb, 0));
-      g.save(); g.translate(x, y); g.scale(st, 1); g.fillStyle = gr; g.fillRect(-r, -r, 2 * r, 2 * r); g.restore();
-    }
-    return c;
-  }
-
-  // Daylight shafts painted into the picture behind the two nearest walls.
-  function paintShafts(B) {
-    const { g, W, H, S, T, scale } = B, R = makeRng(T.seed * 53 + 7);
-    if (!(B.open.a > 0)) return;
-    const left = B.open.x < W / 2, h = H * 0.7, col = mix(B.pal.light, WHITE, 0.35);
-    const w = S * R.range(18, 28), lean = (left ? 1 : -1) * S * R.range(9, 15);
-    const o = place(shaftSprite(col, w * scale, h * scale, lean * scale), B.open.x + S * R.range(-8, 6) + lean * 0.3, H * 0.05 + h / 2, scale, { a: B.open.a * 0.5, speed: R.range(0.12, 0.25), phase: R() * TAU });
-    for (let i = 0; i < 3; i++) { g.globalAlpha = o.a * R.range(0.8, 1.2); g.drawImage(o.img, o.x + S * R.range(-11, 11), o.y, o.w * R.range(0.7, 1.2), o.h * R.range(0.85, 1)); }
-    g.globalAlpha = 1;
-    B.scene.shafts.push(o);                        // the same beam breathes on top of everything
-  }
-  // Focus dimming, particles, drips, lava flicker.
-  function finishScene(B) {
-    const { g, W, H, S, T, scene: sc, pal } = B, R = makeRng(T.seed * 59 + 3);
-    if (B.focus) { const f = B.focus; g.fillStyle = css(pal.deep, 0.16); g.fillRect(f.x, f.y, f.w, f.h); }
-    const lightCol = mix(pal.light, WHITE, 0.35);
-    sc.glintSprite = radialSprite(32, [[0, WHITE, 1], [0.18, WHITE, 0.75], [0.4, mix(pal.light, WHITE, 0.5), 0.2], [1, pal.light, 0]]);
-    const P = T.particles, K = P && PARTICLE_KINDS[P.kind];
-    if (K) {
-      sc.dotKind = K; sc.dotSprite = radialSprite(24, [[0, mix(lightCol, WHITE, 0.5), 1], [0.35, lightCol, 0.5], [1, lightCol, 0]]);
-      for (let i = 0, n = Math.round(P.count * (B.wide ? 1.8 : 1)); i < n; i++) {
-        sc.dots.push({ x0: R(), y0: R(), vx: S * R.range(K.vx[0], K.vx[1]), vy: S * R.range(K.vy[0], K.vy[1]), r: S * R.range(K.r[0], K.r[1]) * 1.6, a: R.range(K.a[0], K.a[1]),
-          wa: S * K.wob * R.range(0.4, 1), wf: R.range(0.2, 0.6), wp: R() * TAU, pf: R.range(0.4, 1.1), pp: R() * TAU });
-      }
-    }
-    if (T.drips) {                                 // drops fall from the tips of the far stalactites
-      const tips = B.layers[2].tips.concat(B.layers[3].tips, B.layers[1].tips).filter(t => t.x > W * 0.12 && t.x < W * 0.88);
-      for (let i = 0; i < T.drips && tips.length; i++) {
-        const t = tips.splice(R.int(tips.length), 1)[0], y1 = B.liquid ? B.liquid.y + S * R.range(1.5, 7) : H * R.range(0.82, 0.9);
-        sc.drips.push({ x: t.x, y0: t.y, y1, r: S * 0.32, period: R.range(5, 9), off: R(), ring: B.liquid ? S * 5 : S * 2 });
-      }
-      sc.dripColor = css(mix(pal.light, WHITE, 0.6), 1);
-    }
-    if (T.liquid === 'lava') {                     // flicker of the lava glow
-      const scale = B.scale, hb = B.layers[2].hb, x0 = Math.max(0, hb[0] - S * 8), x1 = Math.min(W, hb[2] + S * 8), hh = S * 20;
-      const c = makeCanvas((x1 - x0) * scale, hh * scale), cg = c.getContext('2d');
-      let gr = cg.createLinearGradient(0, 0, 0, c.height);
-      gr.addColorStop(0, 'rgba(255,90,20,0)'); gr.addColorStop(0.7, 'rgba(255,110,30,0.5)'); gr.addColorStop(0.85, 'rgba(255,150,60,0.55)'); gr.addColorStop(1, 'rgba(255,90,20,0)');
-      cg.fillStyle = gr; cg.fillRect(0, 0, c.width, c.height);
-      gr = cg.createLinearGradient(0, 0, c.width, 0);                                // fades out towards the walls
-      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.3, '#000'); gr.addColorStop(0.7, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      cg.globalCompositeOperation = 'destination-in'; cg.fillStyle = gr; cg.fillRect(0, 0, c.width, c.height);
-      sc.flicker = place(c, (x0 + x1) / 2, B.liquid.y - hh * 0.3, scale, {});
-    }
-  }
-  // One drifting fog bank: f = [height (fraction), strength, banks].
-  function addFog(B, f, i) {
-    const { W, H, S, pal, scale } = B, R = makeRng(B.T.seed * 61 + i * 7 + Math.round(f[0] * 100));
-    const w = Math.max(W * 0.85, S * 80) * R.range(0.8, 1.1), h = S * R.range(13, 19);
-    B.scene.fogs.push(place(fogSprite(R, mix(pal.haze, mix(pal.light, WHITE, 0.35), 0.42), w * scale, h * scale), 0, H * f[0] + S * R.range(-2, 2), scale, { a: f[1], off: R(), speed: S * R.range(0.5, 1.4) * (i % 2 ? -1 : 1), phase: R() * TAU }));
-  }
-
-  // The bake of one theme as a list of small steps, so it can be spread over many frames.
-  function createBakeJob(T, W, H, scale, focus, P) {
-    const pw = Math.max(1, Math.ceil(W * scale - 1e-4)), ph = Math.max(1, Math.ceil(H * scale - 1e-4));
-    const canvas = makeCanvas(pw, ph), g = canvas.getContext('2d', { alpha: false, willReadFrequently: true });
-    g.setTransform(scale, 0, 0, scale, 0, 0);
-    const ls = Math.min(1, Math.sqrt(clamp(W * H * 0.33, LOW_MIN, LOW_MAX) / (W * H)));
-    const lw = Math.max(16, Math.round(W * ls)), lh = Math.max(16, Math.round(H * ls));
-    const scene = { theme: T, canvas, scale, w: pw / scale, h: ph / scale, glows: [], glints: [], shafts: [], dots: [], fogs: [], drips: [], shimmers: [], flicker: null };
-    const B = { g, canvas, scale, W, H, S: Math.min(W, H) / 100, T, R: makeRng(T.seed * 7919 + 17), pal: makePalette(T), scene, focus, P, sx: lw / W, sy: lh / H, wide: W > H * 1.15, layers: [], clusters: [], extra: [], liquid: null };
-    const order = T.liquid === 'lava' ? [NL, 3, NL + 1, 2, 1, 0] : [NL, 3, 2, 1, 0], rows = Math.max(8, Math.ceil(BAND_PIXELS / lw));
-    const steps = [], add = (w, fn) => { fn.w = w; steps.push(fn); };   // w = rough cost of a step in ms on a desktop
-    add(9, () => {
-      preparePool(P, lw, lh);
-      if (!WARM) { WARM = true; warmUp(P); }
-      const S = B.S, R = B.R, pal = B.pal;
-      g.fillStyle = css(pal.deep, 1); g.fillRect(0, 0, W, H);
-      B.grain = g.createPattern(grainTile(), 'repeat');
-      const hz = g.createLinearGradient(0, 0, 0, H);
-      const hc = mul(pal.haze, 1.3);
-      hz.addColorStop(0, css(mix(hc, pal.deep, 0.35), 1)); hz.addColorStop(0.5, css(hc, 1)); hz.addColorStop(1, css(mix(hc, T.liquid === 'lava' ? [170, 50, 14] : pal.light, 0.16), 1));
-      B.hazeGrad = hz;
-      if (T.liquid) B.liquid = { kind: T.liquid, y: H * (B.wide ? 0.72 : 0.69), after: 3 };
-      B.open = T.opening ? { x: T.opening[0] * W, y: T.opening[1] * H, a: T.opening[2] } : { x: W * (0.5 + (T.bend || 0)), y: H * 0.42, a: 0 };
-      for (let k = 0; k < NL; k++) B.layers[k] = buildLayer(B, k);
-      B.layers[NL] = makeLayer(NL, LAYERS[NL]); B.layers[NL].full = true;
-      if (T.liquid === 'lava') { const y = B.liquid.y, lv = B.layers[NL + 1] = makeLayer(NL + 1, LAYERS[NL + 1]); lv.lava = true; lv.trace = c => { c.beginPath(); c.rect(-9, y, W + 18, H - y + 9); }; }
-      B.acc = new Uint8Array(lw * lh);             // pixels hidden deep inside nearer walls: never shaded
-    });
-    for (let k = 0; k <= NL + 1; k++) add(k < NL || (k > NL && T.liquid === 'lava') ? 5 : 0.5, () => {    // blurred silhouettes: bevel, shadow, cover
-      const L = B.layers[k]; if (!L) return;
-      L.blurPx = L.lava ? 2 : L.D.blur * B.S * B.sx; L.cov = L.lava ? B.layers[3].cov : B.acc;
-      const hb = L.lava ? B.layers[2].hb : k ? B.layers[k - 1].hb : [0, 0, W, H], mg = 3;
-      L.bx0 = clamp(Math.floor(hb[0] * B.sx) - mg, 0, lw); L.bx1 = clamp(Math.ceil(hb[2] * B.sx) + mg, 0, lw); L.by0 = clamp(Math.floor(hb[1] * B.sy) - mg, 0, lh); L.by1 = clamp(Math.ceil(hb[3] * B.sy) + mg, 0, lh);
-      rasterMask(B, L, L.full || L.lava ? 0 : 3.4 * B.S * B.sx); L.shadow = L.lava ? B.layers[2].Sm : k ? B.layers[k - 1].Sm : null;
-      if (k < NL) { const acc = B.acc = B.acc.slice(), m = L.Bm; for (let i = 0, n = acc.length; i < n; i++) if (m[i << 2] > 236) acc[i] = 1; }
-    });
-    add(1, () => {
-      const S = B.S, R = B.R;
-      B.clusters = placeClusters(B);
-      if (T.fungi) for (let k = 1; k <= 2; k++) for (let i = 0; i < (B.wide ? 5 : 3); i++) {
-        const L = B.layers[k], p = L.rim(R() * TAU), d = S * LAYERS[k].scale * R.range(1.5, 5);
-        B.extra.push({ k, x: p.x - p.ix * d, y: p.y - p.iy * d, r: S * LAYERS[k].scale * R.range(9, 14), I: 0.9, col: hsl([R.range(140, 176), 80, 62]) });
-      }
-    });
-    for (const k of order) {
-      add(7, () => prepLayer(B, k));
-      for (let y = 0; y < lh; y += rows) { const a = y, b = Math.min(lh, y + rows); add(2.5, () => litBand(P, B.layers[k], a, b)); }
-      add(6.5, () => composeRock(B, k));
-      add(8, () => composeDetail(B, k));
-      if (k === 3 && T.liquid === 'lake') add(9, () => lakeReflect(B));
-      if (k === 2 && T.opening) add(4, () => paintShafts(B));
-    }
-    (T.fog || []).forEach(f => { for (let i = 0; i < f[2]; i++) add(1, () => addFog(B, f, i)); });
-    add(7, () => {
-      finishScene(B); B.layers = B.clusters = B.acc = null;
-      const out = makeCanvas(pw, ph); out.getContext('2d', { alpha: false }).drawImage(canvas, 0, 0); scene.canvas = out;   // see NOTES: plain canvas for the per-frame blit
-    });
-    let i = 0;
-    // step(): one step. step(true): about 9 ms worth of steps, then their drawing is rasterised right away
-    // (1 px read-back), so the work really is spread over the frames instead of piling up in the canvas.
-    return { scene, step(spread) {
-      let w = 0;
-      while (i < steps.length && (w === 0 || (spread && w + steps[i].w <= 9))) { w += steps[i].w || 0.01; steps[i++](); }
-      if (spread && w > 0) g.getImageData(0, 0, 1, 1);
-      return i >= steps.length;
-    } };
-  }
-
-  // ------------------------------------------------------------------ per-frame overlays (cheap sprite blits only)
-  function drawOverlays(ctx, sc, t, wgt, W, H) {
-    let i, o, a, p, q, x, y;
-    const px = sc.scale;
-    for (i = 0; i < sc.shafts.length; i++) {            // one daylight shaft breathing over the painted ones
-      o = sc.shafts[i];
-      ctx.globalAlpha = wgt * o.a * (0.5 + 0.5 * Math.sin(t * o.speed * 1.7 + o.phase));
-      ctx.drawImage(o.img, o.x, o.y, o.w, o.h);
-    }
-    if (sc.flicker) {                                   // lava glow: three slow sines out of step
-      o = sc.flicker;
-      ctx.globalAlpha = wgt * (0.34 + 0.14 * Math.sin(t * 1.9) + 0.1 * Math.sin(t * 3.1 + 1.3) + 0.07 * Math.sin(t * 5.3 + 4));
-      ctx.drawImage(o.img, o.x, o.y, o.w, o.h);
-    }
-    for (i = 0; i < sc.glows.length; i++) {             // crystal glows breathing out of phase
-      o = sc.glows[i];
-      ctx.globalAlpha = wgt * o.a * (0.5 + 0.5 * Math.sin(t * o.speed + o.phase));
-      ctx.drawImage(o.img, o.x, o.y, o.w, o.h);
-    }
-    for (i = 0; i < sc.fogs.length; i++) {              // fog banks drifting sideways
-      o = sc.fogs[i];
-      ctx.globalAlpha = wgt * o.a * (0.72 + 0.28 * Math.sin(t * 0.19 + o.phase));
-      ctx.drawImage(o.img, Math.round((mod(o.off * (W + o.w) + o.speed * t, W + o.w) - o.w) * px) / px, o.y, o.w, o.h);
-    }
-    ctx.globalCompositeOperation = 'lighter';
-    if (sc.dots.length) {                               // dust, ice dust, embers, spores
-      const K = sc.dotKind, m = 12, sw = W + 2 * m, z0 = K.zone[0] * H - m, sh = (K.zone[1] - K.zone[0]) * H + 2 * m;
-      for (i = 0; i < sc.dots.length; i++) {
-        o = sc.dots[i];
-        q = mod(o.y0 * sh + o.vy * t, sh) / sh;         // 0 = top of the zone, 1 = bottom
-        x = mod(o.x0 * sw + o.vx * t + Math.sin(t * o.wf + o.wp) * o.wa, sw) - m; y = z0 + q * sh;
-        a = o.a * (1 - K.pulse + K.pulse * (0.5 + 0.5 * Math.sin(t * o.pf + o.pp))) * clamp(Math.min(q, 1 - q) * 7, 0, 1);
-        if (K.fadeTop) a *= clamp(q * 1.5, 0, 1);
-        ctx.globalAlpha = wgt * a; ctx.drawImage(sc.dotSprite, x - o.r, y - o.r, o.r * 2, o.r * 2);
-      }
-    }
-    for (i = 0; i < sc.glints.length; i++) {            // glints on crystal faces: a soft flash, then a long pause
-      o = sc.glints[i]; p = mod(t / o.period + o.off, 1);
-      if (p > 0.3) continue;
-      a = Math.sin(p / 0.3 * Math.PI); a *= a; q = o.r * (0.6 + 0.4 * a);
-      ctx.globalAlpha = wgt * a * 0.85; ctx.drawImage(sc.glintSprite, o.x - q, o.y - q, q * 2, q * 2);
-    }
-    ctx.globalCompositeOperation = 'source-over';
-    if (sc.shimmers.length) {                           // highlights gliding over the water
-      ctx.fillStyle = sc.shimmerColor;
-      for (i = 0; i < sc.shimmers.length; i++) {
-        o = sc.shimmers[i]; a = 0.5 + 0.5 * Math.sin(t * o.speed + o.phase);
-        ctx.globalAlpha = wgt * 0.22 * a * a; ctx.fillRect(o.x + Math.sin(t * o.speed * 0.5 + o.phase) * o.w * 0.4, o.y, o.w, o.h);
-      }
-    }
-    if (sc.drips.length) {                              // a drop swells, falls, and leaves rings
-      ctx.fillStyle = ctx.strokeStyle = sc.dripColor; ctx.lineWidth = 1;
-      for (i = 0; i < sc.drips.length; i++) {
-        o = sc.drips[i]; p = mod(t / o.period + o.off, 1);
-        if (p < 0.5) { q = o.r * (0.3 + 0.7 * p / 0.5); ctx.globalAlpha = wgt * 0.7; ctx.beginPath(); ctx.arc(o.x, o.y0 + q * 0.6, q, 0, TAU); ctx.fill(); }
-        else if (p < 0.62) { q = (p - 0.5) / 0.12; ctx.globalAlpha = wgt * 0.7; ctx.beginPath(); ctx.ellipse(o.x, o.y0 + (o.y1 - o.y0) * q * q, o.r * 0.7, o.r * 1.6, 0, 0, TAU); ctx.fill(); }
-        else {
-          q = (p - 0.62) / 0.38; ctx.globalAlpha = wgt * 0.45 * (1 - q) * (1 - q);
-          ctx.beginPath(); ctx.ellipse(o.x, o.y1, o.ring * (0.1 + q), o.ring * (0.1 + q) * 0.26, 0, 0, TAU); ctx.stroke();
-          if (q > 0.25) { ctx.beginPath(); ctx.ellipse(o.x, o.y1, o.ring * (q - 0.2), o.ring * (q - 0.2) * 0.26, 0, 0, TAU); ctx.stroke(); }
-        }
-      }
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // ------------------------------------------------------------------ public object
   function create() {
-    let W = 360, H = 640, ratio = 1, focus = null, stamp = 0;    // stamp changes whenever size or focus change
-    let level = 1, themeIdx = 0;                                 // requested level and its theme
-    let cur = null, prev = null, job = null, fade = 1, time = 0; // baked scenes (at most two), pending bake, crossfade 0..1
-    let failed = -1;
-    const pool = {};                                             // low-resolution work buffers
+    const root = document.getElementById('kf-atmosphere');
+    const plate = root.querySelector('.motion-plate');
+    const canvas = plate.querySelector('[data-layer="environment"]');
+    const surface = plate.querySelector('[data-layer="water"]');
+    const brush = canvas.getContext('2d');
+    let viewportWidth = 0, viewportHeight = 0;
+    let photo = null, theme = null, water, dirty = true;
 
-    function newJob(idx) {
-      const j = createBakeJob(THEMES[idx], W, H, Math.min(ratio, Math.sqrt(MAX_BAKE_PIXELS / (W * H))), focus, pool);
-      j.scene.idx = idx; j.scene.stamp = stamp;
-      return j;
+    function layout() {
+      if (!photo || !viewportWidth || !viewportHeight) return;
+      const scale = Math.max(viewportWidth / photo.naturalWidth, viewportHeight / photo.naturalHeight);
+      const width = photo.naturalWidth * scale;
+      const height = photo.naturalHeight * scale;
+      const left = (viewportWidth - width) * theme.focusX / 100;
+      const top = (viewportHeight - height) * theme.focusY / 100;
+      plate.style.width = width + 'px';
+      plate.style.height = height + 'px';
+      plate.style.left = left + 'px';
+      plate.style.top = top + 'px';
+      // The underlying photograph remains at native resolution; the soft moving layers
+      // can be sampled more coarsely on phones without softening stationary detail.
+      const pixelScale = Math.min(window.devicePixelRatio || 1, 1.4, 832 / width, 1040 / height);
+      const w = Math.max(2, Math.round(width * pixelScale));
+      const h = Math.max(2, Math.round(height * pixelScale));
+      if (canvas.width !== w) canvas.width = w;
+      if (canvas.height !== h) canvas.height = h;
+      dirty = true;
     }
-    // Make sure a scene of the right size exists; start baking the requested theme if it differs.
-    function ensure() {
-      if (!cur || cur.stamp !== stamp) {
-        if (failed === stamp) return;
-        prev = null; job = null; fade = 1;
-        try { const j = newJob(themeIdx); while (!j.step()) { /* bake everything now */ } cur = j.scene; }
-        catch (e) { cur = null; failed = stamp; }
-      } else if (cur.idx === themeIdx) job = null;
-      else if (!job || job.scene.idx !== themeIdx) {
-        prev = null; fade = 1;                                   // never more than two themes in memory
-        try { job = newJob(themeIdx); } catch (e) { job = null; }
+
+    function draw(time) {
+      if (!photo || !brush) return;
+      dirty = false;
+      const key = theme.key;
+      let mode = 'canvas';
+      if (key === 'moss') {
+        if (water === undefined) water = KF.Water.create(surface);
+        mode = water && water.draw(photo, time) ? 'webgl' : 'fallback';
       }
+      root.dataset.renderer = mode;
+      if (mode === 'webgl') return;
+
+      brush.setTransform(1, 0, 0, 1, 0, 0);
+      brush.clearRect(0, 0, canvas.width, canvas.height);
+      brush.save();
+      brush.setTransform(canvas.width, 0, 0, canvas.height, 0, 0);
+      if (key === 'moss') KF.WaterFallback.draw(brush, time, photo);
+      else if (key === 'ice' || key === 'carnelian' || key === 'lake') KF.CavernMotion.draw(brush, key, time, photo);
+      else KF.MineralMotion.draw(brush, key, time, photo);
+      brush.restore();
     }
 
+    surface.addEventListener('webglcontextlost', () => { dirty = true; });
+    surface.addEventListener('webglcontextrestored', () => { dirty = true; });
     return {
-      // CSS px size of the target canvas and its pixel ratio; the scene is re-baked lazily on the next frame.
-      resize(width, height, pixelRatio) {
-        const w = clamp(Math.round(+width) || 1, 1, 8192), h = clamp(Math.round(+height) || 1, 1, 8192), pr = clamp(+pixelRatio || 1, 0.5, 3);
-        if (w === W && h === H && pr === ratio) return;
-        W = w; H = h; ratio = pr; stamp++;
+      resize(w, h) { viewportWidth = w; viewportHeight = h; layout(); },
+      select(nextPhoto, nextTheme, fade) {
+        photo = nextPhoto;
+        theme = nextTheme;
+        root.dataset.room = theme.key;
+        root.dataset.renderer = '';
+        layout();
+        if (fade && root.animate) root.animate([{opacity: 0}, {opacity: 1}], {duration: 1000, easing:'ease-in-out'});
       },
-      // Playfield rect in CSS px: the art is kept calmer behind it.
-      setFocus(x, y, w, h) {
-        if (!(w > 0 && h > 0)) { if (focus) { focus = null; stamp++; } return; }
-        if (focus && Math.abs(focus.x - x) + Math.abs(focus.y - y) + Math.abs(focus.w - w) + Math.abs(focus.h - h) < 1) return;
-        focus = { x: +x || 0, y: +y || 0, w: +w, h: +h }; stamp++;
-      },
-      // Switch to the theme of a level; crossfades unless immediate.
-      setLevel(lv, immediate) {
-        level = Math.max(1, Math.floor(+lv) || 1);
-        themeIdx = (level - 1) % THEMES.length;
-        if (immediate && (prev || !cur || cur.idx !== themeIdx)) {
-          prev = null; job = null; fade = 1;
-          if (cur && cur.idx !== themeIdx) cur = null;           // baked on the next update / draw
+      get dirty() { return dirty; },
+      draw
+    };
+  }
+  KF.Atmosphere = {create};
+})(globalThis.KF = globalThis.KF || {});
+
+// ---- src/cave.js
+(function (KF) {
+  'use strict';
+  const THEMES = JSON.parse(document.getElementById('cave-art').textContent);
+  function themeForLevel(level) {
+    return THEMES[(Math.max(1, Math.floor(level)) - 1) % THEMES.length];
+  }
+
+  function create() {
+    const chamber = document.querySelector('.scene-chamber');
+    const roomName = document.getElementById('chamber-mineral');
+    const levelLabel = document.getElementById('chamber-level');
+    const atmosphere = KF.Atmosphere.create();
+    let width = 1, height = 1, time = 0, level = 0;
+    let currentPhoto = null;
+    let transition = null;
+    let requestNumber = 0;
+
+    function displayRoom(value, immediate) {
+      if (value === level) return;
+      level = value;
+      const request = ++requestNumber;
+      const theme = themeForLevel(value);
+      if (roomName) roomName.textContent = theme.name;
+      if (levelLabel) levelLabel.textContent = 'LEVEL ' + String(level).padStart(2, '0');
+      if (currentPhoto && currentPhoto.dataset.room === theme.key) return;
+
+      const photo = new Image();
+      photo.alt = '';
+      photo.dataset.room = theme.key;
+      photo.style.objectPosition = theme.focusX + '% ' + theme.focusY + '%';
+      photo.onload = () => {
+        // A restart can select a different room while this photograph is loading.
+        if (request !== requestNumber) return;
+        const previous = currentPhoto;
+        if (transition) { transition.cancel(); transition = null; }
+        currentPhoto = photo;
+        const fade = previous && !immediate && photo.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        atmosphere.select(photo, theme, fade);
+        if (!fade) {
+          chamber.replaceChildren(photo);
+          return;
         }
-      },
-      update(dtMs) {
-        const dt = clamp(+dtMs || 0, 0, 1000);
-        time += dt / 1000;
-        ensure();
-        if (job) {
-          try {
-            for (let i = 0; i < STEPS_PER_UPDATE; i++) if (job.step(true)) { prev = cur; cur = job.scene; fade = 0; job = null; break; }
-          } catch (e) { job = null; themeIdx = cur ? cur.idx : themeIdx; }
-        } else if (prev) { fade += dt / FADE_MS; if (fade >= 1) { fade = 1; prev = null; } }
-      },
-      // ctx is pre-scaled to CSS px. Paints the whole width x height opaquely.
-      draw(ctx) {
-        try { ensure(); } catch (e) { cur = null; }
-        if (!cur) { ctx.fillStyle = '#06080d'; ctx.fillRect(0, 0, W, H); return; }
-        if (prev) {
-          const a = fade * fade * (3 - 2 * fade);
-          ctx.drawImage(prev.canvas, 0, 0, prev.w, prev.h); drawOverlays(ctx, prev, time, 1 - a, W, H);
-          ctx.globalAlpha = a; ctx.drawImage(cur.canvas, 0, 0, cur.w, cur.h); ctx.globalAlpha = 1;
-          drawOverlays(ctx, cur, time, a, W, H);
-        } else { ctx.drawImage(cur.canvas, 0, 0, cur.w, cur.h); drawOverlays(ctx, cur, time, 1, W, H); }
-      },
+        chamber.replaceChildren(previous, photo);
+        transition = photo.animate([{opacity: 0}, {opacity: 1}], {duration: 1000, easing: 'ease-in-out'});
+        transition.onfinish = () => {
+          previous.remove();
+          transition = null;
+        };
+      };
+      photo.src = theme.src;
+    }
+
+    const fraction = n => { const v = Math.sin(n * 78.233 + 34.543) * 43758.5453; return v - Math.floor(v); };
+    const dust = Array.from({length: 28}, (_, i) => ({
+      x: fraction(i + .41), y: fraction(i + 1.31),
+      speed: 1.2 + fraction(i + 3.17) * 4, phase: fraction(i + 2.79) * 6.28, r: .45 + fraction(i + 5.51) * .6
+    }));
+    return {
+      resize(w, h) { width = w; height = h; atmosphere.resize(w, h); },
+      get dirty() { return atmosphere.dirty; },
+      setLevel: displayRoom,
       get level() { return level; },
+      update(ms) { time += ms / 1000; },
+      draw(ctx, title) {
+        if (!title) atmosphere.draw(time);
+        ctx.clearRect(0, 0, width, height);
+        for (const p of dust) {
+          const x = p.x * width + Math.sin(time * .08 + p.phase) * 8;
+          const y = (p.y * height + time * p.speed) % height;
+          const opacity = .065 + .105 * (.5 + .5 * Math.sin(time * .37 + p.phase));
+          ctx.fillStyle = 'rgba(212,224,209,' + opacity.toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.arc(x, y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     };
   }
 
-  KF.Cave = { THEMES, create };
+  KF.Cave = {THEMES, themeForLevel, create};
 })(globalThis.KF = globalThis.KF || {});

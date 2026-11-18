@@ -1,0 +1,61 @@
+{
+  "title": "assets/caves/title.webp",
+  "rooms": [
+    {
+      "key": "ice",
+      "name": "Bergkristallsee",
+      "focusX": 50,
+      "focusY": 55,
+      "file": "assets/caves/ice.webp"
+    },
+    {
+      "key": "amethyst",
+      "name": "Amethystgrotte",
+      "focusX": 50,
+      "focusY": 50,
+      "file": "assets/caves/amethyst.webp"
+    },
+    {
+      "key": "moss",
+      "name": "Prasiolithkaskade",
+      "focusX": 89,
+      "focusY": 55,
+      "file": "assets/caves/moss.webp"
+    },
+    {
+      "key": "citrine",
+      "name": "Citrinterrassen",
+      "focusX": 50,
+      "focusY": 55,
+      "file": "assets/caves/citrine.webp"
+    },
+    {
+      "key": "rose",
+      "name": "Rosenquarzkluft",
+      "focusX": 50,
+      "focusY": 50,
+      "file": "assets/caves/rose.webp"
+    },
+    {
+      "key": "carnelian",
+      "name": "Karneolschlucht",
+      "focusX": 50,
+      "focusY": 53,
+      "file": "assets/caves/carnelian.webp"
+    },
+    {
+      "key": "lake",
+      "name": "Blaue Eishöhle",
+      "focusX": 50,
+      "focusY": 52,
+      "file": "assets/caves/lake.webp"
+    },
+    {
+      "key": "smoky",
+      "name": "Rauchquarzdom",
+      "focusX": 50,
+      "focusY": 50,
+      "file": "assets/caves/smoky.webp"
+    }
+  ]
+}

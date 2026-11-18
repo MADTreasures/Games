@@ -31,11 +31,16 @@ node --test tests/logic.test.mjs    # Regel-Tests
 | Datei | Look | Kristalle | Höhle | Oberfläche |
 | ----- | ---- | --------- | ----- | ---------- |
 | `index.html` | Cartoon | kräftige Konturen, flache Farbflächen | gezeichnete Höhle | bunte 3D-Knöpfe |
-| `real.html` | Realistisch | geschliffene, durchscheinende Steine ohne Kontur | beleuchteter Fels mit Tiefe und Dunst | Gesteinsplatten mit farbigen Einschlüssen, Bronze, Gravurschrift |
+| `real.html` | Realistisch | durchscheinende Kristalle ohne Kontur | fotografische Höhlenräume mit Bewegung (Wasser, Licht, Staub) | Gestein, Bronze, Gravurschrift |
 
-Regeln, Steuerung, Sound und Landevorschau sind in beiden gleich. Ein Skin ist ein Ordner unter
+Regeln, Steuerung und Sound sind in beiden gleich. Ein Skin ist ein Ordner unter
 `src/skins/<name>/`: `crystal.js` und `cave.js` ersetzen das Standardmodul, `skin.js` liefert Rahmen, Logo
 und Texturen (`KF.Skin`), `style.css` wird an das Standard-Stylesheet angehängt.
+
+Die Höhlenräume des realistischen Looks stammen aus der parallel entstandenen «Höhlenedition»
+(Branch `crystal-drop/png-komplettpaket`): acht Raumbilder und ein Titelbild in `assets/caves/`, dazu die
+Bewegungsmodule in `src/skins/real/cave.js`. `caves.json` ordnet Bild und Bildausschnitt den Leveln zu;
+`build.mjs` bettet die Bilder ein, damit das Spiel eine einzige Datei bleibt (rund 5,5 MB).
 
 ## Steuerung
 
@@ -62,6 +67,7 @@ und Texturen (`KF.Skin`), `style.css` wird an das Standard-Stylesheet angehängt
 | `assets/Fredoka-latin.woff2` | Schrift (SIL Open Font License 1.1), wird in die HTML-Datei eingebettet |
 | `assets/Cinzel-latin.woff2` | Gravurschrift des realistischen Looks (SIL Open Font License 1.1) |
 | `src/skins/real/` | Realistischer Look: Kristalle, Höhle, Rahmen, Logo, Gesteins-Texturen, Stylesheet |
+| `assets/caves/` | Höhlenräume und Titelbild des realistischen Looks (WebP) |
 | `tests/` | Regel-Tests (`node --test`) |
 | `RESEARCH.md` | Was aus der Vorlage übernommen wurde und was bewusst anders ist |
 

@@ -1,0 +1,36 @@
+/* Photographic cave rooms behind the game (see skins/real/cave.js).
+   .scene-chamber holds the room photograph, #kf-atmosphere the moving layers registered to it,
+   .scene-entrance the title picture. The #kf-cave canvas on top only carries drifting dust. */
+#cavern-scene, #cavern-scene > div { position: fixed; inset: 0; pointer-events: none; }
+#cavern-scene { overflow: hidden; background: #091112; }
+.scene-chamber { overflow: hidden; background: #0b1516; }
+.scene-chamber img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; }
+.scene-chamber::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(3, 8, 8, 0.15), rgba(2, 7, 7, 0.07)); }
+#kf-atmosphere { overflow: hidden; }
+.at-entrance #kf-atmosphere { visibility: hidden; }
+.motion-plate { position: absolute; pointer-events: none; overflow: hidden; }
+.motion-plate > canvas { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; pointer-events: none; }
+#kf-atmosphere[data-renderer="webgl"] [data-layer="water"],
+#kf-atmosphere[data-renderer="canvas"] [data-layer="environment"],
+#kf-atmosphere[data-renderer="fallback"] [data-layer="environment"] { visibility: visible; }
+#kf-cave { background: transparent; }
+
+/* title picture, with a slow sweep of light and a veil so the lettering and buttons read */
+.scene-entrance { background: var(--title-photo, none) 58% 46% / cover no-repeat #091011; opacity: 0; transition: opacity 0.48s ease; }
+body.at-entrance .scene-entrance { opacity: 1; }
+.scene-entrance::before {
+  position: absolute; inset: 0; content: ''; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(130deg, transparent 55%, rgba(193, 227, 216, 0.05) 61%, rgba(199, 231, 225, 0.1) 63%, transparent 72%);
+  transform-origin: 82% 0; opacity: 0.2;
+}
+.at-entrance .scene-entrance::before { animation: entrance-light 9s ease-in-out infinite alternate; }
+@keyframes entrance-light { from { opacity: 0.12; transform: skewX(0deg); } to { opacity: 0.78; transform: skewX(-4deg); } }
+.scene-entrance::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(90% 60% at 50% 52%, rgba(3, 8, 9, 0.5) 0%, rgba(3, 8, 9, 0.16) 60%, rgba(3, 8, 9, 0) 100%),
+    linear-gradient(0deg, rgba(3, 8, 9, 0.6), transparent 30%, transparent 80%, rgba(3, 7, 8, 0.35));
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-entrance .scene-entrance::before { animation: none; }
+  .scene-entrance { transition: none; }
+}

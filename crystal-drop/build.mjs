@@ -2,7 +2,8 @@
 //   node build.mjs          -> index.html  (cartoon look)
 //   node build.mjs real     -> real.html   (realistic look: files in src/skins/real/ replace or extend the defaults)
 // A skin folder may contain crystal.js / cave.js (replace the default module), skin.js (KF.Skin: frame, logo,
-// fonts, loaded before game.js) and style.css (appended after the default stylesheet).
+// fonts, loaded before game.js), style.css and backdrop.css (appended after the default stylesheet),
+// body-prefix.html (markup placed before the game's own) and caves.json (photographs embedded as #cave-art).
 // KF_CRYSTAL=<file> / KF_CAVE=<file> swap in another renderer, KF_OUT=<file> writes only that file (experiments).
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
@@ -32,8 +33,22 @@ if (skin === 'real') FONTS.push({ family: 'Cinzel', weight: 700, file: 'assets/C
 const fontFaces = FONTS.map((f) =>
   `@font-face { font-family: '${f.family}'; font-style: normal; font-weight: ${f.weight}; font-display: swap; src: url(data:font/woff2;base64,${readFileSync(abs(f.file)).toString('base64')}) format('woff2'); }\n`).join('');
 
-const css = fontFaces + read('src/style.css') + (skinDir && has(`${skinDir}/style.css`) ? `\n/* ---- skin: ${skin} ---- */\n` + read(`${skinDir}/style.css`) : '');
-const body = read('src/body.html');
+let css = fontFaces + read('src/style.css');
+let body = read('src/body.html');
+if (skinDir) {
+  for (const name of ['style.css', 'backdrop.css']) {
+    if (has(`${skinDir}/${name}`)) css += `\n/* ---- skin ${skin}: ${name} ---- */\n` + read(`${skinDir}/${name}`);
+  }
+  if (has(`${skinDir}/body-prefix.html`)) body = read(`${skinDir}/body-prefix.html`) + body;
+  if (has(`${skinDir}/caves.json`)) {
+    // room photographs: embedded so the game stays one self-contained file
+    const caves = JSON.parse(read(`${skinDir}/caves.json`));
+    const uri = (file) => 'data:image/webp;base64,' + readFileSync(abs(file)).toString('base64');
+    const rooms = caves.rooms.map((r) => ({ key: r.key, name: r.name, focusX: r.focusX, focusY: r.focusY, src: uri(r.file) }));
+    body = `<script type="application/json" id="cave-art">${JSON.stringify(rooms)}</script>\n` + body;
+    if (caves.title) css += `\n:root { --title-photo: url('${uri(caves.title)}'); }\n`;
+  }
+}
 const js = SCRIPTS.map((p) => `// ---- ${p}\n${read(p)}`).join('\n').replace(/<\/script/gi, '<\\/script');
 
 const icon = "data:image/svg+xml," + encodeURIComponent(
