@@ -8,12 +8,14 @@
   const C = KF.Crystal;
   const A = KF.Audio || { unlock() {}, play() {}, setMuted() {}, suspend() {}, resume() {} };
   const { COLS, ROWS, SPAWN_ROWS, Phase } = L;
+  const SK = KF.Skin || {};               // optional look overrides of a skin (src/skins/<name>/skin.js)
 
-  const FIELD_ALPHA = 0.42;               // darkness of the glass behind the pieces; lower = more cave visible
+  const FIELD_ALPHA = typeof SK.fieldAlpha === 'number' ? SK.fieldAlpha : 0.42;   // darkness of the glass behind the pieces
   const ENTRY_ROWS = 2;                  // rows above the field where the incoming piece is already visible
   const STORE_KEY = 'kristallfall.v1';   // unchanged so existing records survive the rename
   const TITLE_LINES = ['CRYSTAL', 'DROP'];
-  const FONT = "'Fredoka', ui-rounded, 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif";
+  const FONT = SK.font || "'Fredoka', ui-rounded, 'Arial Rounded MT Bold', 'Trebuchet MS', system-ui, sans-serif";
+  const POPUP = Object.assign({ ink: '#050d1c', gold: '#ffd257', ice: '#e0f4ff', weight: '600' }, SK.popup || {});
   const SOFT_REPEAT_FIRST_MS = 150;
   const SOFT_REPEAT_MS = 45;
   const CLEAR_WORDS = { 2: 'DOPPELT!', 3: 'DREIFACH!', 4: 'KRISTALLBRUCH!' };
@@ -222,6 +224,7 @@
   // ------------------------------------------------------------------ static playfield frame
 
   function drawFrame() {
+    if (SK.drawFrame) { SK.drawFrame(bgCtx, view, { COLS, ROWS, ENTRY_ROWS, FIELD_ALPHA }); return; }
     const g = bgCtx;
     const { W, H, dpr, cell, boardX, boardY, boardW, boardH } = view;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -323,6 +326,7 @@
   function drawLogo() {
     const cv = els.logo;
     if (!cv) return;
+    if (SK.drawLogo) { SK.drawLogo(cv, view, TITLE_LINES); return; }
     const ratio = Math.min(window.devicePixelRatio || 1, 3);
     const wCss = Math.max(120, Math.min(view.colW - 32, 460));
     const font = (px) => '600 ' + px.toFixed(1) + 'px ' + FONT;
@@ -529,9 +533,9 @@
     const y = boardY + (Math.min.apply(null, p.rows) + 0.5) * cell;
     const big = p.count >= 4;
     if (CLEAR_WORDS[p.count]) {
-      popups.push({ text: CLEAR_WORDS[p.count], x: boardX + boardW / 2, y: y - cell * 1.1, t0: animTime, dur: big ? 1500 : 1100, size: cell * (big ? 0.95 : 0.82), color: big ? '#ffd257' : '#e0f4ff' });
+      popups.push({ text: CLEAR_WORDS[p.count], x: boardX + boardW / 2, y: y - cell * 1.1, t0: animTime, dur: big ? 1500 : 1100, size: cell * (big ? 0.95 : 0.82), color: big ? POPUP.gold : POPUP.ice });
     }
-    popups.push({ text: '+' + p.gained, x: boardX + boardW / 2, y, t0: animTime, dur: 1000, size: cell * 0.9, color: '#ffd257' });
+    popups.push({ text: '+' + p.gained, x: boardX + boardW / 2, y, t0: animTime, dur: 1000, size: cell * 0.9, color: POPUP.gold });
   }
 
   function onLevelUp(p) {
@@ -654,9 +658,9 @@
         const rise = 1 - (1 - k) * (1 - k);
         const s = p.size * (k < 0.12 ? 0.6 + (k / 0.12) * 0.5 : Math.max(1, 1.1 - (k - 0.12) * 0.8));
         g.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;
-        g.font = '600 ' + s.toFixed(1) + 'px ' + FONT;
+        g.font = POPUP.weight + ' ' + s.toFixed(1) + 'px ' + FONT;
         g.lineWidth = s * 0.3;
-        g.strokeStyle = '#050d1c';
+        g.strokeStyle = POPUP.ink;
         g.strokeText(p.text, p.x, p.y - cell * 1.2 * rise);
         g.fillStyle = p.color;
         g.fillText(p.text, p.x, p.y - cell * 1.2 * rise);
@@ -1098,6 +1102,7 @@
     layout();
     if (document.fonts && document.fonts.load) {
       document.fonts.load("600 20px 'Fredoka'").then(layout).catch(() => {});
+      if (SK.fontLoad) document.fonts.load(SK.fontLoad).then(layout).catch(() => {});
     }
     window.requestAnimationFrame(frame);
   }

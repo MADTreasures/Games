@@ -1,0 +1,114 @@
+/* Crystal Drop – realistic skin. Overrides the cartoon controls with real materials: cut gemstones in aged
+   bronze settings, iron-and-glass displays, stone slabs for dialogs, engraved lettering.
+   --tex-stone / --tex-fine are grey noise textures generated at start by skins/real/skin.js. */
+:root {
+  --ground: #04060a;
+  --ink: #0a0806;
+  --ice: #f3ecdc;         /* warm stone white */
+  --ice-dim: #b8ad97;
+  --gold: #f6c869;
+  --rose: #e89a8e;
+  --font: 'Cinzel', 'Trajan Pro', 'Times New Roman', Georgia, serif;
+  --tex-stone: none;
+  --tex-fine: none;
+  /* no cartoon outlines: lettering is lifted off the surface by soft shadows */
+  --outline: 0 2px 3px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.7);
+  --outline-s: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.45);
+}
+body { font-weight: 700; }
+
+/* ------------------------------------------------------------------ gemstone buttons in a bronze setting */
+.kf-btn, .kf-panel {
+  --d: 3px; --r: 9px; --b: 0px;
+  --hi: #86bfe6; --mid: #2c6aa6; --lo: #0f3157; --glow: rgba(130, 205, 255, 0.6);
+}
+.kf-btn::after {                                    /* the setting: bezel and base in one piece of bronze */
+  top: -3px; left: -3px; right: -3px; bottom: calc(-1 * var(--d) - 3px + var(--press));
+  border: 0; border-radius: calc(var(--r) + 3px);
+  background: var(--tex-fine), linear-gradient(158deg, #d2b077 0%, #8f6e3c 20%, #4a371a 52%, #80602f 76%, #261b0b 100%);
+  background-blend-mode: overlay, normal;
+  box-shadow: 0 0 0 1px #080603, inset 0 1px 0 rgba(255, 240, 205, 0.6), inset 0 -2px 3px rgba(0, 0, 0, 0.65), 0 8px 14px rgba(0, 0, 0, 0.7);
+}
+.kf-btn::before {                                   /* the stone: translucent, light gathers at the bottom */
+  border: 0; border-radius: var(--r);
+  background:
+    radial-gradient(125% 78% at 50% -14%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.16) 52%, rgba(255, 255, 255, 0) 70%),
+    radial-gradient(92% 120% at 50% 122%, var(--glow) 0%, rgba(0, 0, 0, 0) 64%),
+    var(--tex-fine),
+    linear-gradient(180deg, var(--hi) 0%, var(--mid) 44%, var(--lo) 100%);
+  background-blend-mode: normal, screen, soft-light, normal;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), inset 0 2px 3px rgba(255, 255, 255, 0.3), inset 0 -9px 13px rgba(0, 0, 0, 0.5), inset 0 0 16px rgba(0, 0, 0, 0.32), 0 0 0 1px rgba(0, 0, 0, 0.8);
+}
+.kf-btn {
+  font-size: calc(var(--u) * 3.3); letter-spacing: 0.09em;
+  color: #fff7e4; text-shadow: var(--outline-s);
+}
+.kf-btn:active::before, .kf-btn.is-down::before { filter: brightness(1.22); }
+.kf-btn:focus-visible::before { box-shadow: inset 0 0 0 2px #ffffff, inset 0 -9px 13px rgba(0, 0, 0, 0.5); }
+.kf-btn svg .o { stroke: rgba(0, 0, 0, 0.75); stroke-width: 5.4; }
+.kf-btn svg .i { stroke: #fff7e4; stroke-width: 2.6; }
+
+.kf-btn--gold { --hi: #ffe09a; --mid: #d98c1e; --lo: #5f3204; --glow: rgba(255, 205, 100, 0.75); }
+.kf-btn--rose { --hi: #f2b6a8; --mid: #b4544d; --lo: #521d1c; --glow: rgba(255, 165, 145, 0.55); }
+.kf-btn--ghost { --hi: #958c7e; --mid: #4b453c; --lo: #1c1915; --glow: rgba(225, 205, 175, 0.28); }
+.kf-btn--big { --d: 4px; --r: 12px; font-size: calc(var(--u) * 5.4); text-shadow: var(--outline); }
+#kf-btn-main { font-size: calc(var(--u) * 3.1); letter-spacing: 0.06em; }
+.kf-bottom .kf-btn { --d: 4px; --r: 12px; font-size: calc(var(--u) * 5.2); }
+
+/* ------------------------------------------------------------------ displays: dark glass in a bronze rim */
+.kf-stat {
+  border: 0; border-radius: 8px;
+  background: var(--tex-fine), linear-gradient(180deg, #0c0a08 0%, #1f1a14 100%);
+  background-blend-mode: overlay, normal;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 235, 190, 0.12),
+    0 0 0 1px #080603, 0 0 0 2px #cfae74, 0 0 0 4px #6b5129, 0 0 0 5px #080603, 0 6px 10px rgba(0, 0, 0, 0.65);
+  margin: 0 5px 6px;
+}
+.kf-stats { gap: calc(var(--u) * 0.4); }
+.kf-stat__label { color: var(--ice-dim); letter-spacing: 0.14em; font-size: calc(var(--u) * 2.1); }
+.kf-stat__value { color: #ffe2a6; text-shadow: 0 0 9px rgba(255, 170, 60, 0.6), 0 1px 1px rgba(0, 0, 0, 0.9); font-size: calc(var(--u) * 3.9); }
+.kf-stat--score .kf-stat__value { color: #ffd27a; }
+
+/* ------------------------------------------------------------------ dialogs: slabs of rock */
+.kf-panel { --d: 0px; --r: 8px; }
+.kf-panel::after { display: none; }
+.kf-panel::before {
+  border: 0; border-radius: var(--r);
+  background: var(--tex-fine), var(--tex-stone), linear-gradient(168deg, #615d55 0%, #3a3732 48%, #1d1c19 100%);
+  background-blend-mode: overlay, soft-light, normal;
+  background-size: 96px 96px, 170px 170px, auto;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 1px 0 0 rgba(255, 255, 255, 0.1), inset 0 -4px 8px rgba(0, 0, 0, 0.75), inset 0 0 46px rgba(0, 0, 0, 0.5),
+    0 0 0 1px #040302, 0 22px 46px rgba(0, 0, 0, 0.85);
+}
+.kf-panel h2 { color: #f1d596; letter-spacing: 0.12em; text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.95), 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 16px rgba(255, 170, 60, 0.25); }
+.kf-panel h3 { color: #e6dcc6; text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.14); }
+.kf-panel p, .kf-panel li { font-family: Georgia, 'Times New Roman', serif; font-weight: 400; color: #cdc3ae; }
+.kf-panel li b { font-family: var(--font); font-weight: 700; color: #f3ecdc; font-size: 0.9em; }
+.kf-row { text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.14); }
+.kf-best { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+.kf-card .kf-big { color: #ffd98a; text-shadow: 0 0 18px rgba(255, 170, 60, 0.5), 0 2px 3px rgba(0, 0, 0, 0.95); }
+.kf-card .kf-over { color: #f0a090; }
+.kf-modal { background: radial-gradient(120% 90% at 50% 40%, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0.9) 100%); }
+
+.kf-toast { color: #ffe2a0; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 20px rgba(255, 170, 60, 0.6); letter-spacing: 0.08em; }
+
+/* ------------------------------------------------------------------ title */
+.kf-title .kf-best { color: #f3ecdc; text-shadow: var(--outline); }
+
+/* ------------------------------------------------------------------ toggle: iron track, gem knob */
+.kf-switch {
+  border: 0; border-radius: 17px;
+  background: linear-gradient(180deg, #060504, #2a251d);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 235, 190, 0.14), 0 0 0 1px #080603, 0 0 0 3px #6b5129, 0 0 0 4px #080603;
+}
+.kf-switch::after {
+  top: 4px; left: 4px; width: 26px; height: 26px; border-radius: 13px; border: 0;
+  background: radial-gradient(60% 55% at 38% 30%, #ffffff 0%, #b9b2a4 45%, #4c463c 100%);
+  box-shadow: 0 0 0 1px #080603, 0 3px 5px rgba(0, 0, 0, 0.8);
+}
+.kf-switch[aria-checked="true"] { background: linear-gradient(180deg, #2a1602, #8a5210); }
+.kf-switch[aria-checked="true"]::after {
+  transform: translateX(28px);
+  background: radial-gradient(60% 55% at 38% 30%, #fff8dc 0%, #ffbf4a 45%, #7a3d05 100%);
+  box-shadow: 0 0 0 1px #080603, 0 3px 5px rgba(0, 0, 0, 0.8), 0 0 14px rgba(255, 180, 70, 0.7);
+}
